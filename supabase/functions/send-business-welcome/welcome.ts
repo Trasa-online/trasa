@@ -7,8 +7,27 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-export function buildBusinessWelcomeHtml({ businessName, panelUrl }: { businessName: string; panelUrl: string }): string {
-  const name = escapeHtml(businessName);
+// ── SKÓRA MAILI B2B (2026-09-15) ────────────────────────────────────────────────────────
+// Branding maili dla lokali zszedl z niebieskiego razem z panelem i ekranem logowania
+// (decyzja Nat 2026-09-14). Wczesniej: niebieski pasek u gory, niebieska orba i niebieski
+// guzik - identyfikacja, ktorej nie ma juz nigdzie indziej w produkcie.
+//
+// Teraz uklad jest ten sam, co na `/auth?business=true`: biala belka ze znakiem i wordmarkiem
+// "spontaway biznes", pod nia ZOLTE hero `#FDF184` z naglowkiem w brazie `#5B2C06`, nizej
+// pomaranczowe CTA `#EE5307` w pigulce.
+//
+// ⛔ Sigmar (font marki) NIE dziala w mailu - Gmail i Outlook wycinaja @font-face. Naglowki
+//    ida ciezkim stosem systemowym; charakter niesie kolor i uklad, nie krój.
+// ⛔ Kolorow nie wpisujemy inline "na oko": pomarańcz na żółtym ma kontrast 3,08:1, wiec na
+//    zoltym tle piszemy WYLACZNIE brazem (10:1). Pomaranczowy zostaje na guzik i znak.
+// ⛔ Te same trzy maile trzymamy w JEDNYM stylu - zmieniasz tu, zmien tez w
+//    `send-business-welcome/welcome.ts` i `send-business-password-reset/index.ts`.
+const FONT = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif";
+const MARK = "https://spontaway.com/spontaway-symbol.png";
+
+export function bizEmailShell({ title, heading, lead, ctaUrl, ctaLabel, after, footer }: {
+  title: string; heading: string; lead: string; ctaUrl: string; ctaLabel: string; after: string; footer: string;
+}): string {
   return `<!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -16,39 +35,52 @@ export function buildBusinessWelcomeHtml({ businessName, panelUrl }: { businessN
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light" />
   <meta name="supported-color-schemes" content="light" />
-  <title>Twoja wizytówka w spontaway jest gotowa</title>
+  <title>${title}</title>
 </head>
-<body style="margin:0;padding:0;background:#FEFEFE;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#0E0E0E;">
-  <div style="height:8px;background:#1d4ed8;line-height:8px;font-size:0;">&nbsp;</div>
-  <div style="max-width:480px;margin:0 auto;padding:48px 32px;text-align:center;">
-    <div style="width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#60a5fa,#2563eb 60%,#1d4ed8);margin:0 auto 24px;"></div>
-    <h1 style="font-size:28px;font-weight:900;letter-spacing:-0.02em;margin:0 0 16px;color:#0E0E0E;line-height:1.25;">
-      Witaj w&#160;spontaway dla&#160;firm
-    </h1>
-    <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 12px;">
-      Twoja wizytówka <strong style="color:#0E0E0E;">${name}</strong> jest&#160;aktywna.
+<body style="margin:0;padding:0;background:#FEFEFE;font-family:${FONT};color:#5B2C06;-webkit-font-smoothing:antialiased;">
+  <!-- Belka marki - ta sama, co nad formularzem rejestracji lokalu -->
+  <div style="background:#FEFEFE;padding:22px 24px 18px;text-align:center;border-bottom:1px solid #F0E6D2;">
+    <img src="${MARK}" alt="" width="26" height="26" style="display:inline-block;width:26px;height:26px;vertical-align:middle;border:0;" />
+    <span style="display:inline-block;vertical-align:middle;margin-left:8px;font-size:18px;font-weight:800;letter-spacing:-0.01em;color:#5B2C06;">spontaway <span style="color:#EE5307;">biznes</span></span>
+  </div>
+
+  <!-- Hero: zolte tlo marki, naglowek i lead w brazie -->
+  <div style="background:#FDF184;padding:40px 28px 36px;text-align:center;">
+    <div style="max-width:480px;margin:0 auto;">
+      <h1 style="font-size:28px;font-weight:900;letter-spacing:-0.02em;margin:0 0 14px;color:#5B2C06;line-height:1.2;">${heading}</h1>
+      <p style="font-size:16px;line-height:1.6;color:#6B3A0F;margin:0;">${lead}</p>
+    </div>
+  </div>
+
+  <!-- Akcja -->
+  <div style="max-width:480px;margin:0 auto;padding:32px 32px 44px;text-align:center;">
+    <a href="${ctaUrl}" style="display:inline-block;background-color:#EE5307;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 34px;border-radius:999px;">${ctaLabel}</a>
+    <p style="font-size:13px;color:#8A7A6B;margin:32px 0 0;line-height:1.6;">${after}</p>
+    <p style="font-size:13px;color:#8A7A6B;margin:22px 0 0;">
+      <strong style="color:#5B2C06;">Zespół spontaway</strong>
     </p>
-    <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 32px;">
-      Użytkownicy spontaway mogą już trafić na&#160;Twój lokal podczas planowania wyjazdów po&#160;mieście. Uzupełnij galerię i&#160;opis, żeby wyróżnić się spośród innych miejsc.
-    </p>
-    <a href="${panelUrl}" style="display:inline-block;background-color:#1d4ed8;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px;border-radius:24px;">
-      Przejdź do&#160;panelu →
-    </a>
-    <p style="font-size:13px;color:#979797;margin:40px 0 0;line-height:1.6;">
-      Masz pytania? Odpowiedz na&#160;tego maila - jesteśmy tu dla&#160;Ciebie.
-    </p>
-    <p style="font-size:13px;color:#979797;margin:24px 0 0;">
-      <strong style="color:#0E0E0E;">Zespół spontaway</strong>
-    </p>
-    <div style="margin-top:48px;padding-top:24px;border-top:1px solid #E5E5E5;">
-      <p style="font-size:11px;color:#979797;margin:0;line-height:1.5;">
-        Dostałeś tego maila, ponieważ założyłeś konto firmowe na&#160;<a href="https://spontaway.com" style="color:#1d4ed8;text-decoration:none;">spontaway.com</a>.<br/>
-        Kontakt: <a href="mailto:hello@spontaway.com" style="color:#1d4ed8;text-decoration:none;">hello@spontaway.com</a>
+    <div style="margin-top:40px;padding-top:22px;border-top:1px solid #F0E6D2;">
+      <p style="font-size:11px;color:#A0907F;margin:0;line-height:1.5;">
+        ${footer}<br/>
+        Kontakt: <a href="mailto:hello@spontaway.com" style="color:#EE5307;text-decoration:none;">hello@spontaway.com</a>
       </p>
     </div>
   </div>
 </body>
 </html>`;
+}
+
+export function buildBusinessWelcomeHtml({ businessName, panelUrl }: { businessName: string; panelUrl: string }): string {
+  const name = escapeHtml(businessName);
+  return bizEmailShell({
+    title: "Twoja wizytówka w spontaway jest gotowa",
+    heading: "Witaj w&#160;spontaway dla&#160;firm",
+    lead: `Twoja wizytówka <strong style="color:#5B2C06;">${name}</strong> jest&#160;aktywna. Podróżni mogą już trafić na&#160;Twój lokal, planując wyjazd po&#160;mieście - uzupełnij galerię i&#160;opis, żeby się wyróżnić.`,
+    ctaUrl: panelUrl,
+    ctaLabel: "Przejdź do&#160;panelu →",
+    after: "Masz pytania? Odpowiedz na&#160;tego maila - jesteśmy tu dla&#160;Ciebie.",
+    footer: `Dostałeś tego maila, ponieważ założyłeś konto firmowe na&#160;<a href="https://spontaway.com" style="color:#EE5307;text-decoration:none;">spontaway.com</a>.`,
+  });
 }
 
 export function buildBusinessWelcomeText({ businessName, panelUrl }: { businessName: string; panelUrl: string }): string {

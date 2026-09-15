@@ -4,6 +4,19 @@ project_id = "chxphfcpehxshvijqtlf"
 [functions.register-business]
 verify_jwt = false
 
+# Wpisane JAWNIE (2026-09-15), bo `supabase functions deploy --no-verify-jwt` ZAPAMIETUJE ten
+# przelacznik po stronie platformy i ponowny deploy BEZ flagi go nie cofa. Jedno nieuwazne
+# wdrozenie z flaga zdjelo autoryzacje z `send-business-welcome` (wola ja zalogowany lokal po
+# aktywacji konta) - bez tego kazdy z samym anon key moglby wysylac maile z naszej domeny.
+# Trzymamy stan w repo, zeby deploy nie zalezal od tego, co ktos wpisal ostatnio w terminalu.
+[functions.send-business-welcome]
+verify_jwt = true
+
+# Publiczne z zalozenia: "nie pamietam hasla" wola sie bez sesji. Ochrona = limit per IP
+# w samej funkcji.
+[functions.send-business-password-reset]
+verify_jwt = false
+
 [functions.admin-analytics]
 verify_jwt = true
 
