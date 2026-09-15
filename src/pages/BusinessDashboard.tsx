@@ -40,6 +40,7 @@ import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromDashboardState } from "@/components/business/premiumBusinessAdapters";
 import { ImageCropModal } from "@/components/business/ImageCropModal";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { BizShell, type BizSection } from "@/components/business/dashboard/BizShell";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { avatarSrc } from "@/lib/avatar";
@@ -1846,7 +1847,7 @@ const BusinessDashboard = () => {
     : "";
 
   return (
-    <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
+    <>
 
       {/* ── Draft mode banner ── */}
       {isDraft && (() => {
@@ -1882,171 +1883,24 @@ const BusinessDashboard = () => {
         </div>
       )}
 
-      {/* ── Sidebar (desktop only) ── */}
-      <aside className={`hidden md:flex shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 z-20 transition-all duration-200 ${sidebarOpen ? 'w-56 px-3' : 'w-14 px-2'}`}>
-        {/* Logo + collapse toggle */}
-        <div className="mb-6">
-          <div className={`flex items-center gap-2 px-2 mb-2 ${!sidebarOpen && 'justify-center'}`}>
-            <TrasaLogo size={28} />
-            {sidebarOpen && <span className="font-black text-sm">spontaway</span>}
-          </div>
-          <button
-            onClick={() => setSidebarOpen(v => !v)}
-            title={sidebarOpen ? undefined : t('sidebar.expand')}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-xs ${!sidebarOpen && 'justify-center w-full'}`}
-          >
-            <svg className={`h-3.5 w-3.5 shrink-0 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M10 3L5 8l5 5"/>
-            </svg>
-            {sidebarOpen && <span>{t('sidebar.collapse')}</span>}
-          </button>
-        </div>
-        {/* Nav items */}
-        {([
-          { id: 'overview',   label: t('nav.overview'),  icon: LayoutDashboard, disabled: true,  hidden: true },
-          { id: 'profile',    label: t('nav.profile'),   icon: Store,          disabled: false, hidden: false },
-          { id: 'menu',       label: t('nav.menu'),      icon: BookOpen,       disabled: false, hidden: false },
-          { id: 'posts',      label: t('nav.posts'),     icon: Megaphone,      disabled: false, hidden: false },
-          { id: 'community',  label: t('nav.community'), icon: MessageSquareQuote, disabled: false, hidden: false },
-          { id: 'gallery',    label: t('nav.appearance'), icon: Images,        disabled: false, hidden: false },
-          { id: 'analytics',  label: t('nav.analytics'), icon: TrendingUp,     disabled: true,  hidden: false },
-          { id: 'settings',   label: t('nav.settings'),  icon: Settings,       disabled: false, hidden: false },
-        ] as const).filter(item => !item.hidden).map(item => (
-          <button
-            key={item.id}
-            id={`tour-${item.id}`}
-            onClick={async () => { if (item.disabled) return; if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); } setActiveSection(item.id); }}
-            disabled={item.disabled}
-            title={item.disabled ? t('nav.disabled_soon') : (!sidebarOpen ? item.label : undefined)}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {sidebarOpen && (
-              <span className="flex items-center gap-1.5">
-                {item.label}
-                {item.disabled && <span className="text-[9px] font-bold text-slate-300 bg-slate-100 rounded-full px-1.5 py-0.5">{t('nav.soon')}</span>}
-              </span>
-            )}
-          </button>
-        ))}
-        {/* Logout + support at bottom */}
-        <div className={`mt-auto px-1 space-y-1 ${!sidebarOpen && 'flex flex-col items-center'}`}>
-          <button onClick={() => setShowSupportModal(true)} title={t('sidebar.support')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-            {sidebarOpen && t('sidebar.support')}
-          </button>
-          {!isDraft && (
-            <>
-              <button
-                onClick={handlePasswordReset}
-                disabled={resetPasswordLoading}
-                title={t('sidebar.change_password')}
-                className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 disabled:opacity-50 ${sidebarOpen ? 'px-2' : 'justify-center'}`}
-              >
-                {resetPasswordLoading
-                  ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                  : <KeyRound className="h-3.5 w-3.5 shrink-0" />
-                }
-                {sidebarOpen && (resetPasswordLoading ? t('sidebar.sending') : t('sidebar.change_password'))}
-              </button>
-              <button onClick={handleLogout} title={t('sidebar.logout')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-                <LogOut className="h-3.5 w-3.5 shrink-0" />
-                {sidebarOpen && t('sidebar.logout')}
-              </button>
-            </>
-          )}
-          <button onClick={startTour} title={t('sidebar.repeat_tour')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-            <HelpCircle className="h-3.5 w-3.5 shrink-0" />
-            {sidebarOpen && t('sidebar.repeat_tour')}
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main ── */}
-      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${(previewMode || isDraft) ? 'pt-12 sm:pt-9' : ''}`}>
-
-        {/* ── Top bar ── */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
-          {/* Mobile: logo */}
-          <TrasaLogo size={28} className="md:hidden" />
-          <div id="tour-business-name" className="flex-1 flex items-center gap-2 min-w-0">
-            <h1 className="text-sm font-bold text-slate-800 truncate">{businessName || t("business_name_fallback")}</h1>
-            <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
-            {/* Status miękkiego zapisu (tylko live) - lokal widzi, że zmiany lecą same. */}
-            {!isDraft && !previewMode && saveStatus !== 'idle' && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 shrink-0">
-                {saveStatus === 'saving'
-                  ? <><Loader2 className="h-3 w-3 animate-spin" />{t("save.autosaving")}</>
-                  : <><Check className="h-3 w-3 text-emerald-500" />{t("save.autosaved")}</>}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Przelacznik jezyka PL/EN (changeLanguage zapisuje wybor do localStorage) */}
-            <div className="flex gap-0.5 bg-slate-100 rounded-full p-0.5 shrink-0">
-              {(["pl", "en"] as const).map((code) => {
-                const active = code === ((i18n.language || "").toLowerCase().startsWith("en") ? "en" : "pl");
-                return (
-                  <button
-                    key={code}
-                    onClick={() => { if (!active) { markBusinessLangChoice(code); i18n.changeLanguage(code); } }}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${active ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                  >
-                    {code}
-                  </button>
-                );
-              })}
-            </div>
-            {/* "Przetestuj w aplikacji" — temporarily disabled on frontend */}
-            {isAdminUser && (profile as any).preview_token && (
-              <button
-                onClick={async () => {
-                  const url = `${SHARE_BASE_URL}/#/biznes/${placeId}?t=${(profile as any).preview_token}`;
-                  const result = await share({ title: t("topbar.preview_title"), url });
-                  if (!result.ok) return;
-                  toast.success(result.method === "clipboard" ? t("topbar.link_copied") : t("topbar.shared"));
-                }}
-                className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-primary px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/15 transition-colors"
-              >
-                {t("topbar.copy_link")}
-              </button>
-            )}
-            {!isDraft && (
-              <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
-                <LogOut className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Mobile horizontal tabs ── */}
-        <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
-          {([
-            { id: 'overview', label: t('tabs.overview'), disabled: true,  hidden: true },
-            { id: 'profile', label: t('tabs.profile'), disabled: false, hidden: false },
-            { id: 'menu', label: t('tabs.menu'), disabled: false, hidden: false },
-            { id: 'posts', label: t('tabs.posts'), disabled: false, hidden: false },
-            { id: 'community', label: t('tabs.community'), disabled: false, hidden: false },
-            { id: 'gallery', label: t('tabs.appearance'), disabled: false, hidden: false },
-            { id: 'analytics', label: t('tabs.analytics'), disabled: true,  hidden: false },
-            { id: 'settings', label: t('tabs.settings'), disabled: false, hidden: false },
-          ] as const).filter(item => !item.hidden).map(item => (
-            <button
-              key={item.id}
-              id={`tour-mobile-${item.id}`}
-              onClick={async () => { if (item.disabled) return; if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); } setActiveSection(item.id); }}
-              disabled={item.disabled}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-primary/10 text-primary' : 'text-slate-500'}`}
-            >
-              {item.label}{item.disabled && ` · ${t('nav.soon')}`}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Content ── */}
-        {/* pb-40 gdy isDirty: sticky save bar (button h-12 + pt-3 + pb-6 + pb-safe-6) zajmuje
-            ~110-130 px zaleznie od safe-area. pb-40 (160px) daje margines bez ucinania ostatniej sekcji. */}
-        <div className="flex-1 p-4 md:p-6 max-w-4xl w-full pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] md:pb-10">
+      <BizShell
+        active={(activeSection === 'analytics' ? 'overview' : activeSection) as BizSection}
+        onSelect={async (section) => {
+          // Przejscie miedzy sekcjami dopina miekki zapis - inaczej lokal traci to,
+          // co wpisal sekunde wczesniej (debounce nie zdazyl).
+          if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); }
+          setActiveSection(section);
+        }}
+        businessName={businessName}
+        city={city}
+        avatarUrl={logoUrl || coverImageUrl || null}
+        planLabel={PLAN_LABELS[plan]}
+        isPremium={plan !== 'basic'}
+        saveStatus={!isDraft && !previewMode ? saveStatus : 'idle'}
+        onLogout={handleLogout}
+        onSupport={() => setShowSupportModal(true)}
+        onUpgrade={() => setShowSupportModal(true)}
+      >
 
           {/* Banners (always visible) */}
           <div className="space-y-3 mb-4">
@@ -3307,8 +3161,7 @@ const BusinessDashboard = () => {
             </div>
           )}
 
-        </div>
-      </div>
+      </BizShell>
 
       {/* Mobile FAB — temporarily disabled on frontend */}
 
@@ -3316,7 +3169,10 @@ const BusinessDashboard = () => {
           paska "Zapisz zmiany". Feedback = status "Zapisywanie/Zapisano" w górnej belce. Na
           mobile, w trakcie zapisu, pokazujemy delikatny pasek na dole (belka bywa przewinięta). */}
       {!previewMode && !isDraft && saveStatus !== 'idle' && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-4 pb-4 pt-2 pointer-events-none">
+        <div
+          className="md:hidden fixed left-0 right-0 z-30 px-4 pt-2 pointer-events-none"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.25rem)" }}
+        >
           <div className="mx-auto w-fit flex items-center gap-1.5 rounded-full bg-white/95 border border-slate-200 shadow-sm px-3.5 py-1.5 text-[11px] font-semibold text-slate-500">
             {saveStatus === 'saving'
               ? <><Loader2 className="h-3 w-3 animate-spin" />{t("save.autosaving")}</>
@@ -3355,14 +3211,16 @@ const BusinessDashboard = () => {
         </div>
       )}
 
-      {/* ── Mobile/Tablet FAB: Podglad wizytowki - tylko desktop (lg+) ma sticky sidebar preview ── */}
+      {/* ── Mobile/Tablet FAB: Podglad wizytowki - tylko desktop (lg+) ma sticky sidebar preview ──
+          Dolny pasek nawigacji (BizShell, ~60 px + safe-area) zajmuje dol ekranu, wiec FAB
+          i pasek zapisu siadaja NAD nim - inaczej zaslaniaja nawigacje. */}
       <button
         onClick={() => previewReady && setShowAppPreview(true)}
         disabled={!previewReady}
         title={!previewReady ? t("fab.incomplete") : t("fab.preview_title")}
         aria-label={t("fab.preview_aria")}
         className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-        style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", right: "1rem" }}
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.75rem)", right: "1rem" }}
       >
         <Eye className="h-4 w-4" />
         {t("fab.preview")}
@@ -3439,7 +3297,7 @@ const BusinessDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

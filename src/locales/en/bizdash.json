@@ -395,5 +395,28 @@
     "report_done": "Reported to moderation. We'll take a look.",
     "report_error": "Could not send the report",
     "moderation_hint": "See content that breaks the rules? Report it and the spontaway team will review it. We don't delete notes and photos from the panel - we keep reviews authentic."
+  },
+  "shell": {
+    "breadcrumb": "Panel",
+    "notifications": "Notifications",
+    "more": "More",
+    "close": "Close",
+    "nav": {
+      "overview": "Overview",
+      "profile": "Listing",
+      "menu": "Menu",
+      "posts": "Events",
+      "community": "From guests",
+      "gallery": "Look",
+      "settings": "Settings"
+    },
+    "support": {
+      "title": "Message us",
+      "subtitle": "We usually reply the same day"
+    },
+    "premium": {
+      "copy": "Unlock full analytics, events and push notifications for guests.",
+      "cta": "Go Premium"
+    }
   }
 }

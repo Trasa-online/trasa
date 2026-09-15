@@ -395,5 +395,28 @@
     "report_done": "Zgłoszono do moderacji. Sprawdzimy to.",
     "report_error": "Nie udało się wysłać zgłoszenia",
     "moderation_hint": "Widzisz treść, która narusza zasady? Zgłoś ją, a zespół spontaway ją sprawdzi. Notek i zdjęć nie usuwamy z panelu - dbamy o to, żeby opinie były autentyczne."
+  },
+  "shell": {
+    "breadcrumb": "Panel",
+    "notifications": "Powiadomienia",
+    "more": "Więcej",
+    "close": "Zamknij",
+    "nav": {
+      "overview": "Przegląd",
+      "profile": "Wizytówka",
+      "menu": "Menu",
+      "posts": "Wydarzenia",
+      "community": "Od gości",
+      "gallery": "Wygląd",
+      "settings": "Ustawienia"
+    },
+    "support": {
+      "title": "Napisz do nas",
+      "subtitle": "Zwykle odpowiadamy tego samego dnia"
+    },
+    "premium": {
+      "copy": "Odblokuj pełną analitykę, wydarzenia i powiadomienia push dla gości.",
+      "cta": "Przejdź na Premium"
+    }
   }
 }
