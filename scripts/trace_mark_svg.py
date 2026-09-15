@@ -17,8 +17,18 @@ import sys
 from pathlib import Path
 from PIL import Image
 
-EPS = 1.4        # RDP w pikselach zrodla (1024) - nizej = wierniej, wyzej = gladziej
-TENSION = 0.5    # Catmull-Rom: 0.5 = standardowe zaokraglenie naroznikow
+EPS = 1.5        # RDP w pikselach zrodla (1024)
+# ⚠️ Nizej NIE znaczy wierniej: przy 0,9 obrys zaczyna lapac SCHODKI pikseli, wiec sciezka
+# puchnie 4x, a pokrycie z prawdziwym ksztaltem SPADA. Zmierzone (IoU obrysu z maska):
+#   EPS 0,9 -> gwiazdka 97,44 % / 5262 znaki      EPS 1,5 -> gwiazdka 97,75 % / 1269 znakow
+#   EPS 2,5 -> gwiazdka 97,34 % / 852 znaki       ("S" trzyma 98,6-98,9 % w calym zakresie)
+# 1,5 to maksimum wiernosci przy najmniejszej sciezce - a sciezki ida w paczke pierwszej klatki.
+TENSION = 0.5    # Catmull-Rom: bazowe zaokraglenie (przy ostrym narozniku schodzi do 0)
+# Prog "naroznika": cos kata miedzy odcinkami. Powyzej COS_SMOOTH traktujemy wierzcholek jak
+# punkt gladkiej krzywej i zaokraglamy w pelni; ponizej COS_CORNER jak ostry naroznik i nie
+# zaokraglamy wcale. Bez tego Catmull-Rom wygladzal KAZDY wierzcholek - lacznie z ostrymi
+# wcieciami miedzy ramionami gwiazdki, ktore przez to robily sie plytkie i obce.
+COS_CORNER, COS_SMOOTH = -0.2, 0.7
 
 # Piksel po LEWEJ i po PRAWEJ stronie kroku z naroznika (x,y) w kierunku d.
 # Piksel (i,j) zajmuje kwadrat od naroznika (i,j) do (i+1,j+1), os Y w dol.
@@ -90,15 +100,35 @@ def rdp(pts: list[tuple[float, float]], eps: float) -> list[tuple[float, float]]
     return [p for p, k in zip(pts, keep) if k]
 
 
+def corner_tension(a: tuple[float, float], v: tuple[float, float], b: tuple[float, float],
+                   t: float) -> float:
+    """Ile zaokraglic w wierzcholku `v`: pelne `t` na gladkiej krzywej, 0 na ostrym narozniku."""
+    ax, ay = v[0] - a[0], v[1] - a[1]
+    bx, by = b[0] - v[0], b[1] - v[1]
+    na = (ax * ax + ay * ay) ** 0.5
+    nb = (bx * bx + by * by) ** 0.5
+    if na == 0 or nb == 0:
+        return 0.0
+    cos = (ax * bx + ay * by) / (na * nb)     # 1 = prosto, -1 = zawrot
+    k = (cos - COS_CORNER) / (COS_SMOOTH - COS_CORNER)
+    return t * (0.0 if k < 0 else (1.0 if k > 1 else k))
+
+
 def smooth_path(pts: list[tuple[float, float]], t: float = TENSION) -> str:
-    """Catmull-Rom przez wierzcholki -> zamknieta sciezka z krzywych szesciennych."""
+    """Catmull-Rom przez wierzcholki -> zamknieta sciezka z krzywych szesciennych.
+
+    Napiecie liczymy OSOBNO dla kazdego konca odcinka (`corner_tension`), zeby gladkie luki
+    zostaly gladkie, a ostre naroza - ostre.
+    """
     n = len(pts)
     f = lambda v: f"{v:.1f}".rstrip("0").rstrip(".")
     d = [f"M{f(pts[0][0])} {f(pts[0][1])}"]
     for i in range(n):
         p0, p1, p2, p3 = pts[(i - 1) % n], pts[i], pts[(i + 1) % n], pts[(i + 2) % n]
-        c1 = (p1[0] + (p2[0] - p0[0]) * t / 3, p1[1] + (p2[1] - p0[1]) * t / 3)
-        c2 = (p2[0] - (p3[0] - p1[0]) * t / 3, p2[1] - (p3[1] - p1[1]) * t / 3)
+        t1 = corner_tension(p0, p1, p2, t)
+        t2 = corner_tension(p1, p2, p3, t)
+        c1 = (p1[0] + (p2[0] - p0[0]) * t1 / 3, p1[1] + (p2[1] - p0[1]) * t1 / 3)
+        c2 = (p2[0] - (p3[0] - p1[0]) * t2 / 3, p2[1] - (p3[1] - p1[1]) * t2 / 3)
         d.append(f"C{f(c1[0])} {f(c1[1])} {f(c2[0])} {f(c2[1])} {f(p2[0])} {f(p2[1])}")
     return " ".join(d) + "Z"
 

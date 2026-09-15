@@ -43,56 +43,32 @@ OUT_TS = ROOT / "src/components/spontawayMarkPaths.ts"
 YELLOW = (253, 241, 133)   # tlo marki #FDF184
 ORANGE = (247, 87, 8)      # znak marki #F75708
 # Rampa alfy: ponizej LO piksel jest tlem, powyzej HI pelnym znakiem.
-LO, HI = 40.0, 140.0
+# ⚠️ Srodek rampy MUSI wypadac na prawdziwej krawedzi ksztaltu, czyli w polowie drogi miedzy
+# kolorami (odleglosc 142 z 285). Do 15.09 wieczorem bylo LO=40 HI=140, czyli alfa 128 lapala
+# sie juz przy odleglosci 90 = 32 % drogi - kazdy ksztalt wychodzil ROZDETY o szerokosc
+# rozmycia JPEG. Najbardziej bylo to widac na gwiazdce: grubsze ramiona i plytsze wciecia
+# („gwiazdka wyglada inaczej, jakby byla przerobiona" - Nat 2026-09-15).
+LO, HI = 110.0, 174.0
 
 
-def clean_two_tone(img: Image.Image, mask: Image.Image) -> Image.Image:
-    """Przemalowuje ikone na DOKLADNIE dwa kolory marki, z gladka krawedzia.
+def icon_from_mask(mask: Image.Image, size: int) -> Image.Image:
+    """Ikona w zadanym rozmiarze, zbudowana z ORYGINALNYCH pikseli logo Nat.
 
-    Po co: zrodlo to JPEG, wiec kazdy piksel jest "prawie" #F75708 (JPEG gubi +-2 na kanal),
-    a na styku znaku z tlem chroma 4:2:0 zostawia obwodke posrednich odcieni w rodzaju
-    (249,127,41) - przygaszonego pomaranczu. W pliku 1024 tego nie widac, ale obwodka biegnie
-    wzdluz CALEGO "S", wiec po przeskalowaniu do 180 px na ekranie domowym (i po szklanej
-    obrobce iOS-a) czyta sie jak poswiata albo gradient na znaku. Zgloszenie Nat 2026-09-15:
-    „S ma na sobie jakis gradient... w pliku ktory Ci przeslalam jest jednolite logo".
+    Ksztalt bierzemy z maski policzonej ze zrodla (patrz `alpha_from_yellow`), a nie z mojego
+    obrysu wektorowego - obrys jest przyblizeniem i na ikonie bylo to widac (Nat 2026-09-15:
+    „gwiazdka wyglada inaczej, jakby byla przerobiona"). Wektor zostaje tam, gdzie musi:
+    na ekranie ladowania, ktory animuje gwiazdke osobno od "S".
 
-    Kazdy piksel liczymy wiec od nowa jako mieszanke DOKLADNIE `YELLOW` i `ORANGE` wedlug
-    maski - antyaliasing krawedzi zostaje, ale zaden inny odcien juz w pliku nie istnieje.
+    Pomniejszamy MASKE (krycie), nie gotowy obrazek, i robimy to filtrem `BOX`, czyli
+    usrednieniem pola. To jest wlasciwy antyaliasing i - w przeciwienstwie do LANCZOSA -
+    nie przestrzeliwuje poza oba kolory, wiec w pliku nie powstaje ciemny rant wzdluz znaku.
+    Kolor skladamy DOPIERO po pomniejszeniu, wiec kazdy piksel lezy dokladnie na odcinku
+    zolty-pomarancz.
     """
-    w, h = mask.size
-    mp = mask.load()
-    out = Image.new("RGB", (w, h))
-    op = out.load()
-    # Tablica 256 gotowych mieszanek - szybciej niz liczyc kolor per piksel.
-    ramp = [tuple(round(YELLOW[c] + (ORANGE[c] - YELLOW[c]) * (a / 255)) for c in range(3))
-            for a in range(256)]
-    for y in range(h):
-        for x in range(w):
-            op[x, y] = ramp[mp[x, y]]
+    cov = mask if mask.size == (size, size) else mask.resize((size, size), Image.BOX)
+    out = Image.new("RGB", (size, size), YELLOW)
+    out.paste(Image.new("RGB", (size, size), ORANGE), (0, 0), cov)
     return out
-
-
-def resize_two_tone(icon: Image.Image, size: int) -> Image.Image:
-    """Przeskalowanie, po ktorym w pliku NADAL sa tylko kolory marki.
-
-    ⚠️ Sam LANCZOS nie wystarcza: to filtr wyostrzajacy, wiec na twardej granicy dwoch
-    kolorow PRZESTRZELIWUJE (ringing). Przy skalowaniu 1024 -> 180 dawal np. (247,77,0) -
-    pomarancz CIEMNIEJSZY niz marka - i to tuz przy krawedzi, wzdluz calego "S". Taka
-    obwodka to dokladnie to, co widac na ekranie domowym jako poswiata na znaku.
-
-    Dlatego po przeskalowaniu rzutujemy kazdy piksel z powrotem NA ODCINEK zolty-pomarancz.
-    Udzial liczymy z kanalu ZIELONEGO, bo ma najwiekszy rozrzut (241 -> 87), wiec jest
-    najmniej wrazliwy na zaokraglenia.
-    """
-    im = icon.resize((size, size), Image.LANCZOS)
-    px = im.load()
-    g0, g1 = YELLOW[1], ORANGE[1]
-    for y in range(size):
-        for x in range(size):
-            t = (px[x, y][1] - g0) / (g1 - g0)
-            t = 0.0 if t < 0 else (1.0 if t > 1 else t)
-            px[x, y] = tuple(round(YELLOW[c] + (ORANGE[c] - YELLOW[c]) * t) for c in range(3))
-    return im
 
 
 # Komplet rozmiarow ikony iOS: (idiom, punkty, skala). Podajemy WSZYSTKIE, zeby `actool`
@@ -106,7 +82,7 @@ IOS_ICON_SIZES = [
 ]
 
 
-def write_ios_iconset(icon: Image.Image, icc: bytes) -> int:
+def write_ios_iconset(mask: Image.Image, icc: bytes) -> int:
     """Zapisuje KOMPLET rozmiarow ikony iOS + `Contents.json`.
 
     ⚠️ Po co, skoro Xcode umie zrobic rozmiary z jednego mastera 1024: bo robi to RINGUJACYM
@@ -115,8 +91,7 @@ def write_ios_iconset(icon: Image.Image, icc: bytes) -> int:
     i jasniejsze (253,248,138) tuz obok niej. Ciemny rant biegnacy wzdluz calego znaku czyta
     sie na ekranie domowym jak cieniowanie - to jest ten „gradient na S" zgloszony przez Nat
     2026-09-15. Gdy KAZDY rozmiar jest w katalogu gotowy, `actool` tylko go kopiuje i nie ma
-    czego przestrzelic (skalujemy sami przez `resize_two_tone`, ktore rzutuje piksele na
-    odcinek zolty-pomarancz).
+    czego przestrzelic - kazdy rozmiar skladamy sami przez `icon_from_mask`.
     """
     for f in IOS_ICON.glob("*.png"):
         f.unlink()
@@ -125,7 +100,7 @@ def write_ios_iconset(icon: Image.Image, icc: bytes) -> int:
         px = int(round(pts * scale))
         name = f"AppIcon-{px}.png"
         if px not in made:
-            (icon if px == 1024 else resize_two_tone(icon, px)).save(IOS_ICON / name, icc_profile=icc)
+            icon_from_mask(mask, px).save(IOS_ICON / name, icc_profile=icc)
             made[px] = name
         pt = f"{pts:g}x{pts:g}"
         images.append({"filename": made[px], "idiom": idiom, "scale": f"{scale}x", "size": pt})
@@ -197,26 +172,8 @@ def main() -> None:
     src = Image.open(SRC).convert("RGB")
     assert src.size == (1024, 1024), f"zrodlo ma byc 1024x1024, jest {src.size}"
 
-    mask = alpha_from_yellow(src)
-    # ⛔ Ikona NIE jest kopia JPEG-a - przemalowujemy ja na dwa dokladne kolory marki, zeby
-    # nie wiozla obwodki artefaktow JPEG wzdluz znaku (patrz `clean_two_tone`).
-    icon = clean_two_tone(src, mask)
-    # sRGB w metadanych: bez profilu iOS i actool musza ZGADYWAC przestrzen barw.
-    srgb = ImageCms.createProfile("sRGB")
-    icc = ImageCms.ImageCmsProfile(srgb).tobytes()
-
-    for name, size in (("App icon IOS.png", 1024), ("icon-512.png", 512), ("icon-192.png", 192),
-                       ("apple-touch-icon.png", 180), ("favicon.png", 48),
-                       # Domyslny awatar = ta sama ikona (`DEFAULT_AVATAR` w src/lib/avatar.ts).
-                       # To NIE sa presety awatarow - te sa same kolory, bez znaku (decyzja Nat).
-                       ("Avatar_Trasa.png", 512)):
-        im = icon if size == 1024 else resize_two_tone(icon, size)
-        im.save(PUBLIC / name, icc_profile=icc)
-    resize_two_tone(icon, 48).save(PUBLIC / "favicon.ico", sizes=[(48, 48), (32, 32), (16, 16)])
-    IOS_ICON.mkdir(parents=True, exist_ok=True)
-    n_ios = write_ios_iconset(icon, icc)
-
     # ── Sciezki znaku, wszystkie w JEDNYM ukladzie wspolrzednych (bbox calego znaku) ──
+    mask = alpha_from_yellow(src)
     s_mask, star_mask = split_components(mask)
     (mx0, my0, mx1, my1) = mask.getbbox()
     (sx0, sy0, sx1, sy1) = s_mask.getbbox()
@@ -225,6 +182,20 @@ def main() -> None:
 
     s_path = trace_alpha(layer(s_mask).crop((sx0, sy0, sx1, sy1)), (sx0 - mx0, sy0 - my0))
     star_path = trace_alpha(layer(star_mask).crop((tx0, ty0, tx1, ty1)), (tx0 - mx0, ty0 - my0))
+
+    # ── Ikona: z ORYGINALNYCH pikseli Nat (patrz `icon_from_mask`) ──
+    # sRGB w metadanych: bez profilu iOS i actool musza ZGADYWAC przestrzen barw.
+    icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+
+    for name, size in (("App icon IOS.png", 1024), ("icon-512.png", 512), ("icon-192.png", 192),
+                       ("apple-touch-icon.png", 180), ("favicon.png", 48),
+                       # Domyslny awatar = ta sama ikona (`DEFAULT_AVATAR` w src/lib/avatar.ts).
+                       # To NIE sa presety awatarow - te sa same kolory, bez znaku (decyzja Nat).
+                       ("Avatar_Trasa.png", 512)):
+        icon_from_mask(mask, size).save(PUBLIC / name, icc_profile=icc)
+    icon_from_mask(mask, 48).save(PUBLIC / "favicon.ico", sizes=[(48, 48), (32, 32), (16, 16)])
+    IOS_ICON.mkdir(parents=True, exist_ok=True)
+    n_ios = write_ios_iconset(mask, icc)
 
     OUT_TS.write_text(f'''// WYGENEROWANE przez scripts/gen_app_icon.py z public/Logo_Spontaway.jpg - NIE edytuj recznie.
 //
