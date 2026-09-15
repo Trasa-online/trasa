@@ -19,6 +19,7 @@ import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import PermissionPrimerSheet from "@/components/permissions/PermissionPrimerSheet";
 import { businessPanelPath } from "@/lib/businessRedirect";
+import { fetchMyVenues, pickVenue } from "@/lib/businessVenues";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OnboardingProvider } from "@/components/OnboardingGuide";
 import UpdateGate from "@/components/UpdateGate";
@@ -596,12 +597,14 @@ function SplashController() {
           .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
         if (adminRow) return;
 
-        const { data: bp } = await (supabase as any)
-          .from("business_profiles").select("place_id, id, is_draft").eq("owner_user_id", user.id).maybeSingle();
-        // Draft profile (z /biznes/start, jeszcze nie upgraded) NIE wymusza redirectu -
-        // user moze przyjsc na strone konsumencka mimo niedokonczonego draftu.
-        if (bp?.is_draft) return;
-        if (bp?.id) navigate(await businessPanelPath(user.id, bp), { replace: true });
+        // ⚠️ NIE `.maybeSingle()`: wlasciciel moze miec KILKA lokali, a przy dwoch wierszach
+        // PostgREST oddaje blad zamiast wiersza - taki lokal nie trafialby do panelu wcale.
+        const venues = await fetchMyVenues();
+        const bp = pickVenue(venues);
+        // Szkic (z /biznes/start, jeszcze nie dokonczony) NIE wymusza redirectu - user moze
+        // przyjsc na strone konsumencka mimo niedokonczonego szkicu.
+        if (!bp || bp.is_draft) return;
+        navigate(await businessPanelPath(user.id, bp), { replace: true });
       } finally {
         setBootDone(true);
       }
@@ -679,12 +682,13 @@ function BusinessGuard() {
         .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
       if (adminRow) return;
 
-      const { data: bp } = await (supabase as any)
-        .from("business_profiles").select("place_id, id, is_draft").eq("owner_user_id", user.id).maybeSingle();
-      // Draft profile NIE wymusza redirectu - jezeli user nie dokonczyl flow
-      // upgrade z /biznes/start, to nie blokujemy mu apki konsumenckiej.
-      if (bp?.is_draft) return;
-      if (bp?.id) navigate(await businessPanelPath(user.id, bp), { replace: true });
+      // Jak wyzej: lista lokali, nie pojedynczy wiersz.
+      const venues = await fetchMyVenues();
+      const bp = pickVenue(venues);
+      // Szkic NIE wymusza redirectu - nie blokujemy apki konsumenckiej komus,
+      // kto nie dokonczyl zakladania lokalu.
+      if (!bp || bp.is_draft) return;
+      navigate(await businessPanelPath(user.id, bp), { replace: true });
     })();
   }, [user, location.pathname]);
 

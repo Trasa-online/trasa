@@ -554,6 +554,25 @@
     "premium": {
       "copy": "Odblokuj pełną analitykę, wydarzenia i powiadomienia push dla gości.",
       "cta": "Przejdź na Premium"
+    },
+    "venues": {
+      "count_one": "1 lokal",
+      "count_few": "{{count}} lokale",
+      "count_many": "{{count}} lokali",
+      "draft": "szkic, niedokończony",
+      "hidden": "schowana z aplikacji",
+      "add": "Dodaj kolejny lokal"
     }
+  },
+  "venues": {
+    "add_title": "Dodaj kolejny lokal",
+    "add_hint": "Zakładamy samą wizytówkę na tym samym koncie. Resztę danych uzupełnisz w sekcji Wizytówka.",
+    "name_label": "Nazwa lokalu",
+    "name_placeholder": "Kawiarnia Bajka - Nadodrze",
+    "phone_label": "Telefon (opcjonalnie)",
+    "create": "Dodaj lokal",
+    "creating": "Dodaję…",
+    "created": "„{{name}}” dodany. Uzupełnij wizytówkę, żeby goście go zobaczyli.",
+    "create_error": "Nie udało się dodać lokalu."
   }
 }

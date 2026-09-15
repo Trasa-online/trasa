@@ -49,6 +49,7 @@ import { SettingsSection } from "@/components/business/dashboard/SettingsSection
 import { GuestInsights } from "@/components/business/dashboard/GuestInsights";
 import { EventsSection } from "@/components/business/dashboard/EventsSection";
 import { ListingPreviewCard } from "@/components/business/dashboard/ListingPreviewCard";
+import { fetchMyVenues, createVenue, rememberVenue, type OwnedVenue } from "@/lib/businessVenues";
 import { ThanksButton } from "@/components/business/dashboard/ThanksButton";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
@@ -559,6 +560,13 @@ const BusinessDashboard = () => {
   // Edycja inline istniejacego wydarzenia (tylko nadchodzace/aktywne).
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [eventsTab, setEventsTab] = useState<"upcoming" | "past">("upcoming");
+  // Wlasciciel moze miec KILKA lokali (2026-09-15). Panel trzyma ich liste do przelacznika,
+  // a otwarty lokal zapamietuje, zeby nastepne logowanie wrocilo tam, gdzie skonczyl.
+  const [venues, setVenues] = useState<OwnedVenue[]>([]);
+  const [addVenueOpen, setAddVenueOpen] = useState(false);
+  const [newVenueName, setNewVenueName] = useState("");
+  const [newVenuePhone, setNewVenuePhone] = useState("");
+  const [creatingVenue, setCreatingVenue] = useState(false);
   const [addEventOpen, setAddEventOpen] = useState(false);
   const [editEventTitle, setEditEventTitle] = useState("");
   const [editEventDescription, setEditEventDescription] = useState("");
@@ -1753,6 +1761,43 @@ const BusinessDashboard = () => {
     return true;
   };
 
+  // Lista lokali wlasciciela - zrodlo przelacznika w bocznej nawigacji.
+  const reloadVenues = useCallback(async () => {
+    if (!user) { setVenues([]); return; }
+    setVenues(await fetchMyVenues());
+  }, [user]);
+
+  useEffect(() => { void reloadVenues(); }, [reloadVenues]);
+
+  // Zapamietujemy OTWARTY lokal, a nie "pierwszy z listy" - wlasciciel dwoch lokali wraca
+  // po zalogowaniu tam, gdzie ostatnio pracowal.
+  useEffect(() => { if (placeId) rememberVenue(placeId); }, [placeId]);
+
+  const switchVenue = (key: string) => {
+    rememberVenue(key);
+    navigate(`/biznes/${key}`);
+  };
+
+  const addVenue = async () => {
+    const name = newVenueName.trim();
+    if (!name) return;
+    setCreatingVenue(true);
+    try {
+      const id = await createVenue(name, newVenuePhone.trim() || undefined);
+      await reloadVenues();
+      setAddVenueOpen(false);
+      setNewVenueName("");
+      setNewVenuePhone("");
+      toast.success(t("venues.created", { name }));
+      // Nowy lokal nie ma jeszcze `place_id`, wiec adres panelu idzie po id wizytowki.
+      switchVenue(id);
+    } catch (e: any) {
+      toast.error(e?.message || t("venues.create_error"));
+    } finally {
+      setCreatingVenue(false);
+    }
+  };
+
   const handlePasswordReset = async () => {
     if (!user?.email) {
       toast.error(t("password.no_email"));
@@ -1937,6 +1982,10 @@ const BusinessDashboard = () => {
         onLogout={handleLogout}
         onSupport={() => setShowSupportModal(true)}
         onUpgrade={() => setShowSupportModal(true)}
+        venues={venues}
+        currentVenueKey={placeId}
+        onSwitchVenue={switchVenue}
+        onAddVenue={() => setAddVenueOpen(true)}
       >
 
           {/* Banners (always visible) */}
@@ -2592,6 +2641,66 @@ const BusinessDashboard = () => {
           </div>
         </div>
       )}
+      {/* ── Kolejny lokal tego samego wlasciciela ──
+          Zakladamy SAMA wizytowke: konto juz istnieje i jest potwierdzone, wiec nie ma tu
+          maila aktywacyjnego ani hasla. Reszte danych lokal uzupelnia w sekcji Wizytowka. */}
+      {addVenueOpen && (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true">
+          <div className="w-full rounded-t-3xl bg-white p-6 sm:max-w-[420px] sm:rounded-3xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-black text-slate-900">{t("venues.add_title")}</h2>
+                <p className="mt-1 text-[13px] leading-snug text-slate-500">{t("venues.add_hint")}</p>
+              </div>
+              <button type="button" onClick={() => setAddVenueOpen(false)} aria-label={t("shell.close")} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-50">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-4 flex flex-col gap-3">
+              <label className="block">
+                <span className="mb-1.5 block text-[13px] font-semibold text-slate-700">{t("venues.name_label")}</span>
+                <input
+                  value={newVenueName}
+                  onChange={(e) => setNewVenueName(e.target.value)}
+                  maxLength={80}
+                  autoFocus
+                  placeholder={t("venues.name_placeholder")}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[14px] text-slate-900 outline-none focus:border-primary focus:bg-white"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[13px] font-semibold text-slate-700">{t("venues.phone_label")}</span>
+                <input
+                  value={newVenuePhone}
+                  onChange={(e) => setNewVenuePhone(e.target.value)}
+                  maxLength={20}
+                  type="tel"
+                  placeholder="+48 500 000 000"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[14px] text-slate-900 outline-none focus:border-primary focus:bg-white"
+                />
+              </label>
+              <div className="mt-1 flex gap-2">
+                <button
+                  type="button"
+                  onClick={addVenue}
+                  disabled={creatingVenue || !newVenueName.trim()}
+                  className="flex-1 rounded-full bg-primary py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                >
+                  {creatingVenue ? t("venues.creating") : t("venues.create")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddVenueOpen(false)}
+                  className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  {t("category.cancel")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Kategorie w dwoch krokach (model: 2 glowne + 3 podkategorie) ── */}
       <CategoryPickerModal
         open={categoryPickerOpen}

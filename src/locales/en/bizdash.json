@@ -553,6 +553,24 @@
     "premium": {
       "copy": "Unlock full analytics, events and push notifications for guests.",
       "cta": "Go Premium"
+    },
+    "venues": {
+      "count_one": "1 venue",
+      "count_other": "{{count}} venues",
+      "draft": "draft, unfinished",
+      "hidden": "hidden from the app",
+      "add": "Add another venue"
     }
+  },
+  "venues": {
+    "add_title": "Add another venue",
+    "add_hint": "This creates a listing on the same account. You fill in the rest in the Listing section.",
+    "name_label": "Venue name",
+    "name_placeholder": "Bajka Cafe - Nadodrze",
+    "phone_label": "Phone (optional)",
+    "create": "Add venue",
+    "creating": "Adding…",
+    "created": "“{{name}}” added. Fill in the listing so guests can see it.",
+    "create_error": "The venue could not be added."
   }
 }

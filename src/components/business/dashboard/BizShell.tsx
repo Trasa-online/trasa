@@ -8,10 +8,11 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, Store, BookOpen, CalendarDays, MessageSquareQuote, Images, Settings,
-  Bell, LogOut, ChevronDown, Loader2, Check, MoreHorizontal, X,
+  Bell, LogOut, ChevronDown, Loader2, Check, MoreHorizontal, X, Plus,
 } from "lucide-react";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { markBusinessLangChoice } from "@/lib/businessLanguage";
+import { venueKey, type OwnedVenue } from "@/lib/businessVenues";
 import i18n from "@/i18n";
 
 export type BizSection = "overview" | "profile" | "menu" | "posts" | "community" | "gallery" | "settings";
@@ -51,6 +52,12 @@ export interface BizShellProps {
   onLogout: () => void;
   onSupport: () => void;
   onUpgrade: () => void;
+  /** Wszystkie lokale wlasciciela. Jeden lokal = przelacznik pokazuje sama nazwe. */
+  venues?: OwnedVenue[];
+  /** Klucz otwartego lokalu (place_id albo id wizytowki - to samo, co w adresie). */
+  currentVenueKey?: string;
+  onSwitchVenue?: (key: string) => void;
+  onAddVenue?: () => void;
   children: ReactNode;
 }
 
@@ -81,18 +88,16 @@ export function BizShell(props: BizShellProps) {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => props.onSelect("profile")}
-          className="mb-4 flex w-full items-center gap-2.5 rounded-xl border border-slate-200 p-2.5 text-left transition-colors hover:bg-slate-50"
-        >
-          <Avatar />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-bold text-slate-900">{props.businessName || t("business_name_fallback")}</span>
-            {props.city ? <span className="block truncate text-xs text-slate-400">{props.city}</span> : null}
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
-        </button>
+        <VenueSwitcher
+          businessName={props.businessName || t("business_name_fallback")}
+          city={props.city}
+          avatar={<Avatar />}
+          venues={props.venues ?? []}
+          currentKey={props.currentVenueKey}
+          onSwitch={props.onSwitchVenue}
+          onAdd={props.onAddVenue}
+          onOpenProfile={() => props.onSelect("profile")}
+        />
 
         <nav className="flex flex-col gap-0.5">
           {ORDER.map((id) => {
@@ -265,6 +270,82 @@ export function BizShell(props: BizShellProps) {
             ) : null}
           </div>
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Przelacznik lokali. Wlasciciel kilku lokali przelacza sie tutaj, a nie przez adres URL.
+// Jeden lokal = ta sama karta, tylko bez listy - zeby nie sugerowac wyboru, ktorego nie ma.
+function VenueSwitcher({ businessName, city, avatar, venues, currentKey, onSwitch, onAdd, onOpenProfile }: {
+  businessName: string;
+  city?: string | null;
+  avatar: ReactNode;
+  venues: OwnedVenue[];
+  currentKey?: string;
+  onSwitch?: (key: string) => void;
+  onAdd?: () => void;
+  onOpenProfile: () => void;
+}) {
+  const { t } = useTranslation("bizdash");
+  const [open, setOpen] = useState(false);
+  const many = venues.length > 1;
+
+  return (
+    <div className="relative mb-4">
+      <button
+        type="button"
+        onClick={() => (many || onAdd ? setOpen((v) => !v) : onOpenProfile())}
+        className="flex w-full items-center gap-2.5 rounded-xl border border-slate-200 p-2.5 text-left transition-colors hover:bg-slate-50"
+      >
+        {avatar}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold text-slate-900">{businessName}</span>
+          <span className="block truncate text-xs text-slate-400">
+            {many ? t("shell.venues.count", { count: venues.length }) : city || ""}
+          </span>
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open ? (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute inset-x-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+            {venues.map((v) => {
+              const key = venueKey(v);
+              const on = key === currentKey;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => { setOpen(false); if (!on) onSwitch?.(key); }}
+                  className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${on ? "bg-slate-50" : "hover:bg-slate-50"}`}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold text-slate-900">
+                      {v.business_name || t("business_name_fallback")}
+                    </span>
+                    <span className="block truncate text-[11px] text-slate-400">
+                      {v.is_draft ? t("shell.venues.draft") : !v.is_active ? t("shell.venues.hidden") : v.city || ""}
+                    </span>
+                  </span>
+                  {on ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
+                </button>
+              );
+            })}
+            {onAdd ? (
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onAdd(); }}
+                className="mt-1 flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2.5 text-left text-[13px] font-bold text-primary"
+              >
+                <Plus className="h-4 w-4" />
+                {t("shell.venues.add")}
+              </button>
+            ) : null}
+          </div>
+        </>
       ) : null}
     </div>
   );
