@@ -12,7 +12,7 @@ Co powstaje:
   public/favicon.png                   48
   public/favicon.ico                   48  - stare przegladarki i zakladki
   public/Avatar_Trasa.png             512  - domyslny awatar = ta sama ikona (DEFAULT_AVATAR)
-  ios/.../AppIcon-512@2x.png         1024  - ikona iOS
+  ios/.../AppIcon-<px>.png                 - KOMPLET rozmiarow iOS + Contents.json
   src/components/spontawayMarkPaths.ts     - "S" i gwiazdka jako SCIEZKI, w jednym ukladzie
 
 ⛔ Splash (`ios/.../Splash.imageset`) NIE jest tu generowany: od 2026-09-01 natywny ekran
@@ -29,8 +29,9 @@ artefakty kompresji, a rampa daje gladki brzeg przed obrysem.
 
 Uruchomienie:  python3 scripts/gen_app_icon.py
 """
+import json
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageCms
 from trace_mark_svg import trace_alpha
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,8 +41,97 @@ IOS_ICON = ROOT / "ios/App/App/Assets.xcassets/AppIcon.appiconset"
 OUT_TS = ROOT / "src/components/spontawayMarkPaths.ts"
 
 YELLOW = (253, 241, 133)   # tlo marki #FDF184
+ORANGE = (247, 87, 8)      # znak marki #F75708
 # Rampa alfy: ponizej LO piksel jest tlem, powyzej HI pelnym znakiem.
 LO, HI = 40.0, 140.0
+
+
+def clean_two_tone(img: Image.Image, mask: Image.Image) -> Image.Image:
+    """Przemalowuje ikone na DOKLADNIE dwa kolory marki, z gladka krawedzia.
+
+    Po co: zrodlo to JPEG, wiec kazdy piksel jest "prawie" #F75708 (JPEG gubi +-2 na kanal),
+    a na styku znaku z tlem chroma 4:2:0 zostawia obwodke posrednich odcieni w rodzaju
+    (249,127,41) - przygaszonego pomaranczu. W pliku 1024 tego nie widac, ale obwodka biegnie
+    wzdluz CALEGO "S", wiec po przeskalowaniu do 180 px na ekranie domowym (i po szklanej
+    obrobce iOS-a) czyta sie jak poswiata albo gradient na znaku. Zgloszenie Nat 2026-09-15:
+    „S ma na sobie jakis gradient... w pliku ktory Ci przeslalam jest jednolite logo".
+
+    Kazdy piksel liczymy wiec od nowa jako mieszanke DOKLADNIE `YELLOW` i `ORANGE` wedlug
+    maski - antyaliasing krawedzi zostaje, ale zaden inny odcien juz w pliku nie istnieje.
+    """
+    w, h = mask.size
+    mp = mask.load()
+    out = Image.new("RGB", (w, h))
+    op = out.load()
+    # Tablica 256 gotowych mieszanek - szybciej niz liczyc kolor per piksel.
+    ramp = [tuple(round(YELLOW[c] + (ORANGE[c] - YELLOW[c]) * (a / 255)) for c in range(3))
+            for a in range(256)]
+    for y in range(h):
+        for x in range(w):
+            op[x, y] = ramp[mp[x, y]]
+    return out
+
+
+def resize_two_tone(icon: Image.Image, size: int) -> Image.Image:
+    """Przeskalowanie, po ktorym w pliku NADAL sa tylko kolory marki.
+
+    ⚠️ Sam LANCZOS nie wystarcza: to filtr wyostrzajacy, wiec na twardej granicy dwoch
+    kolorow PRZESTRZELIWUJE (ringing). Przy skalowaniu 1024 -> 180 dawal np. (247,77,0) -
+    pomarancz CIEMNIEJSZY niz marka - i to tuz przy krawedzi, wzdluz calego "S". Taka
+    obwodka to dokladnie to, co widac na ekranie domowym jako poswiata na znaku.
+
+    Dlatego po przeskalowaniu rzutujemy kazdy piksel z powrotem NA ODCINEK zolty-pomarancz.
+    Udzial liczymy z kanalu ZIELONEGO, bo ma najwiekszy rozrzut (241 -> 87), wiec jest
+    najmniej wrazliwy na zaokraglenia.
+    """
+    im = icon.resize((size, size), Image.LANCZOS)
+    px = im.load()
+    g0, g1 = YELLOW[1], ORANGE[1]
+    for y in range(size):
+        for x in range(size):
+            t = (px[x, y][1] - g0) / (g1 - g0)
+            t = 0.0 if t < 0 else (1.0 if t > 1 else t)
+            px[x, y] = tuple(round(YELLOW[c] + (ORANGE[c] - YELLOW[c]) * t) for c in range(3))
+    return im
+
+
+# Komplet rozmiarow ikony iOS: (idiom, punkty, skala). Podajemy WSZYSTKIE, zeby `actool`
+# nie musial niczego przeskalowywac - patrz `write_ios_iconset`.
+IOS_ICON_SIZES = [
+    ("iphone", 20, 2), ("iphone", 20, 3), ("iphone", 29, 2), ("iphone", 29, 3),
+    ("iphone", 40, 2), ("iphone", 40, 3), ("iphone", 60, 2), ("iphone", 60, 3),
+    ("ipad", 20, 1), ("ipad", 20, 2), ("ipad", 29, 1), ("ipad", 29, 2),
+    ("ipad", 40, 1), ("ipad", 40, 2), ("ipad", 76, 1), ("ipad", 76, 2), ("ipad", 83.5, 2),
+    ("ios-marketing", 1024, 1),
+]
+
+
+def write_ios_iconset(icon: Image.Image, icc: bytes) -> int:
+    """Zapisuje KOMPLET rozmiarow ikony iOS + `Contents.json`.
+
+    ⚠️ Po co, skoro Xcode umie zrobic rozmiary z jednego mastera 1024: bo robi to RINGUJACYM
+    resamplerem. Przy katalogu z jednym plikiem `actool` oddawal ikone 120 px, w ktorej 899
+    pikseli lezalo POZA kolorami marki - ciemniejsze (247,81,3) tuz WEWNATRZ krawedzi "S"
+    i jasniejsze (253,248,138) tuz obok niej. Ciemny rant biegnacy wzdluz calego znaku czyta
+    sie na ekranie domowym jak cieniowanie - to jest ten „gradient na S" zgloszony przez Nat
+    2026-09-15. Gdy KAZDY rozmiar jest w katalogu gotowy, `actool` tylko go kopiuje i nie ma
+    czego przestrzelic (skalujemy sami przez `resize_two_tone`, ktore rzutuje piksele na
+    odcinek zolty-pomarancz).
+    """
+    for f in IOS_ICON.glob("*.png"):
+        f.unlink()
+    images, made = [], {}
+    for idiom, pts, scale in IOS_ICON_SIZES:
+        px = int(round(pts * scale))
+        name = f"AppIcon-{px}.png"
+        if px not in made:
+            (icon if px == 1024 else resize_two_tone(icon, px)).save(IOS_ICON / name, icc_profile=icc)
+            made[px] = name
+        pt = f"{pts:g}x{pts:g}"
+        images.append({"filename": made[px], "idiom": idiom, "scale": f"{scale}x", "size": pt})
+    (IOS_ICON / "Contents.json").write_text(json.dumps(
+        {"images": images, "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
+    return len(made)
 
 
 def alpha_from_yellow(img: Image.Image) -> Image.Image:
@@ -107,20 +197,26 @@ def main() -> None:
     src = Image.open(SRC).convert("RGB")
     assert src.size == (1024, 1024), f"zrodlo ma byc 1024x1024, jest {src.size}"
 
-    # ── Ikona: zrodlo JEST juz gotowa ikona (tlo + znak), wiec tylko przeskalowania ──
-    src.save(PUBLIC / "App icon IOS.png")
-    for name, size in (("icon-512.png", 512), ("icon-192.png", 192),
+    mask = alpha_from_yellow(src)
+    # ⛔ Ikona NIE jest kopia JPEG-a - przemalowujemy ja na dwa dokladne kolory marki, zeby
+    # nie wiozla obwodki artefaktow JPEG wzdluz znaku (patrz `clean_two_tone`).
+    icon = clean_two_tone(src, mask)
+    # sRGB w metadanych: bez profilu iOS i actool musza ZGADYWAC przestrzen barw.
+    srgb = ImageCms.createProfile("sRGB")
+    icc = ImageCms.ImageCmsProfile(srgb).tobytes()
+
+    for name, size in (("App icon IOS.png", 1024), ("icon-512.png", 512), ("icon-192.png", 192),
                        ("apple-touch-icon.png", 180), ("favicon.png", 48),
                        # Domyslny awatar = ta sama ikona (`DEFAULT_AVATAR` w src/lib/avatar.ts).
                        # To NIE sa presety awatarow - te sa same kolory, bez znaku (decyzja Nat).
                        ("Avatar_Trasa.png", 512)):
-        src.resize((size, size), Image.LANCZOS).save(PUBLIC / name)
-    src.resize((48, 48), Image.LANCZOS).save(PUBLIC / "favicon.ico", sizes=[(48, 48), (32, 32), (16, 16)])
+        im = icon if size == 1024 else resize_two_tone(icon, size)
+        im.save(PUBLIC / name, icc_profile=icc)
+    resize_two_tone(icon, 48).save(PUBLIC / "favicon.ico", sizes=[(48, 48), (32, 32), (16, 16)])
     IOS_ICON.mkdir(parents=True, exist_ok=True)
-    src.save(IOS_ICON / "AppIcon-512@2x.png")
+    n_ios = write_ios_iconset(icon, icc)
 
     # ── Sciezki znaku, wszystkie w JEDNYM ukladzie wspolrzednych (bbox calego znaku) ──
-    mask = alpha_from_yellow(src)
     s_mask, star_mask = split_components(mask)
     (mx0, my0, mx1, my1) = mask.getbbox()
     (sx0, sy0, sx1, sy1) = s_mask.getbbox()
@@ -152,7 +248,7 @@ export const MARK_STAR_PATH =
 export const MARK_STAR_BOX = {{ x: {tx0 - mx0}, y: {ty0 - my0}, w: {tx1 - tx0}, h: {ty1 - ty0} }};
 ''')
 
-    print(f"ikona:  1024/512/192/180/48 + iOS AppIcon")
+    print(f"ikona:  1024/512/192/180/48 + iOS AppIcon ({n_ios} rozmiarow, bez skalowania przez Xcode)")
     print(f"znak:   {mw}x{mh}  S={sx1-sx0}x{sy1-sy0} ({len(s_path)} zn.)  "
           f"gwiazdka={tx1-tx0}x{ty1-ty0} ({len(star_path)} zn.)")
     print(f"zapis:  {OUT_TS.relative_to(ROOT)}")
