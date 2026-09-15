@@ -105,10 +105,10 @@ const HASH_ROUTE_GUARD = `<script>(function(){
     document.documentElement.setAttribute("data-app-route", "1");
   }
 })();</script>
-    <style>html[data-app-route="1"] #root > *{display:none!important}</style>`;
+    <style>html[data-app-route="1"] #landing-snapshot{display:none!important}</style>`;
 
 function render(markupFor, metaFor, lang, canonical) {
-  let html = base.replace(rootTag[0], `<div id="root">${markupFor}</div>`);
+  let html = base.replace(rootTag[0], `<div id="root"><div id="landing-snapshot">${markupFor}</div></div>`);
   if (metaFor.title) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${metaFor.title}</title>`);
   html = html.replace(/<html([^>]*)\slang="[^"]*"/, "<html$1").replace(/<html/, `<html lang="${lang}"`);
   html = html.replace("</head>", `  <link rel="canonical" href="${canonical}" />\n    ${ALTERNATES}\n    ${HASH_ROUTE_GUARD}\n  </head>`);
