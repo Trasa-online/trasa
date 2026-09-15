@@ -24,6 +24,7 @@ function BizInput({ className, ...props }: React.ComponentProps<typeof Input>) {
 const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
+import type { TFunction } from "i18next";
 import { MAIN_CATEGORIES, readMainCategories, normalizeSubcategoryId, mainsFromSubs } from "@/lib/categories";
 import { resizeImage } from "@/lib/imageResize";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
@@ -44,6 +45,7 @@ import { BizShell, type BizSection } from "@/components/business/dashboard/BizSh
 import { OverviewSection, type CompletenessStep } from "@/components/business/dashboard/OverviewSection";
 import { ProfileSection } from "@/components/business/dashboard/ProfileSection";
 import { CategoryPickerModal } from "@/components/business/dashboard/CategoryPickerModal";
+import { SettingsSection } from "@/components/business/dashboard/SettingsSection";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { avatarSrc } from "@/lib/avatar";
@@ -120,6 +122,18 @@ interface Stats {
 type AnalyticsRange = '7d' | '30d' | '90d' | 'custom';
 interface ChartDay { date: string; views: number; routes: number; clicks: number; }
 interface HourlyBucket { hour: number; label: string; total: number; }
+
+// Naglowki sekcji panelu. Copy z makiety „Spokojny panel" - jedno zrodlo, bo te same
+// zdania pojawialy sie wczesniej w sekcji i w pigulce nawigacji, i rozjezdzaly sie.
+const SECTION_META: Record<BizSection, { title: (t: TFunction) => string; subtitle: (t: TFunction) => string }> = {
+  overview:  { title: (t) => t("shell.nav.overview"),  subtitle: (t) => t("overview.subtitle") },
+  profile:   { title: (t) => t("shell.nav.profile"),   subtitle: (t) => t("profile.subtitle") },
+  menu:      { title: (t) => t("shell.nav.menu"),      subtitle: (t) => t("menu.subtitle") },
+  posts:     { title: (t) => t("shell.nav.posts"),     subtitle: (t) => t("posts.subtitle") },
+  community: { title: (t) => t("shell.nav.community"), subtitle: (t) => t("community.subtitle") },
+  gallery:   { title: (t) => t("shell.nav.gallery"),   subtitle: (t) => t("gallery.subtitle") },
+  settings:  { title: (t) => t("shell.nav.settings"),  subtitle: (t) => t("settings.subtitle") },
+};
 
 const MAX_GALLERY = 10;
 const MAX_MENU_IMAGES = 6;
@@ -596,6 +610,9 @@ const BusinessDashboard = () => {
   const [convertingDraft, setConvertingDraft] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
+  // Zgody mailowe lokalu (kolumny notify_* - migracja 20260915e). Zapis od razu przy
+  // przelaczeniu: to zgoda, a nie pole formularza, wiec nie moze czekac na miekki zapis.
+  const [notifyPrefs, setNotifyPrefs] = useState({ newNote: true, weeklyDigest: true, news: false });
 
   // Posts state
   const [posts, setPosts] = useState<BusinessPost[]>([]);
@@ -766,6 +783,11 @@ const BusinessDashboard = () => {
     setCustomSubcategory((profileData as any).custom_subcategory ?? "");
     setCustomSubcategoryStatus((profileData as any).custom_subcategory_status ?? null);
     setDescription(profileData.description ?? "");
+    setNotifyPrefs({
+      newNote: (profileData as any).notify_new_note ?? true,
+      weeklyDigest: (profileData as any).notify_weekly_digest ?? true,
+      news: (profileData as any).notify_news ?? false,
+    });
     setLogoUrl(profileData.logo_url ?? "");
     setCoverImageUrl(profileData.cover_image_url ?? "");
     setCoverVideoUrl((profileData as any).cover_video_url ?? "");
@@ -1758,6 +1780,46 @@ const BusinessDashboard = () => {
   };
 
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  // Zmiana hasla BEZ maila z linkiem: najpierw potwierdzamy obecne haslo (Supabase nie ma
+  // osobnego "verify password", wiec logujemy sie nim jeszcze raz), potem ustawiamy nowe.
+  // Bez tego kroku kazdy, kto usiadzie przy otwartym panelu, zmienia lokalowi haslo.
+  const changePassword = async (currentPw: string, nextPw: string): Promise<string | null> => {
+    const mail = user?.email ?? profile?.email ?? "";
+    if (!mail) return t("settings.pw_wrong");
+    const { error: reauthErr } = await supabase.auth.signInWithPassword({ email: mail, password: currentPw });
+    if (reauthErr) return t("settings.pw_wrong");
+    const { error: updErr } = await supabase.auth.updateUser({ password: nextPw });
+    if (updErr) return updErr.message;
+    return null;
+  };
+
+  const saveNotifyPrefs = async (patch: Partial<typeof notifyPrefs>) => {
+    const next = { ...notifyPrefs, ...patch };
+    setNotifyPrefs(next);
+    if (!profile?.id) return;
+    const { error } = await (supabase as any).from("business_profiles").update({
+      notify_new_note: next.newNote,
+      notify_weekly_digest: next.weeklyDigest,
+      notify_news: next.news,
+    }).eq("id", profile.id);
+    if (error) {
+      setNotifyPrefs(notifyPrefs); // zgoda nie zapisana = przelacznik wraca, zeby nie klamal
+      toast.error(t("save.error", { msg: error.message }));
+    }
+  };
+
+  const submitReport = async (topic: string, body: string): Promise<boolean> => {
+    const { error } = await (supabase as any).from("bug_reports").insert({
+      user_id: user?.id ?? null,
+      description: `[Panel biznesowy - ${profile?.business_name ?? ""}] ${topic}\n\n${body}`,
+      status: "new",
+      source: "business",
+    });
+    if (error) { toast.error(t("support.error")); return false; }
+    toast.success(t("support.sent"));
+    return true;
+  };
+
   const handlePasswordReset = async () => {
     if (!user?.email) {
       toast.error(t("password.no_email"));
@@ -1914,6 +1976,8 @@ const BusinessDashboard = () => {
       )}
 
       <BizShell
+        title={SECTION_META[activeSection === 'analytics' ? 'overview' : activeSection].title(t)}
+        subtitle={SECTION_META[activeSection === 'analytics' ? 'overview' : activeSection].subtitle(t)}
         active={(activeSection === 'analytics' ? 'overview' : activeSection) as BizSection}
         onSelect={async (section) => {
           // Przejscie miedzy sekcjami dopina miekki zapis - inaczej lokal traci to,
@@ -1990,15 +2054,10 @@ const BusinessDashboard = () => {
 
           {activeSection === 'gallery' && (
             <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-black">{t("gallery.title")}</h2>
-                <p className="text-sm text-slate-400">{t("gallery.subtitle")}</p>
-              </div>
-
               <div className="flex flex-col lg:flex-row gap-5 items-start">
               <div className="flex-1 min-w-0 space-y-4">
               {/* ── SEKCJA 1: Okładka wizytówki (zdjęcie lub filmik) + Podgląd ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-foreground">{t("gallery.cover_title")}</p>
@@ -2073,7 +2132,7 @@ const BusinessDashboard = () => {
               </div>{/* end outer section card */}
 
               {/* ── SEKCJA 3: Galeria dodatkowa ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-foreground">{t("gallery.extra_title")}</p>
@@ -2217,10 +2276,9 @@ const BusinessDashboard = () => {
               : t('menu.hint_pricelist');
             return (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{menuLabel}</h2><p className="text-sm text-slate-400">{hint}</p></div>
               <div className="flex flex-col lg:flex-row gap-5 items-start">
                 <div className="flex-1 min-w-0">
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-sm font-bold text-foreground">{menuLabel} <span className="font-normal text-muted-foreground text-xs">{t("menu.max", { max: MAX_MENU_IMAGES })}</span></p>
                       <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
@@ -2274,12 +2332,11 @@ const BusinessDashboard = () => {
           {/* ── AKTUALNOŚCI ── */}
           {activeSection === 'posts' && (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{t("posts.title")}</h2><p className="text-sm text-slate-400">{t("posts.subtitle")}</p></div>
               <div className="flex flex-col lg:flex-row gap-5 items-start">
                 {/* Form */}
                 <div className="flex-1 space-y-5">
                   {/* Events */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.current_event")}</p>
                     <p className="text-xs text-muted-foreground -mt-2">{t("posts.event_desc")}</p>
                     <div className="space-y-1">
@@ -2310,7 +2367,7 @@ const BusinessDashboard = () => {
                     </div>
                   </div>
                   {/* Zaplanowane wydarzenia (kolejka + historia) */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.events_label")}</p>
                     <p className="text-xs text-muted-foreground -mt-2">{t("posts.events_desc")}</p>
                     {/* Formularz dodania */}
@@ -2461,7 +2518,6 @@ const BusinessDashboard = () => {
           {/* ── OD UŻYTKOWNIKÓW (notki + zdjęcia userów o tym miejscu) ── */}
           {activeSection === 'community' && (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{t("community.title")}</h2><p className="text-sm text-slate-400">{t("community.subtitle")}</p></div>
 
               {communityLoading ? (
                 <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-slate-300" /></div>
@@ -2474,7 +2530,7 @@ const BusinessDashboard = () => {
               ) : (
                 <div className="grid lg:grid-cols-2 gap-5 items-start">
                   {/* Notki */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t("community.notes_label", { count: communityNotes.length })}</p>
                     {communityNotes.length === 0 ? (
                       <p className="text-xs text-slate-400 py-4">{t("community.no_notes")}</p>
@@ -2505,7 +2561,7 @@ const BusinessDashboard = () => {
                     )}
                   </div>
                   {/* Zdjęcia */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t("community.photos_label", { count: communityPhotos.length })}</p>
                     {communityPhotos.length === 0 ? (
                       <p className="text-xs text-slate-400 py-4">{t("community.no_photos")}</p>
@@ -2544,28 +2600,27 @@ const BusinessDashboard = () => {
 
           {/* ── ANALITYKA ── */}
           {activeSection === 'settings' && (
-            <div className="space-y-5 max-w-lg">
-              <div>
-                <h2 className="text-lg font-black">{t("settings.title")}</h2>
-                <p className="text-sm text-slate-400">{t("settings.subtitle")}</p>
+            (!previewMode && !isDraft && user && (profile as any)?.owner_user_id === user.id) ? (
+              <SettingsSection
+                email={user.email ?? profile?.email ?? ""}
+                planLabel={PLAN_LABELS[plan]}
+                planHint={plan === 'basic' ? t("settings.plan_basic_hint") : t("settings.plan_premium_hint")}
+                isPremium={plan !== 'basic'}
+                prefs={notifyPrefs}
+                onPrefsChange={saveNotifyPrefs}
+                onChangePassword={changePassword}
+                onForgotPassword={handlePasswordReset}
+                forgotPending={resetPasswordLoading}
+                onSubmitReport={submitReport}
+                onUpgrade={() => setShowSupportModal(true)}
+                onSupport={() => setShowSupportModal(true)}
+                deleteAccount={<BusinessDeleteAccount />}
+              />
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <p className="text-sm text-slate-500">{t("settings.login_prompt")}</p>
               </div>
-              {(!previewMode && !isDraft && user && (profile as any)?.owner_user_id === user.id) ? (
-                <div className="space-y-3">
-                  <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                    <p className="text-sm font-semibold text-slate-700">{t("settings.logged_as")}</p>
-                    <p className="text-xs text-slate-400 mt-0.5 break-all">{user.email}</p>
-                  </div>
-                  <div>
-                    <BusinessDeleteAccount />
-                    <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">{t("settings.delete_hint")}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                  <p className="text-sm text-slate-500">{t("settings.login_prompt")}</p>
-                </div>
-              )}
-            </div>
+            )
           )}
 
           {activeSection === 'analytics' && (
@@ -2676,7 +2731,7 @@ const BusinessDashboard = () => {
                       { label: t('analytics.stat_addplan'), value: s.onRoutes, desc: t('analytics.addplan_desc'), icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                       { label: t('analytics.stat_clicks'), value: s.websiteClicks + s.phoneClicks, desc: t('analytics.clicks_desc', { www: s.websiteClicks, tel: s.phoneClicks }), icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     ].map(({ label, value, desc, icon: Icon, color, bg }) => (
-                      <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                      <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
                           <Icon className={`h-4 w-4 ${color}`} />
                         </div>
@@ -2690,7 +2745,7 @@ const BusinessDashboard = () => {
                   })()}
 
                   {/* Daily activity chart */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.activity_over_time")}</p>
                       <div className="flex items-center gap-3">
@@ -2760,7 +2815,7 @@ const BusinessDashboard = () => {
                     const peakHour = hourlyData.reduce((best, h) => h.total > best.total ? h : best, hourlyData[0] ?? { hour: -1, total: 0 });
                     const hasData = hourlyData.some(h => h.total > 0);
                     return (
-                      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5">
                         <div className="flex items-center justify-between mb-1">
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.hourly_title")}</p>
                           {hasData && !analyticsLoading && (
@@ -2837,7 +2892,7 @@ const BusinessDashboard = () => {
                   })()}
 
                   {/* Activity feed */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t("activity.title")}</p>
                     {recentEvents.length === 0 ? (
                       <p className="text-sm text-slate-400 text-center py-6">{t("activity.empty")}</p>
