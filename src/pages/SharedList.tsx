@@ -55,6 +55,7 @@ import { fetchCollectionMembers, collectionMembersKey } from "@/lib/collectionIn
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { fetchCollectionNotes, saveCollectionNote, collectionNotesKey } from "@/lib/collectionNotes";
+import { fetchCollectionPhotos, addCollectionPhoto, removeCollectionPhoto, photosByPlace, collectionPhotoKey, collectionPhotosKey } from "@/lib/collectionPhotos";
 import { notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { listTheme } from "@/lib/listThemes";
@@ -196,8 +197,11 @@ export default function SharedList() {
         return supabase.storage.from("route-images").getPublicUrl(path).data?.publicUrl ?? null;
       });
       urls.push(...added.filter((u): u is string => !!u));
+      // `images[]` zostaje dla okladek kafelkow i mostu do place_photos. Wspoltworca moze
+      // nie miec prawa do UPDATE na cudzej pozycji - to NIE jest blad, bo zrodlem prawdy dla
+      // widoku sa teraz `discovery_item_photos` nizej.
       const { error: upErr } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
-      if (upErr) { toast.error(t("toast.photo_add_failed")); return; }
+      if (upErr) console.warn("[SharedList] images[] nie zaktualizowane (zapewne wspoltworca):", upErr.message);
       // Zdjecie zyje tez w galerii MIEJSCA (place_photos) - inaczej widac je tylko na tej liscie,
       // a wizytowka miejsca i okladki w innych widokach o nim nie wiedza (zgloszenie Nat 2026-08-28).
       const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
@@ -224,6 +228,9 @@ export default function SharedList() {
       await Promise.all(fresh.map((photoUrl) => linkPhotoToPlace({
         userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl,
       })));
+      // Z AUTOREM - to z tego bierze sie awatar przy miniaturze i prawo do skasowania.
+      await Promise.all(fresh.map((photoUrl) => addCollectionPhoto(id!, item.place_name, user.id, photoUrl)));
+      queryClient.invalidateQueries({ queryKey: collectionPhotosKey(id) });
       queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
       // Zdjecie z miejsca = bylem tam - odhaczamy automatycznie (patrz markVisitedAuto).
       if (fresh.length) void markVisitedAuto(item);
@@ -233,11 +240,17 @@ export default function SharedList() {
   // Kasowalo BEZ SLOWA - ani toasta, ani drogi powrotu (zgloszenie Nat 2026-09-09). Plik
   // w Storage zostaje, zmieniamy tylko tablice `images` i wiersz galerii miejsca, wiec
   // "Cofnij" przywraca komplet.
-  const removeItemPhoto = async (item: any, url: string) => {
+  const removeItemPhoto = async (item: any, url: string, photoId?: string) => {
     const before: string[] = Array.isArray(item.images) ? item.images : [];
     const urls = before.filter((u: string) => u !== url);
+    // Wiersz z autorem (zrodlo prawdy dla widoku). RLS wpuszcza autora zdjecia i wlasciciela.
+    if (photoId) {
+      const ok = await removeCollectionPhoto(photoId);
+      if (!ok) { toast.error(t("toast.photo_delete_failed")); return; }
+      queryClient.invalidateQueries({ queryKey: collectionPhotosKey(id) });
+    }
     const { error } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
-    if (error) { toast.error(t("toast.photo_delete_failed")); return; }
+    if (error && !photoId) { toast.error(t("toast.photo_delete_failed")); return; }
     const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
     // Zdejmij tez z galerii miejsca (tylko wlasny wiersz - cudze zdjecia miejsca zostaja).
     if (user) await unlinkPhotoFromPlace({ userId: user.id, placeKey, photoUrl: url });
@@ -249,6 +262,9 @@ export default function SharedList() {
           void (async () => {
             await (supabase as any).from("discovery_items").update({ images: before }).eq("id", item.id);
             if (user) await linkPhotoToPlace({ userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl: url });
+            // Wiersz z autorem odtwarzamy na nowo (stary `id` juz nie istnieje).
+            if (user) await addCollectionPhoto(id!, item.place_name, user.id, url);
+            queryClient.invalidateQueries({ queryKey: collectionPhotosKey(id) });
             queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
             queryClient.invalidateQueries({ queryKey: ["place-photos"] });
           })();
@@ -396,6 +412,40 @@ export default function SharedList() {
       return data as { username: string | null; avatar_url: string | null } | null;
     },
   });
+
+  // ⛔ TE DWA HOOKI MUSZA STAC TU, NAD `if (isLoading) return ...` (linia nizej w pliku).
+  // Wyladowaly pierwotnie obok `isOwner`, czyli PO early-returnach - przez co przy pierwszym
+  // renderze (kolekcja jeszcze sie laduje) Reactowi ubywalo hookow i cala strona sie
+  // wywalala na "Cos sie zacielo" zaraz po utworzeniu kolekcji (zgloszenie Nat 2026-09-15).
+  // Ta sama pulapka, co przy hurtowym wstawianiu `t` (memory feedback_i18n_t_shadowing_pitfall):
+  // ani tsc, ani build tego nie lapia.
+  //
+  // WSPOLTWORCY: zaproszeni moga DODAWAC miejsca, a edytowac i usuwac tylko to, co sami
+  // dodali (`discovery_items.added_by`) - tak samo mowia polityki RLS w bazie.
+  const { data: memberIds = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionMembersKey(id),
+    enabled: !!id && !!user,
+    staleTime: 60_000,
+    queryFn: async () => (await fetchCollectionMembers(id!)).map((m) => m.user_id),
+  });
+  // Notki WSZYSTKICH uczestnikow: RLS wpuszcza kazdego, kto widzi kolekcje, wiec czytelnik
+  // publicznej kolekcji tez widzi caly watek - tak samo, jak przy opublikowanym wyjezdzie.
+  const { data: allNotes = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionNotesKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchCollectionNotes(id!),
+  });
+  const notesFor = notesByPlace(allNotes as any[]);
+  // Zdjecia uczestnikow przy miejscach - kazde z awatarem autora (prosba Nat 2026-09-15).
+  // Ten sam hook-porzadek co notki: NAD early-returnami.
+  const { data: allPhotos = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionPhotosKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchCollectionPhotos(id!),
+  });
+  const photosFor = photosByPlace(allPhotos as any[]);
 
   // Licznik wyswietlen (dedup per-urzadzenie, jak SharedRoute).
   useEffect(() => {
@@ -548,27 +598,7 @@ export default function SharedList() {
   const cityLabel = col.city || scopeLabel(col) || "";
   const authorName = author?.first_name || author?.username || col.author_name || t("someone");
   const isOwner = !!user && col.user_id === user.id;
-  // WSPOLTWORCY (2026-09-15): zaproszeni moga DODAWAC miejsca, a edytowac i usuwac tylko to,
-  // co sami dodali (`discovery_items.added_by`) - tak samo mowia polityki RLS w bazie, wiec
-  // UI nie obiecuje niczego, czego baza by nie przepuscila. Zmiana nazwy, tla, zasiegu
-  // i usuniecie CALEJ kolekcji zostaja przy wlascicielu.
-  const { data: memberIds = EMPTY_ARRAY } = useQuery({
-    queryKey: collectionMembersKey(col?.id),
-    enabled: !!col?.id && !!user,
-    staleTime: 60_000,
-    queryFn: async () => (await fetchCollectionMembers(col!.id)).map((m) => m.user_id),
-  });
   const isMember = !!user && (memberIds as string[]).includes(user.id);
-  // Notki WSZYSTKICH uczestnikow (prosba Nat 2026-09-15). RLS wpuszcza kazdego, kto widzi
-  // kolekcje, wiec czytelnik publicznej kolekcji tez widzi caly watek - tak samo, jak przy
-  // opublikowanym wyjezdzie.
-  const { data: allNotes = EMPTY_ARRAY } = useQuery({
-    queryKey: collectionNotesKey(id),
-    enabled: !!id,
-    staleTime: 30_000,
-    queryFn: () => fetchCollectionNotes(id!),
-  });
-  const notesFor = notesByPlace(allNotes as any[]);
   const canAddPlaces = isOwner || isMember;
   const canEditItem = (it: any) => isOwner || (isMember && it?.added_by === user?.id);
   const placesCountLabel = t("places_count", { count: items.length });
@@ -657,7 +687,15 @@ export default function SharedList() {
     <div>
       {rows.map((pin: any, idx: number) => {
         const i = offset + idx;
-        const photos: string[] = Array.isArray(pin.images) ? pin.images : [];
+        // Zdjecia przy miejscu Z AUTOREM. Zrodlem sa `discovery_item_photos`; stara tablica
+        // `images[]` dokladana jest tylko dla pozycji sprzed migracji (backfill przepisal
+        // istniejace, ale nowa pozycja dodana starym kodem moze jeszcze trafic do tablicy).
+        const rowPhotos = photosFor.get(collectionPhotoKey(pin.place_name)) ?? [];
+        const legacy: string[] = (Array.isArray(pin.images) ? pin.images : [])
+          .filter((u: string) => !rowPhotos.some((rp: any) => rp.url === u));
+        const photos: { id?: string; url: string; user_id?: string | null; avatar_url?: string | null }[] =
+          [...rowPhotos.map((rp: any) => ({ id: rp.id, url: rp.url, user_id: rp.user_id, avatar_url: rp.avatar_url })),
+           ...legacy.map((u: string) => ({ url: u }))];
         const busy = uploadingItem === pin.id;
         // Notka (auto-zapis, bez headera) + zdjecia miejsca. Widz: read-only. Slot renderowany
         // tylko gdy jest tresc lub jestem wlascicielem. Uklad wspolny z wyjazdami (PlaceNoteEditor).
@@ -690,18 +728,28 @@ export default function SharedList() {
             {/* Zdjecia miejsca (2:3) - dodane przez wlasciciela listy. */}
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {photos.map((url) => (
-                  <div key={url} className="relative w-[76px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
-                    {/* Klik w zdjecie = pelnoekranowy podglad. */}
-                    {/* Kafelek 76 px -> miniatura; podglad pelnoekranowy bierze oryginal. */}
-                    <StoredImage
-                      url={url} size={76} role="button"
-                      onClick={() => setPhotoViewer({ urls: photos.map((u: string) => resolveStored(u) ?? u), idx: photos.indexOf(url) })}
-                      className="w-full h-full object-cover active:opacity-90 transition-opacity"
-                    />
-                    {mine && <button onClick={() => removeItemPhoto(pin, url)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
-                  </div>
-                ))}
+                {photos.map((ph, pi) => {
+                  // Kasuje AUTOR zdjecia albo wlasciciel kolekcji - tak samo mowi RLS.
+                  const canDropPhoto = isOwner || (!!ph.user_id && ph.user_id === user?.id) || (!ph.id && mine);
+                  return (
+                    <div key={ph.id ?? ph.url} className="relative w-[76px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
+                      {/* Klik w zdjecie = pelnoekranowy podglad. */}
+                      {/* Kafelek 76 px -> miniatura; podglad pelnoekranowy bierze oryginal. */}
+                      <StoredImage
+                        url={ph.url} size={76} role="button"
+                        onClick={() => setPhotoViewer({ urls: photos.map((x) => resolveStored(x.url) ?? x.url), idx: pi })}
+                        className="w-full h-full object-cover active:opacity-90 transition-opacity"
+                      />
+                      {/* Awatar autora w lewym-dolnym rogu - zeby bylo wiadomo, kto co wrzucil
+                          (prosba Nat 2026-09-15). Ten sam jezyk, co przy notkach i w wyjezdzie. */}
+                      {ph.user_id && (
+                        <img src={avatarSrc(ph.avatar_url ?? null)} alt="" aria-hidden
+                          className="absolute bottom-1 left-1 h-5 w-5 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+                      )}
+                      {canDropPhoto && <button onClick={() => removeItemPhoto(pin, ph.url, ph.id)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -725,7 +773,9 @@ export default function SharedList() {
             // sama logika, co na wyjezdzie: jedna gwiazdka, kolejny wybor ja PRZENOSI.
             isTop={!!pin.is_top}
             onToggleTop={mine ? () => void toggleTopItem(pin) : undefined}
-            menuExtras={mine ? [
+            /* Notke i zdjecie moze dodac KAZDY uczestnik, takze przy cudzym miejscu -
+               `mine` rzadzi tylko usuwaniem samej pozycji z kolekcji. */
+            menuExtras={canWriteNote ? [
               {
                 key: "note",
                 label: myNote ? t("route:note.edit") : t("route:note.add"),

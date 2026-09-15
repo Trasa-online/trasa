@@ -590,6 +590,24 @@ const TravelerProfile = () => {
     });
   };
 
+  // ⛔ TEN HOOK MUSI STAC NAD early-returnami ponizej. Stal pod nimi i przy pierwszym
+  // renderze (profil sie laduje / gosc) Reactowi ubywalo hookow - ta sama pulapka, ktora
+  // wywalila widok kolekcji 2026-09-15. Bramka `npm run hooks:check` lapie to od tamtej pory.
+  //
+  // Kafelek ma sie zatrzymywac POD przyklejonym naglowkiem (zakladki + chipy podzakladek),
+  // a nie za nim. Wysokosc MIERZYMY i podajemy jako `--profile-sticky` - wpisana na sztywno
+  // rozjechalaby sie przy kazdej zmianie tego paska.
+  const stickyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = stickyRef.current;
+    if (!el) return;
+    const apply = () => document.documentElement.style.setProperty("--profile-sticky", `${Math.round(el.getBoundingClientRect().height)}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => { ro.disconnect(); document.documentElement.style.removeProperty("--profile-sticky"); };
+  }, [tab]);
+
   if (loading) return <ScreenSkeleton variant="profile" />;
   if (!user || user.is_anonymous) return <GuestProfile />;
 
@@ -712,20 +730,6 @@ const TravelerProfile = () => {
 
   // Snap wlaczamy tylko tam, gdzie scrolluje sie KOLEKCJE (kafelki jednakowej budowy).
   const listSnap = tab === "listy" && (listyTab === "moje" ? listCards.length > 0 : listyTab === "zapisane" && (savedListCards as any[]).length > 0);
-
-  // Kafelek ma sie zatrzymywac POD przyklejonym naglowkiem (zakladki + chipy podzakladek),
-  // a nie za nim. Wysokosc MIERZYMY i podajemy jako `--profile-sticky` - wpisana na sztywno
-  // rozjechalaby sie przy kazdej zmianie tego paska (i rozjechala sie po dolozeniu chipow).
-  const stickyRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = stickyRef.current;
-    if (!el) return;
-    const apply = () => document.documentElement.style.setProperty("--profile-sticky", `${Math.round(el.getBoundingClientRect().height)}px`);
-    apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
-    return () => { ro.disconnect(); document.documentElement.style.removeProperty("--profile-sticky"); };
-  }, [tab]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
