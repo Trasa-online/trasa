@@ -7,6 +7,7 @@ import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
+import { rememberItem, recallItem } from "@/hooks/useScrollRestore";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { format } from "date-fns";
@@ -973,6 +974,9 @@ function placeBaseScore(p: MockPlace): number {
   return rating;
 }
 
+/** Klucz pamieci powrotu dla zakladki Miejsca (swiper w `exploreMode`). */
+const MIEJSCA_SCROLL_KEY = "/miejsca";
+
 // Przeplot kategorii (weighted round-robin): zadne dwie sasiednie karty nie sa z tej
 // samej kategorii (chyba ze zostala juz tylko jedna kategoria), a w obrebie kategorii
 // najlepiej oceniane miejsca pojawiaja sie wczesniej. Rozwiazuje "4-5 restauracji pod rzad".
@@ -1490,6 +1494,41 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseQueue, sortByNearest]);
+
+  // ── POWROT NA TA SAMA WIZYTOWKE (prosba Nat 2026-09-15) ────────────────────────────────
+  // Wejscie w cos z zakladki Miejsca odmontowuje swiper, wiec po powrocie user ladowal na
+  // pierwszej karcie. ⚠️ NIE zapamietujemy pozycji w pikselach: `interleaveByCategory`
+  // uklada kolejke od nowa przy kazdym montowaniu (przeplot kategorii z losowym jitterem),
+  // wiec ten sam offset trafilby w INNA wizytowke. Pamietamy IDENTYFIKATOR karty i szukamy
+  // jej w nowej kolejnosci. Tylko w exploreMode - kreator (`/plan`) ma wlasny przebieg.
+  useEffect(() => {
+    // ⚠️ Tylko gdy karta JEST znana. Przy montowaniu `activeCardId` to jeszcze null, a
+    // `rememberItem(key, null)` kasuje wpis - czyli wymazalibysmy pamiec dokladnie w chwili,
+    // w ktorej jest potrzebna do powrotu.
+    if (exploreMode && activeCardId) rememberItem(MIEJSCA_SCROLL_KEY, activeCardId);
+  }, [exploreMode, activeCardId]);
+
+  const restoreCardId = useRef<string | null>(exploreMode ? recallItem(MIEJSCA_SCROLL_KEY) : null);
+  // Przywrocenie pozycji to PROGRAMOWY scroll. Bez tej flagi `onScroll` potraktowalby go jak
+  // przegladanie i od razu po powrocie wyskoczyloby pytanie o lokalizacje (prog: trzecia karta).
+  const programmaticScroll = useRef(false);
+  useEffect(() => {
+    const want = restoreCardId.current;
+    if (!exploreMode || !want) return;
+    const idx = displayQueue.findIndex((p) => p.id === want);
+    if (idx < 0) return;                       // kolejki jeszcze nie ma - efekt wroci z nia
+    // Karta poza oknem leniwego doladowania: najpierw ja wyrenderuj, scroll w nastepnym przebiegu.
+    if (idx >= exploreVisible) { setExploreVisible(Math.min(displayQueue.length, idx + 4)); return; }
+    restoreCardId.current = null;
+    const scroller = scrollWrapRef.current;
+    const node = scroller?.children[idx] as HTMLElement | undefined;
+    if (!scroller || !node) return;
+    // Roznica prostokatow zamiast `scrollIntoView` - przesuwa WYLACZNIE ten scroller,
+    // bez ruszania przodkow. Snap sam doklei karte do punktu przyciagania.
+    programmaticScroll.current = true;
+    scroller.scrollTop += node.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    window.setTimeout(() => { programmaticScroll.current = false; }, 250);
+  }, [exploreMode, displayQueue, exploreVisible]);
 
   const photoUrlOverrides = useRef<Record<string, string>>({});
 
@@ -2044,13 +2083,15 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         <div
           ref={scrollWrapRef}
           onScroll={(e) => {
+            // User sam przewinal - nie wyrywamy mu juz widoku do zapamietanej karty.
+            restoreCardId.current = null;
             const el = e.currentTarget;
             const h = el.clientHeight || 1;
             const idx = Math.round(el.scrollTop / h);
             const p = displayQueue[idx];
             if (p && p.id !== activeCardId) setActiveCardId(p.id);
             if (el.scrollTop > 24 && !hasScrolled) setHasScrolled(true);
-            maybeAskLocationOnBrowse(idx);
+            if (!programmaticScroll.current) maybeAskLocationOnBrowse(idx);
             // Infinite scroll: dociagaj kolejne karty gdy zblizamy sie do konca (2.5 ekranu).
             if (el.scrollHeight - el.scrollTop - el.clientHeight < el.clientHeight * 2.5) {
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));

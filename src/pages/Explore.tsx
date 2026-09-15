@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { track } from "@/lib/analytics";
 import { Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -789,6 +790,13 @@ const Explore = () => {
   // Prog 8 px, zeby baner nie migal przy mikroruchach palca.
   const [feedScrolled, setFeedScrolled] = useState(false);
 
+  // Powrot z wyjazdu/kolekcji ma wracac NA TEN KAFELEK, a nie na gore feedu (prosba Nat
+  // 2026-09-15). Scroller siedzi w `PullToRefresh`, wiec bierzemy go stamtad przez `scrollRef`.
+  // W trybie szukania ten sam kontener pokazuje wyniki - wtedy hook spi, zeby nie wrzucil
+  // w wyniki pozycji zapisanej dla feedu (i zeby po zamknieciu szukania feed wrocil na swoje).
+  const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  useScrollRestore("/eksploruj", feedScrollRef, { enabled: !searchOpen });
+
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
   };
@@ -871,7 +879,7 @@ const Explore = () => {
                 (siatka 2 kolumny) i osobny feed obserwowanych (/feed) zdjete z paska tego dnia -
                 zostal jeden widok odkrywania. Snap tylko poza szukaniem: wyniki nie maja punktow
                 przyciagania. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast feedu. */}
-            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)}
+            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} scrollRef={feedScrollRef}
               className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
               {/* Wyszukiwarka: lista kategorii jedna pod druga / wyniki (wspolny SearchPane -
                   ten sam co w Miejscach i na profilu). Poza szukaniem - feed. */}
