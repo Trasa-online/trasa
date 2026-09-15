@@ -185,8 +185,13 @@ function DashboardLoadingScreen() {
   }, []);
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5">
-      <TrasaLogo size={64} className="shadow-lg" />
-      <p className="font-black text-xl tracking-tight text-foreground">spontaway</p>
+      {/* ⛔ BEZ cienia. `shadow-lg` na przezroczystym PNG rysuje cien wokol PROSTOKATA obrazka,
+          wiec znak wygladal, jakby siedzial w kwadracie (zgloszenie Nat 2026-09-15).
+          Marka to sam symbol - bez kolka, bez kafelka, bez cienia. */}
+      <TrasaLogo size={64} />
+      <p className="text-xl font-black tracking-tight text-foreground">
+        spontaway <span className="text-primary">biznes</span>
+      </p>
       <div className="flex flex-col items-center gap-1.5 w-44">
         <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
           <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%`, transition: "width 0.3s ease-out" }} />
@@ -2221,12 +2226,14 @@ const BusinessDashboard = () => {
                   <ListingPreviewCard
                     coverImageUrl={coverImageUrl}
                     coverVideoUrl={coverVideoUrl}
+                    logoUrl={logoUrl}
                     businessName={businessName}
                     mainCategory={mainCategories[0] ?? mainCategory}
                     subcategories={bizSubcategories}
+                    street={street}
                     city={city}
-                    openingHours={openingHours as never}
                     eventTitle={eventTitle}
+                    tags={tags}
                   />
                 </button>
               </div>
@@ -2271,12 +2278,14 @@ const BusinessDashboard = () => {
                   <ListingPreviewCard
                     coverImageUrl={coverImageUrl}
                     coverVideoUrl={coverVideoUrl}
+                    logoUrl={logoUrl}
                     businessName={businessName}
                     mainCategory={mainCategories[0] ?? mainCategory}
                     subcategories={bizSubcategories}
+                    street={street}
                     city={city}
-                    openingHours={openingHours as never}
                     eventTitle={eventTitle}
+                    tags={tags}
                   />
                 </button>
               }
