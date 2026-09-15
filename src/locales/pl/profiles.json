@@ -183,7 +183,8 @@
     "list": "Lista",
     "mosaic": "Mozaika",
     "grid": "Siatka",
-    "reorder_failed": "Nie udało się zapisać układu. Spróbuj ponownie."
+    "reorder_failed": "Nie udało się zapisać układu. Spróbuj ponownie.",
+    "switch_aria": "Zmień układ, następny: {{next}}"
   },
   "tab_hints": {
     "lists_moje": "Twoje publiczne polecajki miejsc. Każdy może je zapisać u siebie.",
@@ -202,6 +203,40 @@
     "trip_fallback": "Wyjazd",
     "list_fallback": "Kolekcja",
     "desc_theirs": "Miejsca wyróżnione gwiazdką w wyjazdach i kolekcjach tej osoby.",
-    "empty_title_theirs": "Brak wyróżnionych miejsc"
+    "empty_title_theirs": "Brak wyróżnionych miejsc",
+    "filter_all_countries": "Wszystkie kraje",
+    "filter_all_cities": "Wszystkie miasta",
+    "filter_all_types": "Wszystkie typy",
+    "filter_clear": "Wyczyść filtry",
+    "filter_count_one": "{{count}} miejsce",
+    "filter_count_few": "{{count}} miejsca",
+    "filter_count_many": "{{count}} miejsc"
+  },
+  "trash": {
+    "title": "Kosz",
+    "desc": "Usunięte wyjazdy i kolekcje leżą tu {{days}} dni. Potem znikają na dobre.",
+    "empty_title": "Kosz jest pusty",
+    "empty_desc": "Jeśli usuniesz wyjazd albo kolekcję, znajdziesz je tutaj przez {{days}} dni.",
+    "restore": "Przywróć",
+    "restored": "Przywrócono",
+    "restore_failed": "Nie udało się przywrócić. Spróbuj ponownie.",
+    "purge": "Usuń na zawsze",
+    "purged": "Usunięto na zawsze",
+    "purge_failed": "Nie udało się usunąć. Spróbuj ponownie.",
+    "purge_title": "Usunąć bezpowrotnie?",
+    "purge_desc": "„{{name}}” zniknie razem ze wszystkimi miejscami, notkami i zdjęciami. Tego nie da się cofnąć.",
+    "cancel": "Anuluj",
+    "expires_today": "Znika dzisiaj",
+    "expires_in_one": "Zostaje {{count}} dzień",
+    "expires_in_few": "Zostają {{count}} dni",
+    "expires_in_many": "Zostaje {{count}} dni",
+    "trip_fallback": "Wyjazd bez nazwy",
+    "list_fallback": "Kolekcja bez nazwy",
+    "trip_meta_one": "Wyjazd · {{count}} miejsce",
+    "trip_meta_few": "Wyjazd · {{count}} miejsca",
+    "trip_meta_many": "Wyjazd · {{count}} miejsc",
+    "list_meta_one": "Kolekcja · {{count}} miejsce",
+    "list_meta_few": "Kolekcja · {{count}} miejsca",
+    "list_meta_many": "Kolekcja · {{count}} miejsc"
   }
 }

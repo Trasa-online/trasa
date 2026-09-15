@@ -10,6 +10,11 @@ export type StarredPlace = {
   category: string | null;
   photo: string | null;
   google_place_id: string | null;
+  /** Miasto i kraje BIORA SIE ZE ZRODLA (wyjazdu / kolekcji) - pin i pozycja kolekcji same
+   *  nie niosa kraju, a wyjazd "Lodzki citybreak" i tak opisuje wszystkie swoje miejsca.
+   *  Pozycja kolekcji ma wlasne `city`, wiec przy niej wygrywa ono. Sluza filtrom w arkuszu. */
+  city: string | null;
+  countries: string[];
   source: { kind: "trip" | "list"; id: string; title: string };
 };
 
@@ -20,10 +25,10 @@ export const starredPlacesKey = (userId: string | null | undefined) => ["starred
 export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]> {
   const [pinsRes, itemsRes] = await Promise.all([
     (supabase as any).from("pins")
-      .select("id, place_name, category, photo_url, image_url, images, user_photo_urls, place_id, route_id, routes!inner(id, title, user_id, created_at)")
+      .select("id, place_name, category, photo_url, image_url, images, user_photo_urls, place_id, route_id, routes!inner(id, title, user_id, created_at, city, countries)")
       .eq("is_top", true).eq("routes.user_id", userId),
     (supabase as any).from("discovery_items")
-      .select("id, place_name, category, photo_url, google_place_id, collection_id, discovery_collections!inner(id, title, user_id, updated_at)")
+      .select("id, place_name, category, photo_url, google_place_id, city, collection_id, discovery_collections!inner(id, title, user_id, updated_at, city, countries)")
       .eq("is_top", true).eq("discovery_collections.user_id", userId),
   ]);
   const trips: StarredPlace[] = ((pinsRes.data ?? []) as any[]).map((p) => ({
@@ -31,11 +36,15 @@ export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]
     photo: p.image_url || firstOf(p.images) || firstOf(p.user_photo_urls) || p.photo_url || null,
     // Piny trzymaja w place_id identyfikator Google (nie UUID naszej bazy) - patrz SavePlaceSheet.
     google_place_id: typeof p.place_id === "string" && !/^[0-9a-f-]{36}$/i.test(p.place_id) ? p.place_id : null,
+    city: p.routes?.city ?? null,
+    countries: Array.isArray(p.routes?.countries) ? p.routes.countries.filter(Boolean) : [],
     source: { kind: "trip", id: p.route_id, title: p.routes?.title ?? "" },
   }));
   const lists: StarredPlace[] = ((itemsRes.data ?? []) as any[]).map((it) => ({
     id: `item:${it.id}`, place_name: it.place_name ?? "", category: it.category ?? null,
     photo: it.photo_url ?? null, google_place_id: it.google_place_id ?? null,
+    city: it.city ?? it.discovery_collections?.city ?? null,
+    countries: Array.isArray(it.discovery_collections?.countries) ? it.discovery_collections.countries.filter(Boolean) : [],
     source: { kind: "list", id: it.collection_id, title: it.discovery_collections?.title ?? "" },
   }));
   const all = [...trips, ...lists];

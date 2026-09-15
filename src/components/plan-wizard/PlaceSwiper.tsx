@@ -1079,20 +1079,20 @@ export async function fetchEnrichedPlace(id: string, refDate?: string): Promise<
 }
 
 export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
-  const placeGallery: string[] = Array.isArray(p.gallery_urls) ? p.gallery_urls.filter(Boolean) : [];
-
+  // `places.gallery_urls` (backfill Google) NIE jest juz czytane nigdzie: galeria lokalu bierze
+  // wylacznie zdjecia wgrane przez lokal, a zwykle miejsce - wylacznie zdjecia userow.
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
   if (!bp) {
-    // Zwykle miejsce (bez profilu biznesu). ZERO Google (2026-07-29): NIE uzywamy starego Google
-    // backfillu (places.photo_url z prefiksem gpid_/cache). Zachowujemy: (a) recznie skurowana
-    // okladka (upload /manual/) = NASZ content, (b) proxy Google na zywo (/api/place-photo) - swiadomy
-    // backfill zdjec dla ODBLOKOWANYCH miejsc zakladki "Miejsca" (proxy = pobranie live, bez cache
-    // bajtow, zgodnie z ToS Google). Brak -> okladka z losowego zdjecia usera (SwipeCard) / ikona.
-    const curated = typeof p.photo_url === "string"
-      && (p.photo_url.includes("/place-photos-cache/manual/") || p.photo_url.includes("/api/place-photo"))
-      ? p.photo_url
-      : undefined;
-    return { ...p, photo_url: curated, galleryPhotos: curated ? [curated] : [] } as MockPlace;
+    // Zwykle miejsce (bez profilu biznesu) = ZERO zdjec spoza spolecznosci (decyzja Nat
+    // 2026-09-15). Okladka moze pochodzic WYLACZNIE od uzytkownikow (place_photos /
+    // pins.user_photo_urls, dociagane osobno przez SwipeCard) albo od samego lokalu.
+    // `places.photo_url` i `places.gallery_urls` sa tu ODRZUCANE w calosci, niezaleznie od
+    // tego, czy to proxy Google (/api/place-photo), plik z cache (gpid_/hash_), czy okladka
+    // wgrana recznie (/place-photos-cache/manual/) - wszystkie trzy to nie jest nasz content
+    // spolecznosciowy. Brak zdjecia usera -> ikona kategorii na peachy tle.
+    // Dane w bazie ZOSTAJA nietkniete: to odsiew po stronie klienta, wiec przywrocenie
+    // ktoregokolwiek zrodla to jedna linijka tutaj.
+    return { ...p, photo_url: undefined, galleryPhotos: [] } as MockPlace;
   }
   // Per decyzja produktowa (CLAUDE.md): WYGLAD wizytowki (logo, eventy, cover, kontakt) jest
   // premium dla kazdego aktywnego biznesu - kolumna `plan` (legacy zero/basic/premium) jest tu
@@ -1104,11 +1104,9 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   // Logika galerii: jesli biznes wgral wlasne zdjecia (cover_image, cover_video, gallery_urls)
   // -> uzywamy TYLKO biznesowych. Biznes wybral jak chce sie prezentowac, nie nadpisujemy
   // kurowanymi Google Photos z places.gallery_urls (backfill).
-  // Jesli biznes NIE ma zadnych wlasnych zdjec -> uzywamy placeGallery (Google backfill)
-  // jako fallback zeby wizytowka miala chociaz placeholder.
   const hasBizPhotos = !!(bp.cover_image_url || bp.cover_video_url || bizGallery.length > 0);
-  // ZERO Google (2026-07-29): gdy biznes nie ma wlasnych zdjec, NIE fallbackujemy do
-  // placeGallery (Google backfill) - zostaje pusto (-> ikona kategorii / zdjecia usera).
+  // ZERO Google (2026-07-29): gdy lokal nie ma wlasnych zdjec, NIE fallbackujemy do
+  // places.gallery_urls (backfill Google) - zostaje pusto (-> ikona / zdjecia userow).
   const mergedGallery = hasBizPhotos ? bizGallery : [];
   // Adres z profilu biznesu (street + postal + miasto). Biznes wpisuje wlasny adres w dashboardzie -
   // to autorytatywne zrodlo. Inaczej adres bralby sie z Google (detail.formatted_address), ktory dla

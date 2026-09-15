@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash } from "@/lib/trash";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
 import { MapPin, Users, ChevronRight, ChevronDown, Trash2, Loader2, X } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
@@ -117,10 +118,9 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
       onUndo: () => queryClient.setQueryData(["home-active-solo", userId], prev),
       commit: async () => {
         try {
-          await supabase.from("pins").delete().eq("route_id", r.id);
-          await (supabase as any).from("chat_sessions").delete().eq("route_id", r.id);
-          const { error } = await supabase.from("routes").delete().eq("id", r.id);
-          if (error) throw error;
+          // Do KOSZA, nie DELETE (2026-09-15): piny i czat zostaja, zeby odzyskany wyjazd
+          // wrocil kompletny. Realne kasowanie robi cron po 7 dniach.
+          await moveToTrash("trip", r.id);
           queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
           queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
         } catch (err: any) {

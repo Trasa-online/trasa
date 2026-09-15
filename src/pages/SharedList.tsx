@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash } from "@/lib/trash";
 import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -260,9 +261,10 @@ export default function SharedList() {
       deferDelete({
         message: t("toast.list_deleted"),
         commit: async () => {
-          await (supabase as any).from("discovery_items").delete().eq("collection_id", id);
-          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", id).eq("user_id", user.id);
-          if (error) { toast.error(t("toast.list_delete_failed")); return; }
+          // Do KOSZA, nie DELETE (2026-09-15): pozycje kolekcji zostaja, zeby odzyskana
+          // kolekcja wrocila z miejscami. Patrz src/lib/trash.ts.
+          const moved = await moveToTrash("list", id);
+          if (!moved) { toast.error(t("toast.list_delete_failed")); return; }
           refresh();
         },
         onUndo: refresh,

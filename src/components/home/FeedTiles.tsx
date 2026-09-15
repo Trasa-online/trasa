@@ -190,7 +190,9 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
       <div className="relative w-full aspect-[9/16]">
         <GridCover url={it.cover} thumb={feed ? 800 : 400} />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+      {/* Gradient od dolnej krawedzi CIEMNIEJSZY o ~20% (prosba Nat 2026-09-15): 75 -> 90 u dolu,
+          30 -> 40 w srodku. Tytul w Inter Black lezy na nim, a nie na zdjeciu. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
       {it.showAuthor && !mapExpanded && (
         <div className={`pointer-events-none absolute z-[2] ${feed ? "left-3 top-3 max-w-[calc(100%-136px)]" : "left-2 top-2 max-w-[calc(100%-76px)]"}`}>
           <AuthorPill it={it} tone="brand" size={size} />
@@ -226,7 +228,7 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
       )}
       <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1] ${feed ? "p-4 pb-5" : "p-3 pb-[18px]"}`}>
         {/* Feed: tytul 36 px i chipy 30 px (makieta Nat 2026-09-13 - wczesniej 24 / 26 px). */}
-        <p className={`line-clamp-2 font-bold leading-[1.05] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] ${feed ? "text-[36px] tracking-[-0.01em]" : "text-[19px]"}`}>{it.title}</p>
+        <p className={`line-clamp-2 font-black leading-[1.05] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] ${feed ? "text-[36px] tracking-[-0.015em]" : "text-[19px]"}`}>{it.title}</p>
         <div className={`flex flex-wrap ${feed ? "mt-3.5 gap-2" : "mt-2 gap-1"}`}>
           <Chip dark size={size}><MapPin className={feed ? "h-4 w-4" : "h-3 w-3"} strokeWidth={2.4} />{it.placesCount}</Chip>
           {it.where && <Chip dark size={size}>{it.where}</Chip>}

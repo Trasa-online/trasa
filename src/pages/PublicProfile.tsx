@@ -25,7 +25,7 @@ import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
-import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
+import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
 import { scopeLabel } from "@/lib/tripScope";
 // Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
 import TrasaBigCard from "@/components/home/TrasaBigCard";
@@ -535,7 +535,7 @@ export default function PublicProfile() {
               {/* Dwie kolumny flex (naprzemiennie), NIE CSS multicol - patrz mosaicColumns. */}
               <div className="flex items-start gap-1.5">
                 {mosaicColumns(tripCards).map((col, ci) => (
-                  <div key={ci} className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div key={ci} className={`flex min-w-0 flex-1 flex-col gap-1.5 ${ci === 1 ? MOSAIC_OFFSET : ""}`}>
                     {col.map((tr: any) => (
                       <TripTile key={tr.id} natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
                         meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />

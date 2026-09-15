@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, ArrowRight, Search, X, Trash2, Plus, Loader2 } from "lucide-react";
 import { resolveStored } from "@/components/PlacePhoto";
@@ -146,8 +147,8 @@ export default function StartWyjazd() {
     deferDelete({
       message: t("drafts.deleted"),
       commit: async () => {
-        await (supabase as any).from("pins").delete().eq("route_id", id);
-        await (supabase as any).from("routes").delete().eq("id", id);
+        // Do KOSZA, nie DELETE (2026-09-15) - takze roboczy wyjazd da sie odzyskac.
+        await moveToTrash("trip", id);
         queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
       },
       onUndo: () => queryClient.invalidateQueries({ queryKey: ["start-robocze"] }),

@@ -121,5 +121,6 @@
     "long": "The name can have at most 30 characters",
     "chars": "Letters only (a hyphen or apostrophe is fine)",
     "banned": "That name is not allowed"
-  }
+  },
+  "trash": "Trash"
 }

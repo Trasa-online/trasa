@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash } from "@/lib/trash";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
@@ -260,10 +261,8 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       commit: async () => {
         try {
           if (entry.is_own) {
-            await supabase.from("pins").delete().eq("route_id", entry.id);
-            await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
-            const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-            if (error) throw error;
+            // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
+            await moveToTrash("trip", entry.id);
           } else {
             if (!entry.group_session_id) throw new Error("missing group_session_id");
             // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).

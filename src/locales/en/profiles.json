@@ -181,7 +181,8 @@
     "list": "List",
     "mosaic": "Mosaic",
     "grid": "Grid",
-    "reorder_failed": "Could not save the layout. Try again."
+    "reorder_failed": "Could not save the layout. Try again.",
+    "switch_aria": "Change layout, next: {{next}}"
   },
   "tab_hints": {
     "lists_moje": "Your public place recommendations. Anyone can save them.",
@@ -200,6 +201,36 @@
     "trip_fallback": "Trip",
     "list_fallback": "Collection",
     "desc_theirs": "Places this person starred in their trips and collections.",
-    "empty_title_theirs": "No starred places yet"
+    "empty_title_theirs": "No starred places yet",
+    "filter_all_countries": "All countries",
+    "filter_all_cities": "All cities",
+    "filter_all_types": "All types",
+    "filter_clear": "Clear filters",
+    "filter_count_one": "{{count}} place",
+    "filter_count_other": "{{count}} places"
+  },
+  "trash": {
+    "title": "Trash",
+    "desc": "Deleted trips and collections stay here for {{days}} days. After that they are gone for good.",
+    "empty_title": "Trash is empty",
+    "empty_desc": "If you delete a trip or a collection, you will find it here for {{days}} days.",
+    "restore": "Restore",
+    "restored": "Restored",
+    "restore_failed": "Could not restore. Try again.",
+    "purge": "Delete forever",
+    "purged": "Deleted forever",
+    "purge_failed": "Could not delete. Try again.",
+    "purge_title": "Delete permanently?",
+    "purge_desc": "“{{name}}” will go together with every place, note and photo in it. This cannot be undone.",
+    "cancel": "Cancel",
+    "expires_today": "Goes today",
+    "expires_in_one": "{{count}} day left",
+    "expires_in_other": "{{count}} days left",
+    "trip_fallback": "Untitled trip",
+    "list_fallback": "Untitled collection",
+    "trip_meta_one": "Trip · {{count}} place",
+    "trip_meta_other": "Trip · {{count}} places",
+    "list_meta_one": "Collection · {{count}} place",
+    "list_meta_other": "Collection · {{count}} places"
   }
 }

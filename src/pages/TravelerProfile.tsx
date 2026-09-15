@@ -4,6 +4,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash, moveManyToTrash } from "@/lib/trash";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
 import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
@@ -35,7 +36,7 @@ import { listTheme } from "@/lib/listThemes";
 import ReferralCard from "@/components/profile/ReferralCard";
 import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
-import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
+import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
 import { REORDER_ITEM_CLASS, useLongPressReorder } from "@/hooks/useLongPressReorder";
 import { applyTripOrder, fetchTripOrder, saveTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import AvatarFrame from "@/components/profile/AvatarFrame";
@@ -273,10 +274,9 @@ const TravelerProfile = () => {
       onUndo: () => queryClient.setQueryData(key, prev),
       commit: async () => {
         try {
-          await supabase.from("pins").delete().in("route_id", ids);
-          await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
-          const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
-          if (error) throw new Error(error.message);
+          // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
+          const moved = await moveManyToTrash("trip", ids);
+          if (moved === 0) throw new Error("trash: nic nie przeniesiono");
           queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
         } catch (e: any) {
           toast.error(t("profile.delete_error"));
@@ -726,6 +726,20 @@ const TravelerProfile = () => {
   // Snap wlaczamy tylko tam, gdzie scrolluje sie KOLEKCJE (kafelki jednakowej budowy).
   const listSnap = tab === "listy" && (listyTab === "moje" ? listCards.length > 0 : listyTab === "zapisane" && (savedListCards as any[]).length > 0);
 
+  // Kafelek ma sie zatrzymywac POD przyklejonym naglowkiem (zakladki + chipy podzakladek),
+  // a nie za nim. Wysokosc MIERZYMY i podajemy jako `--profile-sticky` - wpisana na sztywno
+  // rozjechalaby sie przy kazdej zmianie tego paska (i rozjechala sie po dolozeniu chipow).
+  const stickyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = stickyRef.current;
+    if (!el) return;
+    const apply = () => document.documentElement.style.setProperty("--profile-sticky", `${Math.round(el.getBoundingClientRect().height)}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => { ro.disconnect(); document.documentElement.style.removeProperty("--profile-sticky"); };
+  }, [tab]);
+
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
 
@@ -788,7 +802,7 @@ const TravelerProfile = () => {
           `scroll-pt-[44px]` = wysokosc PRZYKLEJONEJ belki zakladek, zeby kafelek zatrzymywal
           sie pod nia, a nie za nia. Naglowek profilu dostaje wlasny punkt zaczepienia nizej
           (bez niego snap-mandatory nie pozwolilby sie przy nim zatrzymac). */}
-      <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 overflow-x-hidden", searchOpen && "hidden", listSnap && "snap-y snap-mandatory scroll-pt-[44px]")}>
+      <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 overflow-x-hidden", searchOpen && "hidden", listSnap && "snap-y snap-mandatory scroll-pt-[var(--profile-sticky,44px)]")}>
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
@@ -875,7 +889,11 @@ const TravelerProfile = () => {
         {/* Sticky: przy przewijaniu profilu zakladki zostaja na gorze (prosba Nat 2026-09-01).
             -mx-4 px-4 + tlo, zeby przyklejony pasek zakrywal tresc na CALEJ szerokosci - inaczej
             kafelki przejezdzalyby pod nim po bokach. */}
-        <div className="sticky top-0 z-30 bg-background -mx-4 px-4 flex border-b border-border/40">
+        {/* Podzakladki (chipy) siedza W TYM SAMYM sticky pudelku co zakladki (prosba Nat
+            2026-09-15) - wczesniej przyklejaly sie tylko zakladki, a chipy odjezdzaly w gore
+            i przy przewinietej liscie nie bylo widac, ktora podzakladke sie oglada. */}
+        <div ref={stickyRef} className="sticky top-0 z-30 bg-background -mx-4 px-4">
+        <div className="flex border-b border-border/40">
           {/* Kolejnosc: Wyjazdy | Listy (prosba Nat 2026-08-30) - wyjazdy sa flagowa trescia profilu. */}
           {(["wyjazdy", "listy"] as const).map((tk) => {
             const active = tab === tk;
@@ -891,24 +909,46 @@ const TravelerProfile = () => {
             );
           })}
         </div>
+        {/* Wiersz podzakladek: chipy + (przy Wspomnieniach) guzik ukladu. */}
+        <div className="flex items-center gap-3 pt-3 pb-2">
+          {tab === "listy" ? (
+            /* Moje listy (curated) | Ogólne (lista ogólna) | Zapisane (od innych). */
+            <TabSelect
+              dotLabel={t("profile.new_content_aria")}
+              value={listyTab}
+              onChange={(v) => { setListyTab(v as "moje" | "ogolne" | "zapisane"); goSub(v); }}
+              options={[
+                { id: "moje", label: t("tabs.my_lists") },
+                { id: "ogolne", label: t("tabs.general") },
+                // Kropka = w ktorejs zapisanej liscie autor dodal miejsce, ktorego jeszcze nie
+                // widzialem. Na profilu to jedyny sygnal dla kogos, kto nie scrolluje zapisanych.
+                { id: "zapisane", label: t("trip_tabs.saved"), dot: (savedListCards as any[]).some((l) => l.isNew) },
+              ]}
+            />
+          ) : (
+            <>
+              {/* Opublikowane | Robocze | Zapisane (od innych). */}
+              <TabSelect
+                dotLabel={t("profile.new_content_aria")}
+                value={wyjazdyTab}
+                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); goSub(v); }}
+                options={[{ id: "wspomnienia", label: t("trip_tabs.published") }, { id: "robocze", label: t("trip_tabs.drafts") }, { id: "zapisane", label: t("trip_tabs.saved") }]}
+              />
+              {/* Przelacznik ukladu TYLKO przy opublikowanych - roboczy ma na karcie akcje
+                  wlasciciela (olowek, kosz), ktore w malym kafelku nie mialyby gdzie stanac.
+                  JEDEN guzik (2026-09-15): rzad trzech najezdzal na chipy obok. */}
+              {wyjazdyTab === "wspomnienia" && memoryTrips.length > 0 && (
+                <TripLayoutSwitch value={tripLayout} onChange={setTripLayout} />
+              )}
+            </>
+          )}
+        </div>
+        </div>
 
         {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
         <div className="space-y-6 pt-1" {...swipeTabs}>
           {tab === "listy" ? (
             <div className="space-y-4">
-              {/* Podzakładki (dropdown): Moje listy (curated) | Ogólne (lista ogólna) | Zapisane (od innych). */}
-              <TabSelect
-                dotLabel={t("profile.new_content_aria")}
-                value={listyTab}
-                onChange={(v) => { setListyTab(v as "moje" | "ogolne" | "zapisane"); goSub(v); }}
-                options={[
-                  { id: "moje", label: t("tabs.my_lists") },
-                  { id: "ogolne", label: t("tabs.general") },
-                  // Kropka = w ktorejs zapisanej liscie autor dodal miejsce, ktorego jeszcze nie
-                  // widzialem. Na profilu to jedyny sygnal dla kogos, kto nie scrolluje zapisanych.
-                  { id: "zapisane", label: t("trip_tabs.saved"), dot: (savedListCards as any[]).some((l) => l.isNew) },
-                ]}
-              />
               <TabHint text={t(`tab_hints.lists_${listyTab}`)} />
               {listyTab === "moje" ? (
                 listCards.length === 0 ? (
@@ -975,23 +1015,6 @@ const TravelerProfile = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Podzakładki: Opublikowane | Robocze | Zapisane (od innych).
-                  "Zapisane" wrocilo 2026-09-11 razem z zapisem CALEGO cudzego wyjazdu -
-                  bookmark i wybor pojedynczych miejsc z cudzego wyjazdu odpowiadaja na dwie
-                  rozne potrzeby, wiec zyja obok siebie. */}
-              <div className="flex items-center justify-between gap-3">
-                <TabSelect
-                  dotLabel={t("profile.new_content_aria")}
-                  value={wyjazdyTab}
-                  onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); goSub(v); }}
-                  options={[{ id: "wspomnienia", label: t("trip_tabs.published") }, { id: "robocze", label: t("trip_tabs.drafts") }, { id: "zapisane", label: t("trip_tabs.saved") }]}
-                />
-                {/* Przelacznik ukladu TYLKO przy opublikowanych - roboczy ma na karcie akcje
-                    wlasciciela (olowek, kosz), ktore w malym kafelku nie mialyby gdzie stanac. */}
-                {wyjazdyTab === "wspomnienia" && memoryTrips.length > 0 && (
-                  <TripLayoutSwitch value={tripLayout} onChange={setTripLayout} />
-                )}
-              </div>
               <TabHint text={wyjazdyTab === "wspomnienia" && tripLayout !== "lista" && memoryTrips.length > 1
                 ? t("tab_hints.trips_wspomnienia_reorder")
                 : t(`tab_hints.trips_${wyjazdyTab}`)} />
@@ -1052,7 +1075,7 @@ const TravelerProfile = () => {
                   <>
                     <div className="flex items-start gap-1.5" {...reorder.containerProps}>
                       {mosaicColumns(memoryTrips).map((col, ci) => (
-                        <div key={ci} className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div key={ci} className={`flex min-w-0 flex-1 flex-col gap-1.5 ${ci === 1 ? MOSAIC_OFFSET : ""}`}>
                           {col.map((tr: any) => (
                             <div key={tr.id} className={REORDER_ITEM_CLASS} {...reorder.itemProps(tr.id)}>
                               <TripTile natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}

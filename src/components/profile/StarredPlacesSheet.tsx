@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +11,37 @@ import { subcategoryLabelLocalized } from "@/lib/categories";
 import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 import { haptics } from "@/hooks/useHaptics";
 import { fetchStarredPlaces, starredPlacesKey, type StarredPlace } from "@/lib/starredPlaces";
+
+// Filtry arkusza (prosba Nat 2026-09-15): kraj, miasto, typ miejsca. Grupa pojawia sie TYLKO
+// wtedy, gdy realnie ma co filtrowac (dwie rozne wartosci) - przy jednym miescie rzad chipow
+// "Wszystkie / Warszawa" jest samym halasem. Wartosci biora sie z tego, co user faktycznie
+// wyroznil, wiec nigdy nie ma tu pustego wyniku po wyborze pojedynczego filtra.
+function FilterRow({ value, onChange, options, allLabel }: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  options: { id: string; label: string }[];
+  allLabel: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+      {[{ id: "", label: allLabel }, ...options].map((o) => {
+        const active = (o.id || null) === value;
+        return (
+          <button
+            key={o.id}
+            onClick={() => { haptics.selection(); onChange(o.id || null); }}
+            aria-pressed={active}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-bold whitespace-nowrap active:scale-95 transition-all ${
+              active ? "bg-[#FDF184] text-[#5B2C06]" : "bg-secondary text-foreground"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // Wyroznione miejsca (prosba Nat 2026-09-13): licznik gwiazdek na profilu otwiera arkusz ze
 // wszystkimi miejscami, ktore user wyroznil w swoich wyjazdach i listach. Wiersz = zdjecie
@@ -44,6 +76,32 @@ export default function StarredPlacesSheet({ open, onOpenChange, userId, own = t
   const { t } = useTranslation("profiles");
   const navigate = useNavigate();
   const { data: places = [], isLoading } = useStarredPlaces(userId, open);
+  const [country, setCountry] = useState<string | null>(null);
+  const [city, setCity] = useState<string | null>(null);
+  const [cat, setCat] = useState<string | null>(null);
+
+  // Listy wartosci liczymy z CALEGO zbioru (nie z przefiltrowanego), zeby chipy nie znikaly
+  // po wybraniu pierwszego filtra i dalo sie zmienic zdanie bez czyszczenia wszystkiego.
+  const countries = useMemo(
+    () => Array.from(new Set(places.flatMap((p) => p.countries))).sort((a, b) => a.localeCompare(b, "pl")),
+    [places]);
+  const cities = useMemo(
+    () => Array.from(new Set(places.map((p) => p.city).filter((c): c is string => !!c))).sort((a, b) => a.localeCompare(b, "pl")),
+    [places]);
+  const cats = useMemo(
+    () => Array.from(new Set(places.map((p) => p.category).filter((c): c is string => !!c)))
+      .map((id) => ({ id, label: subcategoryLabelLocalized(id) }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pl")),
+    [places]);
+
+  const shown = useMemo(() => places.filter((p) =>
+    (!country || p.countries.includes(country)) &&
+    (!city || p.city === city) &&
+    (!cat || p.category === cat)), [places, country, city, cat]);
+
+  const hasFilters = countries.length > 1 || cities.length > 1 || cats.length > 1;
+  const anyActive = !!(country || city || cat);
+  const clear = () => { haptics.light(); setCountry(null); setCity(null); setCat(null); };
 
   const go = (p: StarredPlace) => {
     haptics.light();
@@ -67,8 +125,30 @@ export default function StarredPlacesSheet({ open, onOpenChange, userId, own = t
             {own && <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{t("starred.empty_desc")}</p>}
           </div>
         ) : (
+          <>
+          {hasFilters && (
+            <div className="mt-4 space-y-2">
+              {countries.length > 1 && (
+                <FilterRow value={country} onChange={setCountry} allLabel={t("starred.filter_all_countries")}
+                  options={countries.map((c) => ({ id: c, label: c }))} />
+              )}
+              {cities.length > 1 && (
+                <FilterRow value={city} onChange={setCity} allLabel={t("starred.filter_all_cities")}
+                  options={cities.map((c) => ({ id: c, label: c }))} />
+              )}
+              {cats.length > 1 && (
+                <FilterRow value={cat} onChange={setCat} allLabel={t("starred.filter_all_types")} options={cats} />
+              )}
+              {anyActive && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="text-[12px] text-muted-foreground">{t("starred.filter_count", { count: shown.length })}</span>
+                  <button onClick={clear} className="text-[12px] font-semibold text-primary active:opacity-70">{t("starred.filter_clear")}</button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-3 divide-y divide-border/40">
-            {places.map((p) => (
+            {shown.map((p) => (
               <button key={p.id} onClick={() => go(p)} className="flex w-full items-center gap-3 py-3 text-left active:bg-muted/40 transition-colors">
                 <Thumb place={p} />
                 <span className="min-w-0 flex-1">
@@ -85,6 +165,7 @@ export default function StarredPlacesSheet({ open, onOpenChange, userId, own = t
               </button>
             ))}
           </div>
+          </>
         )}
       </SheetContent>
     </Sheet>

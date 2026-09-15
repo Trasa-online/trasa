@@ -17,6 +17,7 @@ import { fetchBlockedIds } from "@/lib/blockedUsers";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash } from "@/lib/trash";
 import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -296,8 +297,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     deferDelete({
       message: t("toast.collection_deleted"),
       commit: async () => {
-        await (supabase as any).from("discovery_items").delete().eq("collection_id", col.id);
-        await (supabase as any).from("discovery_collections").delete().eq("id", col.id);
+        // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
+        await moveToTrash("list", col.id);
         refresh();
       },
       onUndo: () => { setDeleting(false); refresh(); },

@@ -94,7 +94,18 @@
     "yellow": "Yellow",
     "gold": "Gold",
     "orange": "Orange",
-    "brown": "Brown"
+    "brown": "Brown",
+    "cream": "Cream",
+    "sand": "Sand",
+    "sage": "Sage",
+    "moss": "Moss",
+    "teal": "Teal",
+    "sky": "Sky",
+    "denim": "Denim",
+    "plum": "Plum",
+    "wine": "Wine",
+    "custom": "Custom colour",
+    "custom_hint": "Pick from the palette"
   },
   "scope": {
     "title": "Country and city",

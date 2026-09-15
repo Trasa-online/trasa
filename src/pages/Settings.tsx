@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare } from "lucide-react";
+import TrashSheet from "@/components/profile/TrashSheet";
 import AvatarFrameSheet, { useMyAvatarFrame } from "@/components/profile/AvatarFrameSheet";
 import AvatarFrame from "@/components/profile/AvatarFrame";
 import { isAvatarFrame } from "@/lib/avatarFrames";
@@ -591,6 +592,8 @@ const Settings = () => {
   const [framesOpen, setFramesOpen] = useState(false);
   const { data: myFrame } = useMyAvatarFrame(user?.id);
 
+  const [trashOpen, setTrashOpen] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
@@ -873,6 +876,17 @@ const Settings = () => {
 
           <CookieConsentSection />
 
+          {/* KOSZ (2026-09-15): usuniety wyjazd / kolekcja czeka 7 dni. Wejscie stoi w Ustawieniach,
+              a nie na profilu - to sciezka ratunkowa ("gdzie to zniknelo"), nie codzienna zakladka. */}
+          <button
+            onClick={() => setTrashOpen(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+          >
+            <Trash2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-medium flex-1">{t("trash")}</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+
           <Link
             to="/terms"
             className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
@@ -933,6 +947,8 @@ const Settings = () => {
           </button>
 
           <DeleteAccountButton onDeleted={() => { signOut(); navigate("/"); }} />
+
+          <TrashSheet open={trashOpen} onOpenChange={setTrashOpen} />
         </div>
 
       </div>

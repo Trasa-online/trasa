@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { fetchRouteLike, toggleRouteLike, type LikeState } from "@/lib/likes";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash, moveManyToTrash } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
 import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
@@ -1402,10 +1403,9 @@ export default function SharedRoute() {
       deferDelete({
         message: t("toast.trip_deleted"),
         commit: async () => {
-          await supabase.from("pins").delete().in("route_id", ids);
-          await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
-          const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
-          if (error) { toast.error(t("toast.trip_delete_failed")); return; }
+          // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
+          const moved = await moveManyToTrash("trip", ids);
+          if (moved === 0) { toast.error(t("toast.trip_delete_failed")); return; }
           queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
         },
         onUndo: () => queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] }),

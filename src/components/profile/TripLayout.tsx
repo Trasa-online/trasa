@@ -27,29 +27,30 @@ export function useTripLayout(): [TripLayout, (l: TripLayout) => void] {
   return [layout, setLayout];
 }
 
+/** Kolejnosc przelaczania jednym guzikiem: lista -> mozaika -> siatka -> lista. */
+const CYCLE: TripLayout[] = ["lista", "mozaika", "siatka"];
+const LAYOUT_ICON: Record<TripLayout, typeof Rows3> = { lista: Rows3, mozaika: LayoutGrid, siatka: Grid3x3 };
+const LAYOUT_LABEL: Record<TripLayout, string> = { lista: "layout.list", mozaika: "layout.mosaic", siatka: "layout.grid" };
+
+/**
+ * JEDEN guzik zamiast rzedu trzech (prosba Nat 2026-09-15): trzy kwadraty obok siebie
+ * najezdzaly na chipy podzakladek (Opublikowane / Robocze / Zapisane) na waskim ekranie.
+ * Tap przelacza uklad w kolko i od razu zmienia ikone - ikona pokazuje uklad AKTUALNY
+ * (stan, nie zapowiedz), bo przy trzech pozycjach "co bedzie dalej" nie da sie odgadnac
+ * z jednego symbolu. Nastepny uklad siedzi w aria-label, zeby czytnik ekranu go zapowiadal.
+ */
 export function TripLayoutSwitch({ value, onChange }: { value: TripLayout; onChange: (l: TripLayout) => void }) {
   const { t } = useTranslation("profiles");
-  const opts: Array<{ id: TripLayout; icon: typeof Rows3; label: string }> = [
-    { id: "lista", icon: Rows3, label: t("layout.list") },
-    { id: "mozaika", icon: LayoutGrid, label: t("layout.mosaic") },
-    { id: "siatka", icon: Grid3x3, label: t("layout.grid") },
-  ];
+  const next = CYCLE[(CYCLE.indexOf(value) + 1) % CYCLE.length];
+  const Icon = LAYOUT_ICON[value];
   return (
-    <div className="flex items-center gap-1 shrink-0">
-      {opts.map(({ id, icon: Icon, label }) => (
-        <button
-          key={id}
-          onClick={() => { haptics.light(); onChange(id); }}
-          aria-label={label}
-          aria-pressed={value === id}
-          className={`h-9 w-9 rounded-xl flex items-center justify-center transition-colors active:scale-90 ${
-            value === id ? "bg-foreground text-background" : "bg-secondary text-muted-foreground"
-          }`}
-        >
-          <Icon className="h-4 w-4" />
-        </button>
-      ))}
-    </div>
+    <button
+      onClick={() => { haptics.light(); onChange(next); }}
+      aria-label={t("layout.switch_aria", { next: t(LAYOUT_LABEL[next]) })}
+      className="h-9 w-9 shrink-0 rounded-xl flex items-center justify-center bg-secondary text-foreground transition-colors active:scale-90"
+    >
+      <Icon className="h-4 w-4" />
+    </button>
   );
 }
 
@@ -61,6 +62,9 @@ export function TripLayoutSwitch({ value, onChange }: { value: TripLayout; onCha
  * "przytrzymaj i przestaw" na profilu (2026-09-11). Ten sam podzial na wlasnym i publicznym
  * profilu, zeby uklad ustawiony przez usera wygladal u innych identycznie.
  */
+/** Zazebienie mozaiki: DRUGA kolumna zjezdza o tyle pikseli w dol (prosba Nat 2026-09-15). */
+export const MOSAIC_OFFSET = "mt-7";
+
 export function mosaicColumns<T>(items: readonly T[]): [T[], T[]] {
   const left: T[] = [];
   const right: T[] = [];
@@ -71,23 +75,26 @@ export function mosaicColumns<T>(items: readonly T[]): [T[], T[]] {
 /**
  * Kafelek wyjazdu do ukladow siatki i mozaiki.
  *
- * Mozaika (Pinterest) NIE udaje roznych wysokosci losowaniem - zdjecie idzie w naturalnych
- * proporcjach (`h-auto`), a uklad robia kolumny CSS. Kafelek bez zdjecia dostaje 3:4, zeby
- * nie zapadal sie do zera przed zaladowaniem.
+ * UJEDNOLICONE PROPORCJE (prosba Nat 2026-09-15). Do tej pory mozaika pusczala zdjecie
+ * w NATURALNYCH proporcjach (`h-auto`), wiec obok siebie stawaly kadry 9:16, 3:4 i panoramy -
+ * kolumny rozjezdzaly sie i uklad wygladal na przypadkowy. Teraz KAZDY kafelek ma ten sam
+ * kadr: 3:4 w mozaice, kwadrat w siatce, a zdjecie jest kadrowane (`object-cover`).
+ * Zazebienie kolumn robi PRZESUNIECIE drugiej kolumny w dol (patrz MOSAIC_OFFSET
+ * w TravelerProfile / PublicProfile), nie rozne wysokosci kafelkow.
  */
 export function TripTile({ photo, title, meta, onOpen, natural }: {
   photo: string | null;
   title: string;
   meta?: string | null;
   onOpen: () => void;
-  /** true = mozaika (naturalne proporcje zdjecia), false = staly kwadrat siatki. */
+  /** true = mozaika (kadr 3:4), false = kwadrat siatki. */
   natural?: boolean;
 }) {
   return (
     <button
       onClick={onOpen}
       className={`relative w-full overflow-hidden rounded-2xl bg-[#fcede3] text-left active:opacity-90 transition-opacity ${
-        natural ? "block" : "aspect-square"
+        natural ? "aspect-[3/4]" : "aspect-square"
       }`}
     >
       {photo ? (
@@ -98,11 +105,11 @@ export function TripTile({ photo, title, meta, onOpen, natural }: {
           // Bez natywnego "podnoszenia" obrazka przez WKWebView: to ono udawalo przestawianie
           // kafelkow (zgloszenie Nat 2026-09-11) - prawdziwy gest robi useLongPressReorder.
           draggable={false}
-          className={`${natural ? "w-full h-auto block" : "absolute inset-0 w-full h-full object-cover"} [-webkit-user-drag:none] select-none`}
+          className="absolute inset-0 w-full h-full object-cover [-webkit-user-drag:none] select-none"
         />
       ) : (
         <span
-          className={natural ? "block w-full aspect-[3/4]" : "absolute inset-0"}
+          className="absolute inset-0"
           style={{ display: "block" }}
         >
           <span

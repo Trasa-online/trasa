@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash, moveManyToTrash } from "@/lib/trash";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -130,13 +131,9 @@ const MyTrips = () => {
     setTimeout(async () => {
       if (undone) return;
       try {
-        for (const route of trip.routes) {
-          await supabase.from("pins").delete().eq("route_id", route.id);
-          await supabase.from("routes").delete().eq("id", route.id);
-        }
-        if (trip.routes[0]?.folder_id) {
-          await supabase.from("route_folders").delete().eq("id", trip.routes[0].folder_id);
-        }
+        // Do KOSZA, nie DELETE (2026-09-15). Folder ZOSTAJE: gdyby zniknal, odzyskane trasy
+        // wrocilyby z wiszacym folder_id i rozsypanym grupowaniem.
+        await moveManyToTrash("trip", trip.routes.map((r: any) => r.id));
       } catch {
         queryClient.setQueryData(["active-routes", user?.id], previousRoutes);
         toast.error(t("toast_delete_error"));

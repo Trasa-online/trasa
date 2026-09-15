@@ -97,7 +97,18 @@
     "yellow": "Żółty",
     "gold": "Złoty",
     "orange": "Pomarańcz",
-    "brown": "Brąz"
+    "brown": "Brąz",
+    "cream": "Krem",
+    "sand": "Piasek",
+    "sage": "Szałwia",
+    "moss": "Mech",
+    "teal": "Morski",
+    "sky": "Niebo",
+    "denim": "Denim",
+    "plum": "Śliwka",
+    "wine": "Wino",
+    "custom": "Własny kolor",
+    "custom_hint": "Wybierz z palety"
   },
   "scope": {
     "title": "Kraj i miasto",

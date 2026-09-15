@@ -121,5 +121,6 @@
     "long": "Imię może mieć najwyżej 30 znaków",
     "chars": "Imię to same litery (może być myślnik lub apostrof)",
     "banned": "To imię jest niedozwolone"
-  }
+  },
+  "trash": "Kosz"
 }

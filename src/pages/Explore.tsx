@@ -40,6 +40,7 @@ import { PLANNING_DISABLED, GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode"
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash } from "@/lib/trash";
 import { toast } from "sonner";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
@@ -520,9 +521,9 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
       deferDelete({
         message: t("collections.toast_deleted"),
         commit: async () => {
-          await (supabase as any).from("discovery_items").delete().eq("collection_id", target.id);
-          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", target.id).eq("user_id", user.id);
-          if (error) toast.error(t("collections.toast_delete_error", { error: error.message }));
+          // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts.
+          const moved = await moveToTrash("list", target.id).catch(() => false);
+          if (!moved) toast.error(t("collections.toast_delete_error", { error: t("collections.error_fallback") }));
           refresh();
         },
         onUndo: refresh,
