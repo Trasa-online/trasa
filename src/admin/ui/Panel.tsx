@@ -3,13 +3,18 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function Panel({ title, subtitle, onClose, actions, children }: {
+export function Panel({ title, subtitle, onClose, actions, children, wide, flush }: {
   title: string;
   subtitle?: ReactNode;
   onClose: () => void;
   actions?: ReactNode;
   children: ReactNode;
+  /** Szerszy panel - dla podgladow "jak w apce", gdzie licza sie zdjecia. */
+  wide?: boolean;
+  /** Bez wewnetrznego marginesu - tresc sama rysuje swoje krawedzie (okladka na caly panel). */
+  flush?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -20,7 +25,10 @@ export function Panel({ title, subtitle, onClose, actions, children }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/45" onClick={onClose} />
-      <div className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--r-card)] border border-[var(--line)] bg-[var(--surface)] sm:max-w-[560px] sm:rounded-[var(--r-card)]">
+      <div className={cn(
+        "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--r-card)] border border-[var(--line)] bg-[var(--surface)] sm:rounded-[var(--r-card)]",
+        wide ? "sm:max-w-[720px]" : "sm:max-w-[560px]",
+      )}>
         <div className="flex items-start gap-3 border-b border-[var(--line)] px-5 py-4">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-[15px] font-semibold text-[var(--ink)]">{title}</h3>
@@ -34,7 +42,7 @@ export function Panel({ title, subtitle, onClose, actions, children }: {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-y-auto p-5">{children}</div>
+        <div className={cn("overflow-y-auto", flush ? "" : "p-5")}>{children}</div>
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ export function PlaceFlagsPage() {
       <Card>
         <EmptyState
           fact="Żadna flaga nie czeka na decyzję."
-          next="Zgłoszenia z wizytówek trafiają tu od razu - nic nie trzeba odświeżać."
+          next="Zgłoszenia z wizytówek trafiają tu od razu - nic nie trzeba odświeżać."
         />
       </Card>
     );
@@ -38,7 +38,7 @@ export function PlaceFlagsPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[14px] font-semibold text-[var(--ink)]">
-                  {f.place?.place_name ?? "Miejsce usunięte z bazy"}
+                  {f.place?.place_name ?? "Miejsce usunięte z bazy"}
                 </p>
                 <p className="truncate text-[12px] text-[var(--stone)]">
                   {[f.place?.address, f.place?.city].filter(Boolean).join(" · ") || "brak adresu"}
@@ -63,7 +63,7 @@ export function PlaceFlagsPage() {
                   disabled={busy} onClick={() => clearPhoto.mutate(f)}
                   icon={clearPhoto.isPending ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
                 >
-                  Wyczyść zdjęcie i pobierz ponownie
+                  Wyczyść zdjęcie i pobierz ponownie
                 </Button>
               ) : null}
               <Button variant="primary" disabled={busy} icon={<Check className="h-4 w-4" />} onClick={() => resolve.mutate({ id: f.id, status: "resolved" })}>

@@ -2,9 +2,10 @@
 // przy kazdej sprawie, a po przekroczeniu doby robi sie czerwony - nie szary.
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, X, MapPin, Phone, Mail } from "lucide-react";
+import { Check, X, MapPin, Phone, Mail, Maximize2 } from "lucide-react";
 import { Card, Button, TextArea, StatusBadge, Loading, EmptyState, type Tone } from "../../ui";
 import { useModerationQueue, useModerate, completeness, type QueueItem, type Completeness } from "./useModeration";
+import { BusinessPreview } from "../preview/BusinessPreview";
 
 const COMPLETENESS_META: Record<Completeness, { label: string; tone: Tone }> = {
   not_started: { label: "Pusta", tone: "bad" },
@@ -22,7 +23,7 @@ export function ModerationQueue() {
       <Card>
         <EmptyState
           fact="Żadna wizytówka nie czeka na decyzję."
-          next="Nowe zgłoszenia lokali pojawią się tu same, licznik w nawigacji odświeża się co minutę."
+          next="Nowe zgłoszenia lokali pojawią się tu same, licznik w nawigacji odświeża się co minutę."
         />
       </Card>
     );
@@ -42,6 +43,7 @@ function QueueCard({ item }: { item: QueueItem }) {
   const moderate = useModerate();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [preview, setPreview] = useState(false);
   const busy = moderate.isPending;
 
   const sla = waitingLabel(item.review_requested_at ?? item.created_at);
@@ -87,7 +89,7 @@ function QueueCard({ item }: { item: QueueItem }) {
         <div className="mt-3 flex flex-col gap-2">
           <TextArea
             value={reason} onChange={(e) => setReason(e.target.value)} rows={2} autoFocus
-            placeholder="Powód odrzucenia (zostaje w dzienniku audytu)"
+            placeholder="Powód odrzucenia (zostaje w dzienniku audytu)"
           />
           <div className="flex gap-2">
             <Button variant="danger" className="flex-1" disabled={busy || !reason.trim()} onClick={doReject}>
@@ -97,15 +99,21 @@ function QueueCard({ item }: { item: QueueItem }) {
           </div>
         </div>
       ) : (
-        <div className="mt-3 flex gap-2">
-          <Button variant="primary" className="flex-1" disabled={busy} icon={<Check className="h-4 w-4" />} onClick={approve}>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={() => setPreview(true)} icon={<Maximize2 className="h-3.5 w-3.5" />}>
+            Podgląd
+          </Button>
+          <span className="flex-1" />
+          <Button variant="primary" disabled={busy} icon={<Check className="h-4 w-4" />} onClick={approve}>
             Akceptuj
           </Button>
-          <Button className="flex-1" disabled={busy} icon={<X className="h-4 w-4" />} onClick={() => setRejecting(true)}>
+          <Button disabled={busy} icon={<X className="h-4 w-4" />} onClick={() => setRejecting(true)}>
             Odrzuć
           </Button>
         </div>
       )}
+
+      {preview ? <BusinessPreview id={item.id} onClose={() => setPreview(false)} /> : null}
     </Card>
   );
 }

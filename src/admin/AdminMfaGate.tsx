@@ -111,7 +111,7 @@ function MfaEnroll({ onDone }: { onDone: () => void }) {
     <Shell>
       <h1 className="text-[20px] font-semibold text-[var(--ink)]">Włącz 2FA</h1>
       <p className="mt-1 text-[14px] leading-relaxed text-[var(--stone)]">
-        Zeskanuj kod w aplikacji uwierzytelniającej (Google Authenticator, Authy, 1Password), potem wpisz 6-cyfrowy kod, żeby dokończyć.
+        Zeskanuj kod w aplikacji uwierzytelniającej (Google Authenticator, Authy, 1Password), potem wpisz 6-cyfrowy kod, żeby dokończyć.
       </p>
       <div className="mt-5 flex justify-center">
         {qrSrc
@@ -129,7 +129,7 @@ function MfaEnroll({ onDone }: { onDone: () => void }) {
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="000000" className={CODE_INPUT} />
         {err && <p className="text-[12px] text-[var(--bad)]">{err}</p>}
         <button type="submit" disabled={busy || code.length < 6 || !factorId} className={PRIMARY_BTN}>
-          {busy ? "Sprawdzam…" : "Potwierdź i włącz"}
+          {busy ? "Sprawdzam…" : "Potwierdź i włącz"}
         </button>
       </form>
       <button onClick={() => supabase.auth.signOut()} className={LINK_BTN}>Wyloguj się</button>
@@ -152,9 +152,9 @@ function MfaChallenge({ factorId, onDone }: { factorId: string; onDone: () => vo
 
   return (
     <Shell>
-      <h1 className="text-[20px] font-semibold text-[var(--ink)]">Kod z aplikacji</h1>
+      <h1 className="text-[20px] font-semibold text-[var(--ink)]">Kod z aplikacji</h1>
       <p className="mt-1 text-[14px] leading-relaxed text-[var(--stone)]">
-        Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej, żeby wejść do panelu.
+        Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej, żeby wejść do panelu.
       </p>
       <form onSubmit={submit} className="mt-5 space-y-3">
         <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} autoFocus

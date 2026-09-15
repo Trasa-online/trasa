@@ -128,7 +128,7 @@ function AdminLogin() {
           {sent ? (
             <>
               <div className="text-center mb-6">
-                <h1 className="text-[26px] font-semibold text-[var(--ink)]">Wpisz kod z maila</h1>
+                <h1 className="text-[26px] font-semibold text-[var(--ink)]">Wpisz kod z maila</h1>
                 <p className="mt-1 text-[14px] leading-relaxed text-[var(--stone)]">
                   Wysłaliśmy 8-cyfrowy kod na <strong className="text-[var(--ink)]">{email}</strong>.
                 </p>

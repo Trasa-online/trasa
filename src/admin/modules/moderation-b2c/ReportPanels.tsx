@@ -32,7 +32,7 @@ export function QuarantinePanel() {
           <EmptyState
             fact={reviewed ? "Nic jeszcze nie zostało sprawdzone." : "Żadne zdjęcie nie czeka na sprawdzenie."}
             next={reviewed
-              ? "Wpisy trafią tu po decyzji w zakładce „Do sprawdzenia”."
+              ? "Wpisy trafią tu po decyzji w zakładce „Do sprawdzenia”."
               : "Auto-moderacja wrzuci tu zdjęcie, gdy Vision uzna je za ryzykowne."}
           />
         </Card>
@@ -100,7 +100,7 @@ function QuarantineCard({ img }: { img: ModImage }) {
           <TextField
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Notatka do decyzji, np. fałszywy alarm, zdjęcie z basenu"
+            placeholder="Notatka do decyzji, np. fałszywy alarm, zdjęcie z basenu"
           />
           <div className="flex gap-2">
             <Button
@@ -143,8 +143,8 @@ export function ReportsPanel() {
           <EmptyState
             fact={open ? "Nikt nic nie zgłosił." : "Żadne zgłoszenie nie zostało jeszcze rozpatrzone."}
             next={open
-              ? "Zgłoszenia z aplikacji trafiają tu od razu, bez odświeżania strony."
-              : "Rozpatrzone sprawy pojawią się tu po decyzji w zakładce „Otwarte”."}
+              ? "Zgłoszenia z aplikacji trafiają tu od razu, bez odświeżania strony."
+              : "Rozpatrzone sprawy pojawią się tu po decyzji w zakładce „Otwarte”."}
           />
         </Card>
       ) : data.map((r) => <ReportCard key={r.id} report={r} />)}

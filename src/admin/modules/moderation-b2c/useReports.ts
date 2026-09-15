@@ -91,7 +91,7 @@ export function useContentReports(open: boolean) {
       const ids = (type: string) => rows.filter((r) => r.target_type === type).map((r) => r.target_id);
       const routeIds = ids("route"), colIds = ids("collection"), userIds = ids("user");
       if (routeIds.length) { const { data } = await (supabase as any).from("routes").select("id, title").in("id", routeIds); (data ?? []).forEach((x: any) => labels[x.id] = x.title || "Wyjazd"); }
-      if (colIds.length) { const { data } = await (supabase as any).from("discovery_collections").select("id, title").in("id", colIds); (data ?? []).forEach((x: any) => labels[x.id] = x.title || "Lista"); }
+      if (colIds.length) { const { data } = await (supabase as any).from("discovery_collections").select("id, title").in("id", colIds); (data ?? []).forEach((x: any) => labels[x.id] = x.title || "Kolekcja"); }
       if (userIds.length) { const { data } = await (supabase as any).from("profiles").select("id, username").in("id", userIds); (data ?? []).forEach((x: any) => labels[x.id] = "@" + (x.username || "user")); }
       return rows.map((r) => ({ ...r, reporter: rep[r.reporter_id] ?? null, targetLabel: labels[r.target_id] ?? null }));
     },

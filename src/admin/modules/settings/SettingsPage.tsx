@@ -36,7 +36,7 @@ export function SettingsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Ustawienia" subtitle="Konto operatorki, wygląd panelu i hasło." />
+      <PageHeader title="Ustawienia" subtitle="Konto operatorki, wygląd panelu i hasło." />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card title="Konto">
@@ -64,7 +64,7 @@ export function SettingsPage() {
             ))}
           </div>
           <p className="pt-2 text-[12px] leading-[17px] text-[var(--stone)]">
-            Siatka zdjęć w kwarantannie zostaje na neutralnym tle w obu trybach, żeby ocena
+            Siatka zdjęć w kwarantannie zostaje na neutralnym tle w obu trybach, żeby ocena
             ekspozycji nie zależała od pory dnia.
           </p>
         </Card>

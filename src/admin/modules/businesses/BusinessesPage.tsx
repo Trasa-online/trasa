@@ -2,7 +2,7 @@
 // TU sa dane: przegladanie, poprawka nazwy, publikacja i usuniecie.
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Pencil, Eye, EyeOff, Trash2, Maximize2 } from "lucide-react";
 import { format } from "date-fns";
 import {
   AppShell, PageHeader, Toolbar, FilterChips, DataTable, StatusBadge, Button, TextField,
@@ -10,6 +10,7 @@ import {
 } from "../../ui";
 import { RequireTier } from "../../RequireTier";
 import { useAllBusinesses, useEditBusiness, useDeleteBusiness, type BizRow } from "./useAllBusinesses";
+import { BusinessPreview } from "../preview/BusinessPreview";
 
 const STATUS_TONE: Record<string, Tone> = { approved: "ok", pending: "warn", rejected: "bad" };
 const STATUS_LABEL: Record<string, string> = { approved: "Zaakceptowana", pending: "Czeka", rejected: "Odrzucona" };
@@ -21,6 +22,7 @@ export function BusinessesPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<BizRow | null>(null);
+  const [preview, setPreview] = useState<BizRow | null>(null);
   const [deleting, setDeleting] = useState<BizRow | null>(null);
   const [reason, setReason] = useState("");
   const edit = useEditBusiness();
@@ -45,7 +47,7 @@ export function BusinessesPage() {
   }, [all, filter, search]);
 
   const togglePublish = (biz: BizRow) => edit.mutate({ id: biz.id, patch: { is_active: !biz.is_active } }, {
-    onSuccess: () => toast.success(biz.is_active ? "Wizytówka schowana z aplikacji" : "Wizytówka widoczna w aplikacji"),
+    onSuccess: () => toast.success(biz.is_active ? "Wizytówka schowana z aplikacji" : "Wizytówka widoczna w aplikacji"),
     onError: (e: any) => toast.error(e.message || "Nie udało się zapisać"),
   });
 
@@ -81,14 +83,15 @@ export function BusinessesPage() {
       render: (b) => <span className="data text-[var(--stone)]">{format(new Date(b.created_at), "dd.MM.yyyy")}</span>,
     },
     {
-      key: "akcje", label: "", width: 190, align: "right", hideOnMobile: true,
+      key: "akcje", label: "", width: 230, align: "right", hideOnMobile: true,
       render: (b) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button icon={<Maximize2 className="h-3.5 w-3.5" />} title="Podgląd wizytówki" onClick={() => setPreview(b)} />
           <Button icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditing(b)}>Edytuj</Button>
           <Button
             icon={b.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             disabled={edit.isPending}
-            title={b.is_active ? "Schowaj z aplikacji" : "Pokaż w aplikacji"}
+            title={b.is_active ? "Schowaj z aplikacji" : "Pokaż w aplikacji"}
             onClick={() => togglePublish(b)}
           />
           <RequireTier tier="super_admin">
@@ -105,7 +108,10 @@ export function BusinessesPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Wizytówki" subtitle="Wszystkie wizytówki lokali poza szkicami. Kolejka do akceptu jest w Kolejce." />
+      <PageHeader
+        title="Wizytówki"
+        subtitle="Wszystkie wizytówki lokali poza szkicami. Wejdź w wiersz, żeby zobaczyć podgląd i kontakt do lokalu."
+      />
 
       <Toolbar search={search} onSearch={setSearch} placeholder="Szukaj po nazwie albo mieście" count={`${shown.length} wizytówek`}>
         <FilterChips chips={chips} value={filter} onChange={(id) => setFilter(id as Filter)} />
@@ -119,9 +125,12 @@ export function BusinessesPage() {
           rows={shown}
           keyOf={(b) => b.id}
           loading={isLoading}
+          onRowClick={(b) => setPreview(b)}
           empty={{ fact: "Żadna wizytówka nie pasuje do filtrów.", next: "Wyczyść szukanie albo wybierz „Wszystkie”." }}
         />
       )}
+
+      {preview ? <BusinessPreview id={preview.id} onClose={() => setPreview(null)} /> : null}
 
       {editing ? (
         <EditPanel biz={editing} onClose={() => setEditing(null)} />
@@ -131,7 +140,7 @@ export function BusinessesPage() {
         open={!!deleting}
         busy={del.isPending}
         confirmDisabled={!reason.trim()}
-        consequence={`Usuniesz wizytówkę „${deleting?.business_name ?? ""}”. Lokal zniknie z aplikacji, a operacja trafi do dziennika audytu.`}
+        consequence={`Usuniesz wizytówkę „${deleting?.business_name ?? ""}”. Lokal zniknie z aplikacji, a operacja trafi do dziennika audytu.`}
         confirmLabel="Usuń wizytówkę"
         onCancel={() => { setDeleting(null); setReason(""); }}
         onConfirm={confirmDelete}

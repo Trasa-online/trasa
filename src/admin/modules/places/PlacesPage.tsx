@@ -52,13 +52,13 @@ export function PlacesPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Miejsca" subtitle="Lokale w bazie. Wejdź w wiersz, żeby zobaczyć ruch miejsca." />
+      <PageHeader title="Miejsca" subtitle="Lokale w bazie. Wejdź w wiersz, żeby zobaczyć ruch miejsca." />
 
       <Toolbar
         search={search}
         onSearch={setSearch}
         placeholder="Szukaj miejsca"
-        count={rows.length === 60 ? "60 z większej listy" : `${rows.length} miejsc`}
+        count={rows.length === 60 ? "60 z większej listy" : `${rows.length} miejsc`}
       >
         <Select label="Miasto" value={city} onChange={setCity} options={(cities.data ?? []).map((c) => ({ value: c, label: c }))} />
       </Toolbar>
@@ -100,18 +100,18 @@ function PlaceTraffic({ place, range, setRange, onClose }: {
       <FilterChips chips={RANGES} value={range} onChange={setRange} className="mb-4" />
 
       {isLoading ? <Loading /> : isError ? (
-        <EmptyState fact="Dane o ruchu nie przyszły." next="Spróbuj za chwilę - odpowiada ta sama funkcja, co analityka produktu." />
+        <EmptyState fact="Dane o ruchu nie przyszły." next="Spróbuj za chwilę - odpowiada ta sama funkcja, co analityka produktu." />
       ) : views === 0 ? (
         <EmptyState
           fact="W tym okresie nikt nie otworzył tego miejsca."
-          next="Zmień zakres na 90 dni albo sprawdź, czy miejsce w ogóle pokazuje się w aplikacji."
+          next="Zmień zakres na 90 dni albo sprawdź, czy miejsce w ogóle pokazuje się w aplikacji."
         />
       ) : (
         <div className="grid grid-cols-2 gap-2.5">
           <Metric label="Wyświetlenia" value={views} />
           <Metric label="Dodania do wyjazdu" value={data?.onRoutes ?? 0} />
-          <Metric label="Kliki w stronę" value={data?.websiteClicks ?? 0} />
-          <Metric label="Kliki w telefon" value={data?.phoneClicks ?? 0} />
+          <Metric label="Kliki w stronę" value={data?.websiteClicks ?? 0} />
+          <Metric label="Kliki w telefon" value={data?.phoneClicks ?? 0} />
         </div>
       )}
     </Panel>

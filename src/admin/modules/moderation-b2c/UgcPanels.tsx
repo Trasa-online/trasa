@@ -5,15 +5,15 @@
 // Klik w miniature otwiera moderacje pojedynczego zdjecia (ukryj / usun z audytem).
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Check, X, Eye, EyeOff, ChevronDown, ImageOff } from "lucide-react";
+import { Check, X, Eye, EyeOff, ImageOff, Maximize2 } from "lucide-react";
 import { avatarSrc } from "@/lib/avatar";
-import { resolveStored } from "@/components/PlacePhoto";
-import { Card, Button, TextArea, StatusBadge, Loading, Spinner, EmptyState, type Tone } from "../../ui";
-import {
-  useRankings, useModerateRanking, useToggleHidden, fetchCollectionItems, type RankingCol,
-} from "../rankings/useRankings";
-import { useTrips, useToggleTripHidden, fetchTripDetail, type TripCol, type TripPlace } from "./useTrips";
+import { previewPhoto } from "../preview/PreviewParts";
+import { Card, Button, TextArea, StatusBadge, Loading, EmptyState, type Tone } from "../../ui";
+import { useRankings, useModerateRanking, useToggleHidden, type RankingCol } from "../rankings/useRankings";
+import { useTrips, useToggleTripHidden, type TripCol } from "./useTrips";
 import { PhotoModerationModal } from "./PhotoModerationModal";
+import { CollectionPreview } from "../preview/CollectionPreview";
+import { TripPreview } from "../preview/TripPreview";
 
 const PhotoCtx = createContext<(url: string) => void>(() => {});
 
@@ -79,7 +79,7 @@ export function TripsPanel() {
         <Card>
           <EmptyState
             fact="Nikt jeszcze nie opublikował wyjazdu."
-            next="Wyjazdy trafiają tu po kliknięciu „Zapisz trasę” w aplikacji."
+            next="Wyjazdy trafiają tu po kliknięciu „Zapisz trasę” w aplikacji."
           />
         </Card>
       ) : (
@@ -137,7 +137,7 @@ function Thumbs({ urls }: { urls: string[] }) {
           key={i} type="button" onClick={() => openPhoto(u)}
           className="h-14 w-14 shrink-0 overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)] transition-transform active:scale-95"
         >
-          <img src={resolveStored(u) || u} alt="" loading="lazy" className="h-full w-full object-cover" />
+          <img src={previewPhoto(u, 200) ?? undefined} alt="" loading="lazy" className="h-full w-full object-cover" />
         </button>
       ))}
     </div>
@@ -147,14 +147,8 @@ function Thumbs({ urls }: { urls: string[] }) {
 // ── WYJAZD ───────────────────────────────────────────────────────────────────
 function TripCard({ trip }: { trip: TripCol }) {
   const toggle = useToggleTripHidden();
-  const [detail, setDetail] = useState<TripPlace[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(false);
 
-  const open = async () => {
-    if (detail) { setDetail(null); return; }
-    setLoading(true);
-    try { setDetail(await fetchTripDetail(trip.id)); } finally { setLoading(false); }
-  };
   const hide = () => toggle.mutate({ id: trip.id, hidden: !trip.hidden_by_admin }, {
     onSuccess: () => toast.success(trip.hidden_by_admin ? "Wyjazd wrócił do eksploracji" : "Wyjazd ukryty"),
     onError: (e: any) => toast.error(e.message || "Nie udało się zapisać decyzji"),
@@ -168,28 +162,28 @@ function TripCard({ trip }: { trip: TripCol }) {
           <p className="truncate text-[14px] font-semibold text-[var(--ink)]">{trip.title || "Wyjazd bez nazwy"}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[12px] text-[var(--stone)]">
             {trip.city ? <span>{trip.city}</span> : null}
-            <button type="button" onClick={open} className="inline-flex items-center gap-0.5 font-medium text-[var(--graphite)]">
-              {trip.place_count} miejsc
-              <ChevronDown className={`h-3 w-3 transition-transform ${detail ? "rotate-180" : ""}`} />
-            </button>
+            <span>{trip.place_count} miejsc</span>
           </div>
         </div>
         {trip.hidden_by_admin ? <StatusBadge tone="bad" mono>UKRYTE</StatusBadge> : null}
       </div>
 
-      {loading ? <Loading label="Wczytuję miejsca…" /> : null}
-      {detail ? <PlacesPreview places={detail} /> : null}
-
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex gap-2">
+        <Button onClick={() => setPreview(true)} icon={<Maximize2 className="h-3.5 w-3.5" />}>
+          Podgląd
+        </Button>
+        <span className="flex-1" />
         <Button
           variant={trip.hidden_by_admin ? "ghost" : "danger"}
           disabled={toggle.isPending}
           onClick={hide}
           icon={trip.hidden_by_admin ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
         >
-          {trip.hidden_by_admin ? "Przywróć" : "Ukryj z eksploracji"}
+          {trip.hidden_by_admin ? "Przywróć" : "Ukryj z eksploracji"}
         </Button>
       </div>
+
+      {preview ? <TripPreview id={trip.id} onClose={() => setPreview(false)} /> : null}
     </Card>
   );
 }
@@ -206,16 +200,10 @@ function ListCard({ col }: { col: RankingCol }) {
   const toggleHidden = useToggleHidden();
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState("");
-  const [items, setItems] = useState<any[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(false);
   const st = STATUS_META[col.moderation_status] ?? STATUS_META.pending;
   const busy = moderate.isPending || toggleHidden.isPending;
 
-  const open = async () => {
-    if (items) { setItems(null); return; }
-    setLoading(true);
-    try { setItems(await fetchCollectionItems(col.id)); } finally { setLoading(false); }
-  };
   const approve = () => moderate.mutate({ col, status: "approved" }, {
     onSuccess: () => toast.success("Kolekcja zaakceptowana"),
     onError: (e: any) => toast.error(e.message || "Nie udało się zapisać decyzji"),
@@ -225,12 +213,6 @@ function ListCard({ col }: { col: RankingCol }) {
     onError: (e: any) => toast.error(e.message || "Nie udało się zapisać decyzji"),
   });
 
-  const preview: TripPlace[] = (items ?? []).map((it) => ({
-    place_name: it.place_name,
-    photos: it.photo_url ? [it.photo_url] : [],
-    notes: it.short_desc?.trim() ? [{ text: it.short_desc.trim(), author: null }] : [],
-  }));
-
   return (
     <Card>
       <Thumbs urls={col.thumbs} />
@@ -239,10 +221,7 @@ function ListCard({ col }: { col: RankingCol }) {
           <p className="truncate text-[14px] font-semibold text-[var(--ink)]">{col.title || "Kolekcja bez tytułu"}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[12px] text-[var(--stone)]">
             {col.city ? <span>{col.city}</span> : null}
-            <button type="button" onClick={open} className="inline-flex items-center gap-0.5 font-medium text-[var(--graphite)]">
-              {col.item_count} miejsc
-              <ChevronDown className={`h-3 w-3 transition-transform ${items ? "rotate-180" : ""}`} />
-            </button>
+            <span>{col.item_count} miejsc</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -250,9 +229,6 @@ function ListCard({ col }: { col: RankingCol }) {
           {col.hidden_by_admin ? <StatusBadge tone="bad" mono>UKRYTA</StatusBadge> : null}
         </div>
       </div>
-
-      {loading ? <Loading label="Wczytuję miejsca…" /> : null}
-      {items ? <PlacesPreview places={preview} /> : null}
 
       {rejecting ? (
         <div className="mt-3 flex flex-col gap-2">
@@ -268,14 +244,18 @@ function ListCard({ col }: { col: RankingCol }) {
           </div>
         </div>
       ) : (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={() => setPreview(true)} icon={<Maximize2 className="h-3.5 w-3.5" />}>
+            Podgląd
+          </Button>
+          <span className="flex-1" />
           {col.moderation_status !== "approved" ? (
-            <Button variant="primary" className="flex-1" disabled={busy} icon={<Check className="h-4 w-4" />} onClick={approve}>
+            <Button variant="primary" disabled={busy} icon={<Check className="h-4 w-4" />} onClick={approve}>
               Akceptuj
             </Button>
           ) : null}
           {col.moderation_status !== "rejected" ? (
-            <Button className="flex-1" disabled={busy} icon={<X className="h-4 w-4" />} onClick={() => setRejecting(true)}>
+            <Button disabled={busy} icon={<X className="h-4 w-4" />} onClick={() => setRejecting(true)}>
               Odrzuć
             </Button>
           ) : null}
@@ -287,48 +267,8 @@ function ListCard({ col }: { col: RankingCol }) {
           />
         </div>
       )}
-    </Card>
-  );
-}
 
-// Rozwiniecie: zdjecia i notki przy miejscach - to jest material do moderacji.
-function PlacesPreview({ places }: { places: TripPlace[] }) {
-  const openPhoto = useContext(PhotoCtx);
-  if (!places.length) {
-    return (
-      <div className="mt-3 rounded-[var(--r-control)] bg-[var(--canvas)] p-3">
-        <p className="text-[12px] text-[var(--stone)]">Ta pozycja nie ma jeszcze żadnego miejsca.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="mt-3 flex flex-col gap-3 rounded-[var(--r-control)] bg-[var(--canvas)] p-3">
-      {places.map((p, i) => (
-        <div key={i} className="border-b border-[var(--line)] pb-3 last:border-0 last:pb-0">
-          <p className="truncate text-[13px] font-semibold text-[var(--ink)]">{p.place_name}</p>
-          {p.photos.length ? (
-            <div className="scrollbar-none mt-2 flex gap-1.5 overflow-x-auto">
-              {p.photos.map((u, j) => (
-                <button
-                  key={j} type="button" onClick={() => openPhoto(u)}
-                  className="h-16 w-16 shrink-0 overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)] transition-transform active:scale-95"
-                >
-                  <img src={resolveStored(u) || u} alt="" loading="lazy" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {p.notes.length ? (
-            <div className="mt-2 flex flex-col gap-1">
-              {p.notes.map((n, j) => (
-                <p key={j} className="text-[12px] leading-snug text-[var(--graphite)]">
-                  {n.author ? <span className="font-semibold text-[var(--ink)]">@{n.author}: </span> : null}„{n.text}”
-                </p>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ))}
-    </div>
+      {preview ? <CollectionPreview id={col.id} onClose={() => setPreview(false)} /> : null}
+    </Card>
   );
 }

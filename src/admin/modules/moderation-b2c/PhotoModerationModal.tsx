@@ -4,7 +4,7 @@ import { X, EyeOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveStored } from "@/components/PlacePhoto";
+import { previewPhoto } from "../preview/PreviewParts";
 import { Button, TextArea, Spinner } from "../../ui";
 
 // Best-effort kasowanie pliku ze Storage (dla 'usun'). Dziala tylko dla storage public URL
@@ -49,7 +49,7 @@ export function PhotoModerationModal({ url, onClose }: { url: string | null; onC
         <button onClick={onClose} aria-label="Zamknij" className="h-10 w-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"><X className="h-5 w-5" /></button>
       </div>
       <div className="flex-1 min-h-0 flex items-center justify-center px-4" onClick={(e) => e.stopPropagation()}>
-        <img src={resolveStored(url) || url} alt="" className="rounded-[var(--r-control)] object-contain" style={{ maxHeight: "100%", maxWidth: "100%" }} />
+        <img src={previewPhoto(url, 1200) ?? undefined} alt="" className="rounded-[var(--r-control)] object-contain" style={{ maxHeight: "100%", maxWidth: "100%" }} />
       </div>
       <div className="p-4" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto w-[min(28rem,100%)] rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--surface)] p-4">
@@ -68,7 +68,7 @@ export function PhotoModerationModal({ url, onClose }: { url: string | null; onC
             </Button>
           </div>
           <p className="mt-2 text-center text-[11px] text-[var(--stone)]">
-            Zdjęcie zniknie z aplikacji od razu. Usunięcie kasuje też plik ze storage.
+            Zdjęcie zniknie z aplikacji od razu. Usunięcie kasuje też plik ze storage.
           </p>
         </div>
       </div>

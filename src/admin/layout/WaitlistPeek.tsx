@@ -101,7 +101,7 @@ export function WaitlistPeek() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className="flex items-center gap-1.5 rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--graphite)] shadow-[var(--shadow-inset)] transition-colors hover:bg-[var(--canvas)]"
-        title="Zapisy na powiadomienie o premierze"
+        title="Zapisy na powiadomienie o premierze"
       >
         <Mail className={`h-3.5 w-3.5 transition-colors ${isFetching ? "text-[var(--accent)]" : "text-[var(--stone)]"}`} />
         <span className="data">{isLoading ? "…" : count}</span>
@@ -136,7 +136,7 @@ export function WaitlistPeek() {
           {(count > 25 || converted > 0) && (
             <p className="border-t border-[var(--line)] px-3 py-2 text-[11px] text-[var(--stone)]">
               {count > 25 ? `Pokazuję 25 najnowszych z ${count}. ` : ""}
-              {converted > 0 ? `${converted} z listy ma już konto (nie pokazuję).` : ""}
+              {converted > 0 ? `${converted} z listy ma już konto (nie pokazuję).` : ""}
             </p>
           )}
         </div>

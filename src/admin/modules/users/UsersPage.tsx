@@ -101,7 +101,7 @@ export function UsersPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Użytkownicy" subtitle="Wszystkie konta w bazie. Usuwanie konta widzi tylko super-admin." />
+      <PageHeader title="Użytkownicy" subtitle="Wszystkie konta w bazie. Usuwanie konta widzi tylko super-admin." />
 
       <Toolbar search={search} onSearch={setSearch} placeholder="Szukaj po imieniu albo nazwie" count={`${shown.length} kont`}>
         <FilterChips chips={chips} value={filter} onChange={(id) => setFilter(id as Filter)} />
@@ -123,7 +123,7 @@ export function UsersPage() {
         open={!!target}
         busy={del.isPending}
         confirmDisabled={!reason.trim()}
-        consequence={`Usuniesz konto @${target?.username ?? ""}. Profil, kolekcje i wyjazdy znikną z aplikacji, a operacja trafi do dziennika audytu.`}
+        consequence={`Usuniesz konto @${target?.username ?? ""}. Profil, kolekcje i wyjazdy znikną z aplikacji, a operacja trafi do dziennika audytu.`}
         confirmLabel="Usuń konto"
         onCancel={() => { setTarget(null); setReason(""); }}
         onConfirm={confirmDelete}

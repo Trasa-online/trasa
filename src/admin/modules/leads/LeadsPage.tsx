@@ -1,7 +1,7 @@
 // Leady = miejsca BEZ konta biznesowego, ktore userzy i tak dodaja do kolekcji i wyjazdow.
 // To jest lista "komu zaproponowac wizytowke", posortowana po liczbie dodan.
 import { MapPin } from "lucide-react";
-import { resolveStored } from "@/components/PlacePhoto";
+import { adminPhotoUrl } from "../places/usePlaces";
 import { AppShell, PageHeader, Section, Metric, DataTable, Bar, type Column } from "../../ui";
 import { useLeadPlaces, type LeadPlace } from "./useLeadPlaces";
 
@@ -14,7 +14,7 @@ export function LeadsPage() {
     {
       key: "name", label: "Miejsce", primary: true,
       render: (p) => {
-        const photo = p.photo_url ? resolveStored(p.photo_url) : null;
+        const photo = adminPhotoUrl(p.photo_url, 200);
         return (
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)]">
@@ -48,7 +48,7 @@ export function LeadsPage() {
     <AppShell>
       <PageHeader
         title="Leady"
-        subtitle="Miejsca bez konta biznesowego, które użytkownicy sami dodają do kolekcji i wyjazdów."
+        subtitle="Miejsca bez konta biznesowego, które użytkownicy sami dodają do kolekcji i wyjazdów."
       />
 
       <Section title="Skala">
@@ -71,7 +71,7 @@ export function LeadsPage() {
             loading={isLoading}
             empty={{
               fact: "Żadne miejsce bez konta nie zostało jeszcze dodane.",
-              next: "Lista zapełni się, gdy użytkownicy zaczną dodawać miejsca do kolekcji i wyjazdów.",
+              next: "Lista zapełni się, gdy użytkownicy zaczną dodawać miejsca do kolekcji i wyjazdów.",
             }}
           />
         )}

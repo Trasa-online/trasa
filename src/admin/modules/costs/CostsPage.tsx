@@ -57,12 +57,12 @@ function Monthly() {
     <>
       <Section title="Wyszukiwarka · bieżący miesiąc">
         {isLoading ? <Loading /> : isError ? (
-          <EmptyState fact="Dane o zużyciu nie przyszły." next="Odśwież stronę - licznik żyje w bazie, nie w przeglądarce." />
+          <EmptyState fact="Dane o zużyciu nie przyszły." next="Odśwież stronę - licznik żyje w bazie, nie w przeglądarce." />
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               <Metric
-                label="Wydane w tym miesiącu"
+                label="Wydane w tym miesiącu"
                 value={usd(calls * TEXTSEARCH_COST_PER_CALL)}
                 hint={`z limitu ${usd(TEXTSEARCH_MONTHLY_LIMIT * TEXTSEARCH_COST_PER_CALL)}`}
                 tone={tone}
@@ -74,7 +74,7 @@ function Monthly() {
             <Bar pct={pct} tone={tone} className="mt-1" />
             {blocked ? (
               <p className="text-[12px] leading-5 text-[var(--bad)]">
-                Wyszukiwarka jest zablokowana do końca miesiąca. Użytkownicy widzą propozycje z bazy zamiast wyników
+                Wyszukiwarka jest zablokowana do końca miesiąca. Użytkownicy widzą propozycje z bazy zamiast wyników
                 Google. Limit zeruje się pierwszego dnia następnego miesiąca (UTC).
               </p>
             ) : null}
@@ -128,7 +128,7 @@ function Daily() {
           </div>
           <Bar pct={pct} tone={tone} className="mt-1" />
           <p className="text-[12px] leading-5 text-[var(--stone)]">
-            Bezpiecznik obejmuje wszystkie płatne wywołania razem: wyszukiwarkę, szczegóły miejsc i zdjęcia.
+            Bezpiecznik obejmuje wszystkie płatne wywołania razem: wyszukiwarkę, szczegóły miejsc i zdjęcia.
           </p>
           {data && data.length > 1 ? (
             <DataTable columns={columns} rows={data} keyOf={(d) => d.day} />

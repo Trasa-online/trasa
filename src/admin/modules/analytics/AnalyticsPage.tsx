@@ -19,7 +19,7 @@ export function AnalyticsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Analityka" subtitle="Moderacja, lejek B2B i konta na żywo z bazy. Produkt z PostHoga." />
+      <PageHeader title="Analityka" subtitle="Moderacja, lejek B2B i konta na żywo z bazy. Produkt z PostHoga." />
 
       <Section title="Moderacja">
         {ops.isLoading ? <Loading /> : ops.isError ? (
@@ -44,7 +44,7 @@ export function AnalyticsPage() {
             <Funnel steps={[
               { label: "Wizytówki założone", value: ops.data.funnel.profiles },
               { label: "Zaakceptowane", value: ops.data.funnel.approved },
-              { label: "Aktywne w aplikacji", value: ops.data.funnel.active },
+              { label: "Aktywne w aplikacji", value: ops.data.funnel.active },
             ]} />
           </div>
         ) : null}

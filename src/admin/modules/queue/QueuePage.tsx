@@ -41,7 +41,7 @@ export function QueuePage() {
         title="Kolejka"
         subtitle={typeof pending.data?.total === "number"
           ? `${pending.data.total} spraw czeka na decyzję.`
-          : "Wszystko, co czeka na decyzję, w jednym miejscu."}
+          : "Wszystko, co czeka na decyzję, w jednym miejscu."}
       />
       <FilterChips chips={chips} value={active} onChange={(id) => setParams({ typ: id }, { replace: true })} />
       <div>

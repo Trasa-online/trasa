@@ -80,7 +80,7 @@ export function AuditPage() {
     <AppShell>
       <PageHeader
         title="Audyt"
-        subtitle="Historia operacji nieodwracalnych. Zapis powstaje automatycznie i nie da się go zmienić."
+        subtitle="Historia operacji nieodwracalnych. Zapis powstaje automatycznie i nie da się go zmienić."
       />
 
       <Toolbar count={total ? `${total} wpisów · strona ${page + 1} z ${pages}` : undefined}>

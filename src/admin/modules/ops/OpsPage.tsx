@@ -53,8 +53,8 @@ export function OpsPage() {
               ? `Żadne otwarte zgłoszenie od ${source === "user" ? "użytkowników" : "lokali"}.`
               : "Nic nie zostało jeszcze zamknięte."}
             next={tab === "open"
-              ? "Zgłoszenia z formularza w aplikacji trafiają tu od razu."
-              : "Zamknięte sprawy pojawią się tu po decyzji w zakładce „Otwarte”."}
+              ? "Zgłoszenia z formularza w aplikacji trafiają tu od razu."
+              : "Zamknięte sprawy pojawią się tu po decyzji w zakładce „Otwarte”."}
           />
         </Card>
       ) : shown.map((b) => <BugRow key={b.id} bug={b} />)}

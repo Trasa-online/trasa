@@ -113,7 +113,41 @@ wzrokiem i decydowaniu - przewijanie w bok ją zabija.
 
 ---
 
-## 4. Czego nie ruszać
+## 4. Podglądy „jak w apce"
+
+`src/admin/modules/preview/` odpowiada na jedno pytanie: **co dokładnie widzi użytkownik**.
+Dlatego podglądy celowo wyglądają jak aplikacja, nie jak panel - proporcje zdjęć, chipy
+kategorii i dymki notek są takie, jak w apce (patrz `CLAUDE.md`, sekcja o proporcjach).
+
+| Podgląd | Co pokazuje | Skąd się otwiera |
+|---|---|---|
+| `CollectionPreview` | pasek w kolorze kolekcji, autor, chipy, wszystkie miejsca z miniaturami i notkami | Dziś (wiersz „Ostatnio dodane"), Kolejka → Kolekcje („Podgląd") |
+| `TripPreview` | okładka, autor, opis właściciela, notki uczestników, miejsca **po dniach** ze zdjęciami | Dziś, Kolejka → Wyjazdy |
+| `BusinessPreview` | okładka 4:3, logo, kategorie, adres, godziny, opis, galeria + **kontakt do lokalu** | Wizytówki (wiersz), Kolejka → Wizytówki („Podgląd") |
+
+Zasady:
+
+- **Kliknięcie w zdjęcie w podglądzie kolekcji i wyjazdu otwiera moderację tego zdjęcia.**
+  Podgląd jest narzędziem pracy, więc nie każe przechodzić gdzie indziej, żeby coś z nim
+  zrobić. Do moderacji leci ORYGINALNA wartość z bazy, nie rozwiązany link - RPC dopasowuje
+  zdjęcie po wartości.
+- ⚠️ **Zdjęcia w panelu idą przez proxy na GŁÓWNEJ domenie** (`previewPhoto` →
+  `adminPhotoUrl`): `admin.spontaway.com` nie ma `/api/place-photo`, więc `resolveStored`
+  z aplikacji zwraca tu martwy link. Nie używaj `resolveStored` w `src/admin`.
+- Dane ładują się **dopiero po otwarciu arkusza** (`enabled: !!id`), nie przy każdej liście.
+
+### Kontakt z lokalem
+
+Sekcja „Kontakt" w `BusinessPreview` daje to, czym lokal faktycznie da się złapać: mail
+(z gotowym tematem i wstępem), telefon i stronę, każdy z kopiowaniem do schowka.
+
+⛔ **Nie ma tu okienka czatu.** Czat jest zaprojektowany w nowym dashboardzie B2B, ale po
+stronie lokalu jeszcze nie istnieje - wiadomość nie miałaby gdzie dojść. Gdy czat wejdzie
+(tabela wątków + widok w panelu lokalu), wchodzi w to samo miejsce, nad listą kanałów.
+
+---
+
+## 5. Czego nie ruszać
 
 - logiki `RequireAdmin.tsx`, `RequireTier.tsx`, `AdminMfaGate.tsx` (bramka roli + 2FA,
   fail-closed - warstwa wizualna jest na tokenach, logika zostaje),
@@ -127,7 +161,7 @@ widzą go tylko founderzy (decyzja Nat 2026-09-06).
 
 ---
 
-## 5. Co zostało do zrobienia
+## 6. Co zostało do zrobienia
 
 - **Wspólny strumień kolejki.** Dziś chip wybiera ŹRÓDŁO i renderuje jego panel. Jedna
   lista wszystkich typów naraz wymaga hooka łączącego siedem zapytań i wspólnego kształtu
@@ -136,3 +170,4 @@ widzą go tylko founderzy (decyzja Nat 2026-09-06).
   kursora nad jednym strumieniem, więc czekają na punkt wyżej. `⌘K` działa już teraz.
 - **„Czas najstarszej nieroz­patrzonej sprawy"** na stronie głównej. `useAdminPending`
   zwraca same liczniki - świadomie nie podstawiam tam wartości, której nie mam.
+- **Czat z lokalem** w `BusinessPreview` - czeka na stronę biznesową (patrz sekcja 4).
