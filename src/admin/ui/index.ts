@@ -21,5 +21,6 @@ export { Panel } from "./Panel";
 export { Button } from "./Button";
 export { TextField, TextArea } from "./TextField";
 export { Card } from "./Card";
+export { Thumb } from "./Thumb";
 export { useTheme, applyStoredTheme } from "./theme";
 export type { Theme } from "./theme";

@@ -1,8 +1,7 @@
 // Leady = miejsca BEZ konta biznesowego, ktore userzy i tak dodaja do kolekcji i wyjazdow.
 // To jest lista "komu zaproponowac wizytowke", posortowana po liczbie dodan.
-import { MapPin } from "lucide-react";
 import { adminPhotoUrl } from "../places/usePlaces";
-import { AppShell, PageHeader, Section, Metric, DataTable, Bar, type Column } from "../../ui";
+import { AppShell, PageHeader, Section, Metric, DataTable, Bar, Thumb, type Column } from "../../ui";
 import { useLeadPlaces, type LeadPlace } from "./useLeadPlaces";
 
 export function LeadsPage() {
@@ -13,19 +12,12 @@ export function LeadsPage() {
   const columns: Column<LeadPlace>[] = [
     {
       key: "name", label: "Miejsce", primary: true,
-      render: (p) => {
-        const photo = adminPhotoUrl(p.photo_url, 200);
-        return (
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)]">
-              {photo
-                ? <img src={photo} alt="" loading="lazy" className="h-full w-full object-cover" />
-                : <MapPin className="h-4 w-4 text-[var(--stone)]" />}
-            </span>
-            <span className="truncate font-medium text-[var(--ink)]">{p.place_name}</span>
-          </div>
-        );
-      },
+      render: (p) => (
+        <div className="flex items-center gap-2.5">
+          <Thumb url={adminPhotoUrl(p.photo_url, 200)} category={p.category} />
+          <span className="truncate font-medium text-[var(--ink)]">{p.place_name}</span>
+        </div>
+      ),
     },
     {
       key: "where", label: "Miasto", secondary: true, width: 200,

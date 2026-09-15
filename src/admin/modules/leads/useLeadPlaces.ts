@@ -26,11 +26,20 @@ export function useLeadPlaces() {
     queryKey: ["lead-places"],
     refetchInterval: 120_000,
     queryFn: async () => {
-      const [di, pn, bp] = await Promise.all([
+      const [di, pn, bp, pp] = await Promise.all([
         (supabase as any).from("discovery_items").select("place_name, city, category, photo_url"),
         (supabase as any).from("pins").select("place_name, category, photo_url"),
         (supabase as any).from("business_profiles").select("business_name").not("owner_user_id", "is", null),
+        // Zdjecia uzytkownikow po znormalizowanej nazwie - te same, ktore widzi apka.
+        // Bez nich lead ze zdjeciami w aplikacji wyglada w panelu na pusty.
+        (supabase as any).from("place_photos").select("place_key, photo_url, created_at")
+          .order("created_at", { ascending: false }).limit(5000),
       ]);
+      const userPhoto: Record<string, string> = {};
+      for (const r of pp.data ?? []) {
+        const k = String(r.place_key ?? "").replace(/^nm:/, "");
+        if (k && r.photo_url && !userPhoto[k]) userPhoto[k] = r.photo_url;
+      }
       const claimed = new Set((bp.data ?? []).map((b: any) => norm(b.business_name)));
       const map = new Map<string, LeadPlace>();
       const bump = (name: any, city: any, category: any, photo: any, kind: "list" | "trip") => {
@@ -46,6 +55,8 @@ export function useLeadPlaces() {
       };
       for (const r of di.data ?? []) bump(r.place_name, r.city, r.category, r.photo_url, "list");
       for (const r of pn.data ?? []) bump(r.place_name, null, r.category, r.photo_url, "trip");
+
+      for (const p of map.values()) if (!p.photo_url && userPhoto[p.key]) p.photo_url = userPhoto[p.key];
 
       const places = [...map.values()].filter((p) => p.total > 0).sort((a, b) => b.total - a.total);
       const listAdds = places.reduce((s, p) => s + p.listCount, 0);

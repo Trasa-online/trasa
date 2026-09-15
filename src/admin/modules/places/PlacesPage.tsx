@@ -1,11 +1,12 @@
 // Miejsca w bazie. Wiersz prowadzi do panelu z ruchem (wyswietlenia, dodania, kliki).
 import { useState } from "react";
-import { MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { ImagePlus } from "lucide-react";
 import {
   AppShell, PageHeader, Toolbar, Select, DataTable, StatusBadge, Loading, EmptyState,
-  FilterChips, Metric, Panel, type Column,
+  FilterChips, Metric, Panel, Thumb, Button, type Column,
 } from "../../ui";
-import { usePlaces, useCities, usePlaceAnalytics, adminPhotoUrl, type PlaceRow } from "./usePlaces";
+import { usePlaces, useCities, usePlaceAnalytics, useFetchPlacePhoto, adminPhotoUrl, type PlaceRow } from "./usePlaces";
 
 const RANGES = [
   { id: "7", label: "7 dni" },
@@ -26,19 +27,15 @@ export function PlacesPage() {
   const columns: Column<PlaceRow>[] = [
     {
       key: "name", label: "Miejsce", primary: true,
-      render: (p) => {
-        const img = adminPhotoUrl(p.photo_url);
-        return (
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)]">
-              {img
-                ? <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
-                : <MapPin className="h-4 w-4 text-[var(--stone)]" />}
-            </span>
-            <span className="truncate font-medium text-[var(--ink)]">{p.place_name}</span>
-          </div>
-        );
-      },
+      render: (p) => (
+        <div className="flex items-center gap-2.5">
+          <Thumb url={adminPhotoUrl(p.photo_url)} category={p.category} />
+          <span className="truncate font-medium text-[var(--ink)]">{p.place_name}</span>
+          {/* Zdjecie usera przy pustym `places.photo_url` - operatorka widzi, ze lokal
+              JAKIES zdjecie ma, tylko nie swoje wlasne. */}
+          {p.photoFrom === "user" ? <StatusBadge tone="neutral">od użytkownika</StatusBadge> : null}
+        </div>
+      ),
     },
     { key: "city", label: "Miasto", secondary: true, width: 180, render: (p) => <span>{p.city ?? "-"}</span> },
     { key: "category", label: "Kategoria", width: 180, render: (p) => <span className="data text-[12px]">{p.category ?? "-"}</span> },
@@ -89,7 +86,9 @@ function PlaceTraffic({ place, range, setRange, onClose }: {
   place: PlaceRow; range: string; setRange: (v: string) => void; onClose: () => void;
 }) {
   const { data, isLoading, isError } = usePlaceAnalytics(place.id, Number(range));
+  const fetchPhoto = useFetchPlacePhoto();
   const views = data?.views ?? 0;
+  const photo = adminPhotoUrl(place.photo_url, 600);
 
   return (
     <Panel
@@ -97,6 +96,32 @@ function PlaceTraffic({ place, range, setRange, onClose }: {
       subtitle={`${place.city ?? "bez miasta"} · ${place.category ?? "bez kategorii"} · ${place.claimed ? "wizytówka przejęta" : "stan zero"}`}
       onClose={onClose}
     >
+      {/* Zdjecie: co dokladnie widzi user i skad to sie bierze. */}
+      <div className="mb-4 flex items-center gap-3">
+        <Thumb url={photo} category={place.category} className="h-16 w-16" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] text-[var(--stone)]">
+            {place.photoFrom === "place" ? "Zdjęcie zapisane przy miejscu."
+              : place.photoFrom === "gallery" ? "Zdjęcie z galerii miejsca."
+              : place.photoFrom === "user" ? "Zdjęcie od użytkownika. Miejsce nie ma własnego w bazie."
+              : "Baza nie ma żadnego zdjęcia tego miejsca. W aplikacji widać ikonę kategorii."}
+          </p>
+          {place.photoFrom !== "place" ? (
+            <Button
+              className="mt-1.5"
+              disabled={fetchPhoto.isPending}
+              icon={<ImagePlus className="h-3.5 w-3.5" />}
+              onClick={() => fetchPhoto.mutate(place, {
+                onSuccess: () => toast.success("Zdjęcie pobrane i zapisane przy miejscu"),
+                onError: (e: any) => toast.error(e.message || "Nie udało się pobrać zdjęcia"),
+              })}
+            >
+              {fetchPhoto.isPending ? "Pobieram…" : "Pobierz zdjęcie z Google"}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
       <FilterChips chips={RANGES} value={range} onChange={setRange} className="mb-4" />
 
       {isLoading ? <Loading /> : isError ? (
