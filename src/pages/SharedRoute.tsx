@@ -2037,7 +2037,12 @@ export default function SharedRoute() {
       )}
 
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
-      <div className="shrink-0 bg-background" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      {/* Belka wyjazdu ZAWSZE w zoltym marki (prosba Nat 2026-09-15) - tak jak belka kolekcji,
+          ktora bierze kolor przewodni kolekcji. Wczesniej bylo tu `bg-background`.
+          ⚠️ Kolorowa belka wymusza biale kolka na guzikach: zolte kolko udostepniania
+          zniknelo by w tle, a peachy pigulka autora zlewa sie z zoltym (ten sam problem
+          rozwiazano w widoku kolekcji 2026-09-14). */}
+      <div className="shrink-0 bg-[#FDF184]" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm px-5 pb-2.5">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
@@ -2049,7 +2054,7 @@ export default function SharedRoute() {
               {/* Uzytkownik 1 = host, jako pigulka (redesign 2026-09-13, TripHeaderChips). */}
               {!isAnon && author?.username ? (
                 <AuthorPill src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
-                  onClick={() => navigate(`/profil/${author.username}`)} className="shrink" />
+                  onClick={() => navigate(`/profil/${author.username}`)} className="shrink !bg-white" />
               ) : (
                 <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0 shrink">
                   {!isAnon && <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} />}
@@ -2087,14 +2092,14 @@ export default function SharedRoute() {
                 (gosc ma je przy "Zapisz ten wyjazd" na dole). Polubienie stoi przy TYTULE. */}
             {!canEdit ? (
               <ReportContentSheet targetType="route" targetId={route.id} trigger={(open) => (
-                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-foreground/60 active:scale-90 transition-transform">
+                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center text-foreground/70 active:scale-90 transition-transform">
                   <Flag className="h-5 w-5" strokeWidth={2} />
                 </button>
               )} />
             ) : (
               <div className="shrink-0 flex items-center gap-1.5">
                 <button onClick={() => handleShare()} aria-label={t("aria.share")}
-                  className="h-9 w-9 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
+                  className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center active:scale-90 transition-transform">
                   <Share2 className="h-[18px] w-[18px] text-[#5B2C06]" strokeWidth={2.2} />
                 </button>
                 {/* Akcje wyjazdu (opis, nazwa, zaproszenia, usuniecie) pod "..." w BELCE (prosba Nat
