@@ -636,7 +636,7 @@ Poniższe elementy wyglądają na pozostałości po poprzednich pivotach:
   - **Twarde spacje (sieroty) to reguła POLSKA** - tekstów EN nie NBSP-ujemy.
   - **Treści użytkowników** (nazwy tras, notki, tytuły list) NIE są tłumaczone - to co człowiek napisał, zostaje jak napisał.
   - **Panel ops (`src/admin/**`) zostaje po polsku** - widzą go tylko founderzy (decyzja Nat 2026-09-06).
-- **Toast:** Sonner (`import { toast } from "sonner"`). **U GÓRY ekranu jako biała pigułka** (2026-09-11, wzór Pinterest), akcja (`action: { label: "Cofnij" | "Zobacz" }`) = mała CIEMNA pigułka po prawej; NIE ustawiaj `position` per wywołanie.
+- **Toast:** Sonner (`import { toast } from "sonner"`). **U GÓRY ekranu jako ŻÓŁTA pigułka marki `#FDF184`** (2026-09-15; biała, wzór Pinterest, obowiązywała 11-15.09), tekst brązowy `#5B2C06`, akcja (`action: { label: "Cofnij" | "Zobacz" }`) = mała BRĄZOWA pigułka po prawej z napisem w żółtym. NIE ustawiaj `position` per wywołanie. ⚠️ Na żółtym piszemy WYŁĄCZNIE brązem (10:1) - pomarańcz marki ma na nim 3,08:1 i nadaje się tylko do dużych nagłówków. ⚠️ Kolor jest WSPÓLNY dla wszystkich toastów, także `toast.error` - błędy są żółte, nie czerwone; jeśli błąd ma się odcinać, dołóż osobny wariant, nie zmieniaj tego. Wszystko żyje w [sonner.tsx](src/components/ui/sonner.tsx).
 - **Formularze:** React Hook Form + Zod gdy złożone; prosty `useState` gdy 1-2 pola
 - **Data fetching:** Supabase client direct lub `useQuery` z TanStack Query
 - **Routing:** React Router v6, `useNavigate()` hook
