@@ -89,5 +89,10 @@
     "mark_place": "Mark a place"
   },
   "filters_aria": "Filters",
-  "places": {}
+  "places": {},
+  "scope": {
+    "everywhere": "Everywhere",
+    "all_cities": "Whole country",
+    "other_countries": "Other"
+  }
 }

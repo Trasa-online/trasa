@@ -91,5 +91,10 @@
     "mark_place": "Zaznacz miejsce"
   },
   "filters_aria": "Filtry",
-  "places": {}
+  "places": {},
+  "scope": {
+    "everywhere": "Wszędzie",
+    "all_cities": "Cały kraj",
+    "other_countries": "Pozostałe"
+  }
 }

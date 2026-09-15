@@ -1611,7 +1611,9 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
 // 2026-09-11 - 2026-09-13; flaga zostaje na przyszlosc, dzis nikt jej nie podaje).
 // Bez niej komponent pokazuje tresci od wszystkich - to jest EKSPLORACJA (Explore.tsx, IA
 // 2026-09-13: jedyny widok odkrywania, kafelki z FeedTiles w jednej kolumnie ze snapem).
-export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false, followingOnly = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean; followingOnly?: boolean } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false, followingOnly = false, searchCity }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean; followingOnly?: boolean;
+  /** Miasto wybrane w pasku zasiegu wyszukiwarki (zakladka Miejsca) - zaweza WYNIKI. */
+  searchCity?: string } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
@@ -1771,11 +1773,11 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     } catch { /* localStorage niedostepny */ }
   };
   // FILTRY EKSPLORACJI USUNIETE 2026-09-10 (decyzja Nat). Guzik filtrow i jego arkusz
-  // zniknely; eksploracja jest globalna, a zawezanie robi sie wyszukiwarka. Te
-  // trzy wartosci zostaja jako PUSTE stale, bo zapytanie wyszukiwarki nizej sklada sie z nich -
-  // wyzerowane po prostu nic nie odsiewaja. To swiadomie mniejsza zmiana niz przepisywanie
-  // calego zapytania: mniej ryzyka, ze przy okazji zepsujemy szukanie.
-  const cityFilter: string[] = [];
+  // zniknely; eksploracja jest globalna, a zawezanie robi sie wyszukiwarka.
+  // `cityFilter` zostal WSKRZESZONY 2026-09-15, ale wylacznie jako wejscie z paska zasiegu
+  // wyszukiwarki (kraj + miasto w zakladce Miejsca) - nie wraca zaden arkusz filtrow.
+  // Motyw i kategoria zostaja puste: nic nie odsiewaja, a zapytanie nizej sklada sie z nich.
+  const cityFilter: string[] = searchCity ? [searchCity] : [];
   const themeFilter: string[] = [];
   const categoryFilter: string[] = [];
   // Zakladka wynikow wyszukiwania: najlepsze (wszystko) / miejsca / zestawienia.
@@ -2029,8 +2031,11 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     enabled: isSearchActive,
     staleTime: 30_000,
     queryFn: async () => {
-      // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe).
-      const cities = cityFilter.length ? [...new Set(cityFilter.flatMap(expandCity))] : null;
+      // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe). Do rozwiniecia
+      // DOKLADAMY sama wybrana nazwe: "Trójmiasto" to meta-miasto, ktore `expandCity` zamienia
+      // na Gdansk/Gdynia/Sopot - bez tego piec wizytowek oznaczonych literalnie "Trójmiasto"
+      // bylo nieosiagalne z paska zasiegu (2026-09-15).
+      const cities = cityFilter.length ? [...new Set(cityFilter.flatMap((c) => [...expandCity(c), c]))] : null;
       const like = `%${escapeLike(q)}%`;
       const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags";
 
@@ -2173,7 +2178,9 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         places = await attachCovers(placeRows ?? []);
       } else if (!q && cat === "all") {
         // Podglad: 5 miejsc ZE ZDJECIAMI, kazde z innego miasta (prosba Nat 2026-08-31).
-        places = await fetchCoveredPlaces(5, true);
+        // Przy wybranym miescie deduplikacja po miescie dalaby JEDNO miejsce, wiec ja zdejmujemy
+        // i pokazujemy pelniejszy przeglad tego miasta.
+        places = cities ? await fetchCoveredPlaces(24, false) : await fetchCoveredPlaces(5, true);
       } else if (!q && cat === "places") {
         // Zakladka Miejsca: najpierw losowe miejsca Z OKLADKAMI, potem dopiero te z ikona
         // kategorii na peachy tle (fallback).

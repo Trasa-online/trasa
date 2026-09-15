@@ -138,7 +138,11 @@ function MiniPlace({ place, size }: { place: GridPlace; size: TileSize }) {
     // Dwie warstwy: zewnetrzna NIE przycina (gwiazdka "nowe miejsce" wychodzi poza rog),
     // wewnetrzna przycina zdjecie do zaokraglonego kadru.
     <div className="relative">
-    <div className={`relative aspect-[2/3] overflow-hidden bg-[#fcede3] ${feed ? "rounded-xl" : "rounded-[10px]"}`} title={cat ?? undefined}>
+    {/* Lekki cien (prosba Nat 2026-09-15): odkleja kafelek od kolorowego tla kolekcji.
+        Siedzi na WARSTWIE PRZYCINAJACEJ, nie na zewnetrznej - cien rysuje sie na zewnatrz
+        elementu, wiec `overflow-hidden` go nie zjada, a zewnetrzna warstwa musi zostac
+        czysta, zeby gwiazdka "nowe miejsce" mogla z niej wystawac bez wlasnego cienia. */}
+    <div className={`relative aspect-[2/3] overflow-hidden bg-[#fcede3] shadow-[0_2px_8px_rgba(0,0,0,0.18)] ${feed ? "rounded-xl" : "rounded-[10px]"}`} title={cat ?? undefined}>
       {hasPhoto ? (
         <>
           <img src={src!} alt="" loading="lazy" onError={onError} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
@@ -250,7 +254,7 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
       <div className={`grid grid-cols-3 ${feed ? "gap-2" : "gap-1.5"}`}>
         {shown.map((p, i) => <MiniPlace key={`${p.name}-${i}`} place={p} size={size} />)}
         {overflow > 0 && (
-          <div className={`flex aspect-[2/3] items-center justify-center ${feed ? "rounded-xl" : "rounded-[10px]"}`} style={{ backgroundColor: tintBg(theme.ink) }}>
+          <div className={`flex aspect-[2/3] items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.18)] ${feed ? "rounded-xl" : "rounded-[10px]"}`} style={{ backgroundColor: tintBg(theme.ink) }}>
             <span className={`font-brand leading-none ${feed ? "text-[24px]" : "text-[17px]"}`}>+{overflow}</span>
           </div>
         )}
