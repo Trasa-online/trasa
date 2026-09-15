@@ -315,10 +315,17 @@ export function ShareCardList({ title, city, items, author, avatar, authorId, au
   // Wczesniej byla tu biala karta z siatka 3x3: wyjazd pokazywal swoja karte z eksploracji,
   // a kolekcja cos, czego nie widac nigdzie indziej w produkcie.
   // ⛔ Nie duplikuj tu ukladu kafelka - `ListTile` jest jeden i ma sie zmieniac w jednym miejscu.
+  // ⚠️ Zrodla zdjecia w TEJ kolejnosci: okladka podana przez widok kolekcji (`photo_url` jest
+  // tam juz przeliczone przez `pinCover`, czyli wlasne zdjecie ALBO zdjecie usera z `place_photos`),
+  // a dopiero potem zdjecia z samego wiersza (`images` / `user_photo_urls`).
+  // ⛔ NIE czytaj tu `item._cover`: stara karta udostepniania to robila, a tego pola w widoku
+  // kolekcji NIE MA (ustawiaja je tylko zapytania feedu i profilu). Efekt byl taki, ze wszystkie
+  // miniatury miejsc na karcie udostepniania kolekcji byly puste - zgloszenie Nat 2026-09-15
+  // ("miniatury nie renderuja sie wcale"), blad starszy niz przejscie na `ListTile`.
   const places: GridPlace[] = items.slice(0, LIST_TILES).map((it: any) => ({
     name: it.place_name,
     category: it.category ?? null,
-    photo: resolveStored(it.photo_url ?? null) ?? null,
+    photo: resolveStored(it.photo_url ?? null) ?? rowOwnPhotos(it)[0] ?? null,
   }));
   const tile: GridItem = {
     kind: "list", id: collectionId, title,
