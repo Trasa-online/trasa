@@ -57,7 +57,13 @@ export function useLookupContact() {
       const { data, error } = await supabase.functions.invoke("lead-contact-lookup", {
         body: { place_name: placeName, city: city ?? undefined, force: force === true },
       });
-      if (error) throw error;
+      // Przy odpowiedzi 4xx/5xx supabase-js oddaje wlasny, ogolny komunikat ("non-2xx status"),
+      // a prawdziwy powod (limit Google, brak roli) siedzi w ciele odpowiedzi - wyciagamy go,
+      // zeby operatorka zobaczyla zdanie, z ktorym da sie cos zrobic.
+      if (error) {
+        const body = await (error as any)?.context?.json?.().catch(() => null);
+        throw new Error(body?.error || (error as Error).message);
+      }
       if ((data as any)?.error) throw new Error((data as any).error);
       return (data as any).contact as LeadContact;
     },
