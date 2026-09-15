@@ -51,11 +51,11 @@ import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 import ListThemeSheet from "@/components/lists/ListThemeSheet";
 import ListScopeSheet from "@/components/lists/ListScopeSheet";
 import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
+import { ParticipantsRow } from "@/components/route/ParticipantsRow";
+import PeopleSheet from "@/components/route/PeopleSheet";
 import { fetchCollectionMembers, collectionMembersKey } from "@/lib/collectionInvite";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
-/** Ile pigulek wspoltworcow miesci sie w belce, zanim przechodzimy na "+N". */
-const CO_AUTHORS_SHOWN = 2;
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { fetchCollectionNotes, saveCollectionNote, collectionNotesKey } from "@/lib/collectionNotes";
 import { fetchCollectionPhotos, addCollectionPhoto, removeCollectionPhoto, photosByPlace, collectionPhotoKey, collectionPhotosKey } from "@/lib/collectionPhotos";
@@ -432,7 +432,9 @@ export default function SharedList() {
   // 2026-09-15). Przeksztalcenie robi teraz `select`, ktore NIE dotyka cache.
   const { data: members = EMPTY_ARRAY } = useQuery({
     queryKey: collectionMembersKey(id),
-    enabled: !!id && !!user,
+    // Bez `!!user`: wspoltworcow PUBLICZNEJ kolekcji widzi tez niezalogowany (migracja
+    // 20260915k). Wczesniej belka pokazywala sklad wylacznie wlascicielowi i czlonkom.
+    enabled: !!id,
     staleTime: 60_000,
     queryFn: () => fetchCollectionMembers(id!),
   });
@@ -445,7 +447,7 @@ export default function SharedList() {
     () => (members as any[]).filter((m) => m.user_id !== col?.user_id && m.username),
     [members, col?.user_id],
   );
-  const extraCoAuthors = Math.max(0, coAuthors.length - CO_AUTHORS_SHOWN);
+  const [allPeopleOpen, setAllPeopleOpen] = useState(false);
   // Notki WSZYSTKICH uczestnikow: RLS wpuszcza kazdego, kto widzi kolekcje, wiec czytelnik
   // publicznej kolekcji tez widzi caly watek - tak samo, jak przy opublikowanym wyjezdzie.
   const { data: allNotes = EMPTY_ARRAY } = useQuery({
@@ -857,7 +859,12 @@ export default function SharedList() {
                 sa w danej kolekcji"). Rzad sie ZAWIJA: miedzy guzikiem wstecz a akcja zostaje
                 ~280 px, wiec trzy pigulki obok siebie by sie nie zmiescily, a poziomy scroll
                 w belce gryzlby sie z gestami. Przy zero wspoltworcach wyglada jak dotad. */}
-            <div className="flex-1 min-w-0 flex flex-wrap justify-center items-center gap-1.5">
+            <ParticipantsRow
+              className="flex-1 justify-center"
+              others={coAuthors as any}
+              onOpenAll={() => setAllPeopleOpen(true)}
+              onOpenPerson={(m) => m.username && navigate(`/profil/${m.username}`)}
+              author={<>
               {/* Autor jako pigulka (redesign 2026-09-13, TripHeaderChips) - awatar z ramka zostaje. */}
               {author?.username ? (
                 <AuthorPill src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
@@ -868,25 +875,8 @@ export default function SharedList() {
                   <span className="truncate text-[14px]">{authorName}</span>
                 </span>
               )}
-              {coAuthors.slice(0, CO_AUTHORS_SHOWN).map((m: any) => (
-                <button
-                  key={m.user_id}
-                  onClick={() => m.username && navigate(`/profil/${m.username}`)}
-                  className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2.5 active:opacity-70 transition-opacity"
-                >
-                  <FramedAvatar src={m.avatar_url} frame={m.avatar_frame} color={m.avatar_frame_color} size={20} />
-                  <span className="truncate text-[13px] font-bold text-foreground">@{m.username ?? "?"}</span>
-                </button>
-              ))}
-              {/* ⚠️ `!!extraCoAuthors`, nie `coAuthors.length > CO_AUTHORS_SHOWN`: bramka i18n
-                  czyta `>` w JSX jako poczatek tekstu i zglaszala to jako polski napis
-                  na sztywno. Porownanie siedzi wiec w zmiennej, nie w znaczniku. */}
-              {!!extraCoAuthors && (
-                <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1.5 text-[13px] font-bold text-foreground">
-                  {"+" + extraCoAuthors}
-                </span>
-              )}
-            </div>
+              </>}
+            />
             {/* Polubien list NIE MA (decyzja Nat 2026-09-01) - zostaje sam zapis listy, ktory
                 niesie realna intencje i buduje powiadomienia o nowych miejscach. Udostepnianie
                 w belce po prawej, dla kazdego (prosba Nat 2026-09-13; wczesniej przy tytule /
@@ -998,6 +988,13 @@ export default function SharedList() {
             <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
             <ListScopeSheet open={scopeOpen} onOpenChange={setScopeOpen} listId={col.id} current={col} />
             {user && <CollectionPeopleSheet open={peopleOpen} onOpenChange={setPeopleOpen} collectionId={col.id} ownerId={col.user_id} currentUserId={user.id} />}
+            {/* "+N" w belce - pelna lista do odczytu, dostepna dla kazdego (zarzadzanie skladem
+                zostaje w menu "..." u wlasciciela). */}
+            <PeopleSheet
+              open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.title")}
+              author={author?.username ? { id: col.user_id, username: author.username, avatar_url: author.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color } : null}
+              others={coAuthors as any}
+            />
           </>
         )}
         {shareCardOpen && (

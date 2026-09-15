@@ -285,5 +285,8 @@
     "collapse": "Hide trip actions",
     "chat": "Chat"
   },
-  "add_place_photo": "Add a photo to this place"
+  "add_place_photo": "Add a photo to this place",
+  "people": {
+    "trip_title": "Trip participants"
+  }
 }

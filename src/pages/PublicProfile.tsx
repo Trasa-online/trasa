@@ -27,6 +27,7 @@ import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
 import { listTheme } from "@/lib/listThemes";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
+import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
 import { scopeLabel } from "@/lib/tripScope";
 // Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
@@ -158,7 +159,10 @@ export default function PublicProfile() {
       }
       // "odwiedzone przez autora / wszystkie" - ten sam chip co na kafelku w eksploracji.
       const visits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
-      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0 }));
+      // Wspoltworcy - zeby bylo widac, ze kolekcja jest wspolna (prosba Nat 2026-09-15).
+      const owners = new Map(rows.map((r) => [r.id, profile!.id]));
+      const mem = await fetchCollectionMembersBulk(ids, owners).catch(() => new Map());
+      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0, co_authors: mem.get(r.id) ?? [] }));
     },
   });
 
@@ -511,6 +515,7 @@ export default function PublicProfile() {
                   authorAvatar: profile.avatar_url, authorId: profile.id,
                   authorFrame: profile.avatar_frame, authorFrameColor: profile.avatar_frame_color,
                   showAuthor: true,
+                  coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
                   at: new Date(l.updated_at ?? 0).getTime(),
                   placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
                   theme: listTheme(l.theme, l.id), places,

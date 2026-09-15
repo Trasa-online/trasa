@@ -48,6 +48,11 @@ export type GridItem = {
   /** Ramka awatara autora (profiles.avatar_frame / _color). */
   authorFrame: string | null;
   authorFrameColor: string | null;
+  /** Wspoltworcy kolekcji (bez wlasciciela) - nachodzace awatary obok pigulki autora.
+   *  Bez tego na profilu publicznym nie bylo widac, ze kolekcje wspoltworzy ktos jeszcze
+   *  (prosba Nat 2026-09-15). Pusto = kolekcja jednoosobowa ALBO ogladajacy nie ma prawa
+   *  czytac skladu (RLS) - w obu przypadkach nie pokazujemy nic. */
+  coAuthors?: { id: string; username: string | null; avatar_url: string | null; avatar_frame?: string | null; avatar_frame_color?: string | null }[];
   /** false = wyjazd udostepniony anonimowo: bez pigulki autora. */
   showAuthor: boolean;
   at: number;                 // sort: najnowsze na gorze
@@ -272,6 +277,23 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
           linie podpisu nad zdjeciami. `items-center`, bo pigulka autora jest wyzsza od chipow. */}
       <div className={`flex flex-wrap items-center ${feed ? "gap-1.5" : "gap-1"}`}>
         {it.showAuthor && <AuthorPill it={it} tone="tint" ink={theme.ink} size={size} />}
+        {/* Wspoltworcy: nachodzace awatary tuz przy autorze - na kafelku nie ma miejsca na
+            handle, a chodzi o sam sygnal "to jest wspolna kolekcja". Pelne nazwiska sa
+            w belce kolekcji i w arkuszu pod "+N". */}
+        {!!it.coAuthors?.length && (
+          <span className="flex items-center -space-x-1.5">
+            {it.coAuthors.slice(0, 3).map((c) => (
+              <FramedAvatar key={c.id} src={c.avatar_url} frame={c.avatar_frame} color={c.avatar_frame_color}
+                size={feed ? 24 : 20} imgClassName="ring-2 ring-white/80" />
+            ))}
+            {it.coAuthors.length > 3 && (
+              <span className={`inline-flex items-center rounded-full pl-2.5 pr-2 font-bold ${feed ? "h-[24px] text-[12px]" : "h-[20px] text-[10px]"}`}
+                style={{ backgroundColor: tintBg(theme.ink), color: theme.ink }}>
+                {"+" + (it.coAuthors.length - 3)}
+              </span>
+            )}
+          </span>
+        )}
         {/* "odwiedzone przez autora / wszystkie". ZERO TEZ POKAZUJEMY jako "0/7" (prosba Nat
             2026-09-15) - do tej pory przy zerze zostawala sama liczba miejsc, przez co kafelek
             kolekcji, w ktorej autor jeszcze nigdzie nie byl, wygladal jakby licznika w ogole

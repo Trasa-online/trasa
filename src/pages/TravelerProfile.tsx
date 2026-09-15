@@ -32,6 +32,7 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
+import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
 import { listTheme } from "@/lib/listThemes";
 import ReferralCard from "@/components/profile/ReferralCard";
 import { haptics } from "@/hooks/useHaptics";
@@ -364,8 +365,10 @@ const TravelerProfile = () => {
           .in("id", ownerIds);
         for (const pr of (profs ?? []) as any[]) owners.set(pr.id, pr);
       }
+      const mem = await fetchCollectionMembersBulk(ids, new Map(rows.map((r) => [r.id, r.user_id]))).catch(() => new Map());
       return rows.map((r) => ({
         ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0,
+        co_authors: mem.get(r.id) ?? [],
         _shared: r.user_id !== user!.id,
         _owner: owners.get(r.user_id) ?? null,
       }));
@@ -1010,6 +1013,7 @@ const TravelerProfile = () => {
                   authorFrame: (l._owner ?? profile)?.avatar_frame ?? null,
                   authorFrameColor: (l._owner ?? profile)?.avatar_frame_color ?? null,
                   showAuthor: true,
+                  coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
                   at: new Date(l.updated_at ?? 0).getTime(),
                   placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
                   theme: listTheme(l.theme, l.id), places,

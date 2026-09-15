@@ -296,5 +296,8 @@
     "collapse": "Schowaj akcje wyjazdu",
     "chat": "Czat"
   },
-  "add_place_photo": "Dodaj zdjęcie do miejsca"
+  "add_place_photo": "Dodaj zdjęcie do miejsca",
+  "people": {
+    "trip_title": "Uczestnicy wyjazdu"
+  }
 }

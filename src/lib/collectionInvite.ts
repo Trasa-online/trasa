@@ -87,3 +87,39 @@ export async function removeCollectionMember(collectionId: string, userId: strin
   if (error) { console.warn("[collectionInvite] remove:", error.message); return false; }
   return true;
 }
+
+/** Wspoltworcy dla WIELU kolekcji naraz - jedno zapytanie zamiast N (kafelki na profilu).
+ *  Zwraca mape bez wlasciciela: on stoi juz jako autor kafelka. */
+export async function fetchCollectionMembersBulk(
+  collectionIds: string[],
+  ownerByCollection?: Map<string, string | null>,
+): Promise<Map<string, CollectionMember[]>> {
+  const out = new Map<string, CollectionMember[]>();
+  if (!collectionIds.length) return out;
+  const { data, error } = await (supabase as any)
+    .from("discovery_collection_members")
+    .select("collection_id, user_id, role, created_at")
+    .in("collection_id", collectionIds)
+    .order("created_at", { ascending: true });
+  // ⚠️ Pusto to NORMALNY wynik dla ogladajacego bez dostepu (RLS), nie blad - kafelek po
+  // prostu nie pokaze wspoltworcow. Od migracji 20260915k publiczne kolekcje sa widoczne.
+  if (error) { console.warn("[collectionInvite] bulk members:", error.message); return out; }
+  const rows = (data ?? []) as any[];
+  if (!rows.length) return out;
+  const { data: profs } = await (supabase as any)
+    .from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color")
+    .in("id", Array.from(new Set(rows.map((r) => r.user_id))));
+  const byId = new Map((profs ?? []).map((x: any) => [x.id, x]));
+  for (const r of rows) {
+    if (ownerByCollection?.get(r.collection_id) === r.user_id) continue;
+    const pr: any = byId.get(r.user_id) ?? {};
+    const arr = out.get(r.collection_id) ?? [];
+    arr.push({
+      user_id: r.user_id, role: r.role, created_at: r.created_at,
+      username: pr.username ?? null, first_name: pr.first_name ?? null, avatar_url: pr.avatar_url ?? null,
+      avatar_frame: pr.avatar_frame ?? null, avatar_frame_color: pr.avatar_frame_color ?? null,
+    });
+    out.set(r.collection_id, arr);
+  }
+  return out;
+}

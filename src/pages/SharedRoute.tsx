@@ -70,6 +70,8 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
+import { ParticipantsRow } from "@/components/route/ParticipantsRow";
+import PeopleSheet from "@/components/route/PeopleSheet";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import TripLikeButton from "@/components/route/TripLikeButton";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -282,6 +284,7 @@ export default function SharedRoute() {
   const locationState = useLocation();
   const chatFromNotification = !!(locationState.state as any)?.openChat;
   const [chatOpen, setChatOpen] = useState(chatFromNotification);
+  const [allPeopleOpen, setAllPeopleOpen] = useState(false);
   // Flaga zyje w historii, wiec bez tego powrot "wstecz" na ten wyjazd otwieralby czat
   // drugi raz. Zuzywamy ja RAZ i podmieniamy wpis historii (bez nowego).
   useEffect(() => {
@@ -2062,9 +2065,17 @@ export default function SharedRoute() {
             </button>
             {/* Awatar + username WYSRODKOWANE (#5). Wspolny wyjazd: host + pierwsi 2 uczestnicy z
                 PELNA nazwa (awatar + @username, truncate = "jesli sie zmiesci"); reszta = same awatary. */}
-            <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5">
-              {/* Uzytkownik 1 = host, jako pigulka (redesign 2026-09-13, TripHeaderChips). */}
-              {!isAnon && author?.username ? (
+            {/* Autor + uczestnicy wg WSPOLNEJ reguly (Nat 2026-09-15, ta sama co w kolekcji):
+                autor zawsze w calosci, drugi tylko jesli sie miesci, reszta jako "+N" -> arkusz.
+                Wczesniej byly tu dwie osoby z nazwa i nachodzacy stos awatarow z nieklikalnym
+                "+N", wiec przy dluzszych nickach belka sie rozpychala, a pelnej listy nie dalo
+                sie otworzyc. */}
+            <ParticipantsRow
+              className="flex-1 justify-center"
+              others={groupParticipants as any}
+              onOpenAll={() => setAllPeopleOpen(true)}
+              onOpenPerson={(pp) => pp.username && navigate(`/profil/${pp.username}`)}
+              author={!isAnon && author?.username ? (
                 <AuthorPill src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
                   onClick={() => navigate(`/profil/${author.username}`)} className="shrink !bg-white" />
               ) : (
@@ -2073,29 +2084,7 @@ export default function SharedRoute() {
                   <span className="truncate">{authorName}</span>
                 </span>
               )}
-              {/* Uzytkownicy 2-3 = pierwsi uczestnicy z pelna nazwa (awatar + @username). */}
-              {groupParticipants.slice(0, 2).map((p) => (
-                p.username ? (
-                  <button key={p.id} onClick={() => navigate(`/profil/${p.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink">
-                    <FramedAvatar src={p.avatar_url} frame={(p as any).avatar_frame} color={(p as any).avatar_frame_color} />
-                    <span className="truncate">@{p.username}</span>
-                  </button>
-                ) : (
-                  <FramedAvatar key={p.id} src={p.avatar_url} frame={(p as any).avatar_frame} color={(p as any).avatar_frame_color} />
-                )
-              ))}
-              {/* Pozostali uczestnicy (4+) = same awatary (nachodzacy stack) + "+N". */}
-              {groupParticipants.length > 2 && (
-                <span className="flex items-center -space-x-2 shrink-0">
-                  {groupParticipants.slice(2, 5).map((p) => (
-                    <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
-                  ))}
-                  {groupParticipants.length > 5 && (
-                    <span className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[9px] font-bold text-foreground">+{groupParticipants.length - 5}</span>
-                  )}
-                </span>
-              )}
-            </div>
+            />
             {/* Polubienie wyjazdu (prawy skraj) - TYLKO gosc. Od 2026-09-13 (makieta Nat) to
                 pomaranczowa GWIAZDKA: pusta = nie polubione, wypelniona = polubione; licznik
                 obok tylko gdy > 0. Wlasciciel: spacer dla symetrii. */}
@@ -2692,6 +2681,11 @@ export default function SharedRoute() {
         />
       )}
 
+      <PeopleSheet
+        open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.trip_title")}
+        author={!isAnon && author?.username ? { id: route.user_id, username: author.username, avatar_url: author.avatar_url ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color } : null}
+        others={groupParticipants as any}
+      />
       {canEdit && id && (
         <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={id} tripTitle={route.title ?? cityLabel}
           participants={[
