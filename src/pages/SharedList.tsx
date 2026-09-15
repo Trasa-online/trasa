@@ -53,6 +53,9 @@ import ListScopeSheet from "@/components/lists/ListScopeSheet";
 import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
 import { fetchCollectionMembers, collectionMembersKey } from "@/lib/collectionInvite";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
+import PlaceNotes from "@/components/route/PlaceNotes";
+import { fetchCollectionNotes, saveCollectionNote, collectionNotesKey } from "@/lib/collectionNotes";
+import { notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { listTheme } from "@/lib/listThemes";
 import { BrandBookmark } from "@/components/BrandBookmark";
@@ -148,9 +151,14 @@ export default function SharedList() {
   // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
   useScreenshot(() => setShareCardOpen(true), !shareCardOpen);
 
+  // Zapis MOJEJ notki (2026-09-15). ⛔ NIE piszemy juz w `discovery_items.short_desc` - to
+  // pole trzyma notke wlasciciela i aktualizuje je `propagate_place_note` z triggera. Dwa
+  // punkty zapisu rozjechalyby notke wlasciciela z jego wierszem w `discovery_item_notes`.
   const saveItemNote = async (item: any, value: string) => {
-    const { error } = await (supabase as any).from("discovery_items").update({ short_desc: value || null }).eq("id", item.id);
-    if (error) { toast.error(t("toast.note_failed")); return; }
+    if (!user) return;
+    const ok = await saveCollectionNote(id!, user.id, item.place_name, value);
+    if (!ok) { toast.error(t("toast.note_failed")); return; }
+    queryClient.invalidateQueries({ queryKey: collectionNotesKey(id) });
     queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     if (value.trim()) void markVisitedAuto(item);
   };
@@ -377,6 +385,18 @@ export default function SharedList() {
     },
   });
 
+  // MOJ awatar do edytora notki: dymek nad edytorem nalezy do mnie, wiec musi pokazywac
+  // mnie, a nie autora kolekcji (przy wspoltworzeniu to dwie rozne osoby).
+  const { data: me } = useQuery({
+    queryKey: ["profile-mini", user?.id],
+    enabled: !!user?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("profiles").select("username, avatar_url").eq("id", user!.id).maybeSingle();
+      return data as { username: string | null; avatar_url: string | null } | null;
+    },
+  });
+
   // Licznik wyswietlen (dedup per-urzadzenie, jak SharedRoute).
   useEffect(() => {
     if (!col?.id) return;
@@ -539,6 +559,16 @@ export default function SharedList() {
     queryFn: async () => (await fetchCollectionMembers(col!.id)).map((m) => m.user_id),
   });
   const isMember = !!user && (memberIds as string[]).includes(user.id);
+  // Notki WSZYSTKICH uczestnikow (prosba Nat 2026-09-15). RLS wpuszcza kazdego, kto widzi
+  // kolekcje, wiec czytelnik publicznej kolekcji tez widzi caly watek - tak samo, jak przy
+  // opublikowanym wyjezdzie.
+  const { data: allNotes = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionNotesKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchCollectionNotes(id!),
+  });
+  const notesFor = notesByPlace(allNotes as any[]);
   const canAddPlaces = isOwner || isMember;
   const canEditItem = (it: any) => isOwner || (isMember && it?.added_by === user?.id);
   const placesCountLabel = t("places_count", { count: items.length });
@@ -627,21 +657,30 @@ export default function SharedList() {
     <div>
       {rows.map((pin: any, idx: number) => {
         const i = offset + idx;
-        const noteText = (pin.short_desc ?? "").trim();
         const photos: string[] = Array.isArray(pin.images) ? pin.images : [];
         const busy = uploadingItem === pin.id;
         // Notka (auto-zapis, bez headera) + zdjecia miejsca. Widz: read-only. Slot renderowany
         // tylko gdy jest tresc lub jestem wlascicielem. Uklad wspolny z wyjazdami (PlaceNoteEditor).
         const mine = canEditItem(pin);
-        const hasContent = !!noteText || photos.length > 0 || mine;
+        // Moja notka jedzie do edytora, cudze pod spodem jako dymki z awatarem autora -
+        // dokladnie ten sam uklad, co przy miejscu w wyjezdzie (PlaceNotes).
+        const placeNotes = notesFor.get(placeNoteKey(pin.place_name)) ?? [];
+        const myNote = (placeNotes.find((n: any) => n.user_id === user?.id)?.note ?? "").trim();
+        const othersCount = placeNotes.filter((n: any) => n.user_id !== user?.id).length;
+        // Wspoltworca moze pisac WLASNA notke przy KAZDYM miejscu - takze przy cudzym.
+        // `mine` rzadzi usuwaniem pozycji i zdjec, notka ma szerszy krag autorow.
+        const canWriteNote = isOwner || isMember;
+        const hasContent = !!myNote || othersCount > 0 || photos.length > 0 || canWriteNote;
         const note = hasContent ? (
           <div className="space-y-2.5 mt-0.5">
             {/* Notka wyglada TAK SAMO jak na wyjezdzie: szary dymek + awatar autora w prawym-dolnym
                 rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy.
                 Pigulki "Edytuj notkę" i "Zdjęcie" zniknely stad razem z wyjazdami (2026-09-10) -
                 obie akcje siedza w menu przy miejscu. */}
-            <PlaceNoteEditor note={noteText} editable={mine} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
+            <PlaceNoteEditor note={myNote} editable={canWriteNote} showAvatar avatarUrl={me?.avatar_url ?? author?.avatar_url ?? col.author_avatar}
               onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
+            {/* Notki POZOSTALYCH uczestnikow - moja jest juz w edytorze wyzej. */}
+            <PlaceNotes notes={placeNotes as any} excludeUserId={user?.id ?? null} />
             {/* Wgrywanie trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
             {busy && (
               <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
@@ -689,7 +728,7 @@ export default function SharedList() {
             menuExtras={mine ? [
               {
                 key: "note",
-                label: noteText ? t("route:note.edit") : t("route:note.add"),
+                label: myNote ? t("route:note.edit") : t("route:note.add"),
                 icon: <Pencil className="h-4 w-4" />,
                 onClick: () => setNoteItem(pin),
               },
