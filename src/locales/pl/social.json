@@ -131,7 +131,10 @@
     "route_hidden_many": "{{count}} Twoich wyjazdów nie widać w eksploracji - dodaj zdjęcia",
     "title": "Powiadomienia",
     "list_invite": "{{user}} zaprasza Cię do współtworzenia kolekcji",
-    "list_invite_title": "{{user}} zaprasza Cię do współtworzenia „{{title}}”"
+    "list_invite_title": "{{user}} zaprasza Cię do współtworzenia „{{title}}”",
+    "business_thanks": "{{business}} dziękuje za Twoją notatkę",
+    "business_thanks_photo": "{{business}} dziękuje za Twoje zdjęcie",
+    "business_fallback": "Lokal"
   },
   "live": {
     "friend_request": "Nowe zaproszenie do znajomych 👋",

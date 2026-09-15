@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
 import { applyBusinessDefaultLanguage, markBusinessLangChoice } from "@/lib/businessLanguage";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag, Bookmark, Share2 } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText, BookOpen, Pencil, Check, MessageSquareQuote, Flag, Bookmark, Share2, Globe } from "lucide-react";
 
 // Pola formularza panelu = szare wypełnienie + pomarańczowy focus (prośba Nat 2026-09-14:
 // jednolitość i "zasada przynależności" - wszystkie inputy wyglądają tak samo, spokojnie).
@@ -24,7 +24,8 @@ function BizInput({ className, ...props }: React.ComponentProps<typeof Input>) {
 const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
-import { MAIN_CATEGORIES } from "@/lib/categories";
+import type { TFunction } from "i18next";
+import { MAIN_CATEGORIES, readMainCategories, normalizeSubcategoryId, mainsFromSubs } from "@/lib/categories";
 import { resizeImage } from "@/lib/imageResize";
 import { isHeic, convertHeicToJpeg } from "@/lib/heicConvert";
 import { forwardGeocode } from "@/lib/googleMaps";
@@ -40,6 +41,13 @@ import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromDashboardState } from "@/components/business/premiumBusinessAdapters";
 import { ImageCropModal } from "@/components/business/ImageCropModal";
 import { TrasaLogo } from "@/components/TrasaLogo";
+import { BizShell, type BizSection } from "@/components/business/dashboard/BizShell";
+import { OverviewSection, type CompletenessStep } from "@/components/business/dashboard/OverviewSection";
+import { ProfileSection } from "@/components/business/dashboard/ProfileSection";
+import { CategoryPickerModal } from "@/components/business/dashboard/CategoryPickerModal";
+import { SettingsSection } from "@/components/business/dashboard/SettingsSection";
+import { GuestInsights } from "@/components/business/dashboard/GuestInsights";
+import { ThanksButton } from "@/components/business/dashboard/ThanksButton";
 import { uploadThumb } from "@/lib/imageThumbs";
 import { fetchPlaceNotes, type PlaceUserNote } from "@/lib/placeNotes";
 import { avatarSrc } from "@/lib/avatar";
@@ -106,10 +114,28 @@ interface BusinessProfile {
   is_draft?: boolean;
 }
 
-interface Stats { views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number; }
+interface Stats {
+  views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number;
+  /** Zapisy miejsca do kolekcji (event place_saved). */
+  saves: number;
+  /** Ten sam zakres cofniety o jego dlugosc - sluzy do "+18% wobec poprzednich 30 dni". */
+  previous?: { views: number; onRoutes: number; clicks: number; saves: number };
+}
 type AnalyticsRange = '7d' | '30d' | '90d' | 'custom';
 interface ChartDay { date: string; views: number; routes: number; clicks: number; }
 interface HourlyBucket { hour: number; label: string; total: number; }
+
+// Naglowki sekcji panelu. Copy z makiety „Spokojny panel" - jedno zrodlo, bo te same
+// zdania pojawialy sie wczesniej w sekcji i w pigulce nawigacji, i rozjezdzaly sie.
+const SECTION_META: Record<BizSection, { title: (t: TFunction) => string; subtitle: (t: TFunction) => string }> = {
+  overview:  { title: (t) => t("shell.nav.overview"),  subtitle: (t) => t("overview.subtitle") },
+  profile:   { title: (t) => t("shell.nav.profile"),   subtitle: (t) => t("profile.subtitle") },
+  menu:      { title: (t) => t("shell.nav.menu"),      subtitle: (t) => t("menu.subtitle") },
+  posts:     { title: (t) => t("shell.nav.posts"),     subtitle: (t) => t("posts.subtitle") },
+  community: { title: (t) => t("shell.nav.community"), subtitle: (t) => t("community.subtitle") },
+  gallery:   { title: (t) => t("shell.nav.gallery"),   subtitle: (t) => t("gallery.subtitle") },
+  settings:  { title: (t) => t("shell.nav.settings"),  subtitle: (t) => t("settings.subtitle") },
+};
 
 const MAX_GALLERY = 10;
 const MAX_MENU_IMAGES = 6;
@@ -496,7 +522,7 @@ const BusinessDashboard = () => {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const analyticsRequestId = useRef(0);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
-  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0 });
+  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0, saves: 0 });
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -519,6 +545,10 @@ const BusinessDashboard = () => {
   const [postalCode, setPostalCode] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [mainCategory, setMainCategory] = useState("");
+  // Dwie ROWNORZEDNE kategorie glowne (model z 14.09.2026). `mainCategory` zostaje jako
+  // pierwsza z listy - czyta ja jeszcze apka i panel ops, wiec nie znika w jednym kroku.
+  const [mainCategories, setMainCategories] = useState<string[]>([]);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [secondaryCategory, setSecondaryCategory] = useState("");
   const [bizSubcategories, setBizSubcategories] = useState<string[]>([]);
   const [customVibeTag, setCustomVibeTag] = useState("");
@@ -565,13 +595,16 @@ const BusinessDashboard = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const lastGeoAddrRef = useRef<string | null>(null); // ostatnio geokodowany adres - bez powtórnych płatnych zapytań
 
-  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'menu' | 'posts' | 'community' | 'analytics' | 'settings'>('profile');
+  const [activeSection, setActiveSection] = useState<BizSection>('overview');
   // Sekcja "Od użytkowników" (Nat 2026-09-14): notki i zdjęcia userów o TYM miejscu (te same,
   // które widać na wizytówce). Read + zgłoszenie do moderacji (biznes nie kasuje UGC sam).
   type CommunityPhoto = { id: string; photo_url: string; user_id: string | null; created_at: string; username: string | null; avatar_url: string | null };
   const [communityNotes, setCommunityNotes] = useState<PlaceUserNote[]>([]);
   const [communityPhotos, setCommunityPhotos] = useState<CommunityPhoto[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
+  // Klucze tresci, za ktore lokal juz podziekowal - RPC pilnuje tego w bazie, a panel
+  // czyta liste przy wejsciu, zeby guzik nie wracal do „Podziękuj" po odswiezeniu strony.
+  const [thankedRefs, setThankedRefs] = useState<Set<string>>(new Set());
   const [reportedKeys, setReportedKeys] = useState<Set<string>>(new Set());
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -582,6 +615,9 @@ const BusinessDashboard = () => {
   const [convertingDraft, setConvertingDraft] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
+  // Zgody mailowe lokalu (kolumny notify_* - migracja 20260915e). Zapis od razu przy
+  // przelaczeniu: to zgoda, a nie pole formularza, wiec nie moze czekac na miekki zapis.
+  const [notifyPrefs, setNotifyPrefs] = useState({ newNote: true, weeklyDigest: true, news: false });
 
   // Posts state
   const [posts, setPosts] = useState<BusinessPost[]>([]);
@@ -740,10 +776,23 @@ const BusinessDashboard = () => {
     setTags(profileData.tags ?? []);
     setMainCategory(profileData.main_category ?? "");
     setSecondaryCategory((profileData as any).secondary_category ?? "");
-    setBizSubcategories(profileData.subcategories ?? []);
+    {
+      // Zrodlem prawdy jest `main_categories[]`; helper ogarnia tez stare wiersze
+      // (main_category + secondary_category), zeby nikt nie stracil wyboru przy wejsciu.
+      const mains = readMainCategories(profileData as any);
+      setMainCategories(mains);
+      // Podkategorie potrafia byc zapisane jako polskie etykiety - panel pracuje na id.
+      const stored = (profileData.subcategories ?? []) as string[];
+      setBizSubcategories(stored.map(v => normalizeSubcategoryId(v) ?? v));
+    }
     setCustomSubcategory((profileData as any).custom_subcategory ?? "");
     setCustomSubcategoryStatus((profileData as any).custom_subcategory_status ?? null);
     setDescription(profileData.description ?? "");
+    setNotifyPrefs({
+      newNote: (profileData as any).notify_new_note ?? true,
+      weeklyDigest: (profileData as any).notify_weekly_digest ?? true,
+      news: (profileData as any).notify_news ?? false,
+    });
     setLogoUrl(profileData.logo_url ?? "");
     setCoverImageUrl(profileData.cover_image_url ?? "");
     setCoverVideoUrl((profileData as any).cover_video_url ?? "");
@@ -890,6 +939,8 @@ const BusinessDashboard = () => {
         websiteClicks: phData.websiteClicks ?? 0,
         phoneClicks: phData.phoneClicks ?? 0,
         uniqueChoices: 0,
+        saves: phData.saves ?? 0,
+        previous: phData.previous,
       });
 
       const numDays = rangeDays;
@@ -1499,7 +1550,8 @@ const BusinessDashboard = () => {
         city: city || null,
         postal_code: postalCode || null,
         tags: tags.length > 0 ? tags : null,
-        main_category: mainCategory || null,
+        main_category: (mainCategories[0] ?? mainCategory) || null,
+        main_categories: mainCategories,
         subcategories: bizSubcategories.length > 0 ? bizSubcategories : null,
         custom_subcategory: customSubcategory.trim() || null,
         custom_subcategory_status: customSubcategoryStatus,
@@ -1561,15 +1613,9 @@ const BusinessDashboard = () => {
           .eq("id", profile.id);
         if (enErr) console.warn("[BusinessDashboard] zapis event_title_en nie powiodl sie (uruchom migracje?):", enErr.message);
       }
-      // secondary_category OSOBNYM update'em (best-effort) - kolumna moze nie istniec przed
-      // uruchomieniem migracji; blad nie wywala glownego zapisu.
-      {
-        const { error: secErr } = await (supabase as any)
-          .from("business_profiles")
-          .update({ secondary_category: secondaryCategory || null })
-          .eq("id", profile.id);
-        if (secErr) console.warn("[BusinessDashboard] zapis secondary_category nie powiodl sie (uruchom migracje?):", secErr.message);
-      }
+      // ⛔ `secondary_category` NIE jest juz zapisywana (migracja 20260915_business_main_categories):
+      // dwie rownorzedne kategorie glowne mieszkaja w `main_categories[]`. Kolumna zostaje
+      // w bazie z komentarzem DEPRECATED, dopoki wszystkie odczyty nie przejda na tablice.
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
         if (!silent) toast.success(t("save.saved_review"));
@@ -1632,6 +1678,10 @@ const BusinessDashboard = () => {
       }
       if (cancelled) return;
       setCommunityNotes(notes);
+      try {
+        const { data: refs } = await (supabase as any).rpc("business_thanks_refs", { p_business_id: profile.id });
+        if (Array.isArray(refs)) setThankedRefs(new Set(refs as string[]));
+      } catch { /* brak listy = guziki po prostu zaczynaja od stanu „Podziękuj" */ }
       setCommunityPhotos(photoRes.map((p) => ({
         id: p.id, photo_url: p.photo_url, user_id: p.user_id, created_at: p.created_at,
         username: byId.get(p.user_id)?.username ?? null, avatar_url: byId.get(p.user_id)?.avatar_url ?? null,
@@ -1739,6 +1789,46 @@ const BusinessDashboard = () => {
   };
 
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  // Zmiana hasla BEZ maila z linkiem: najpierw potwierdzamy obecne haslo (Supabase nie ma
+  // osobnego "verify password", wiec logujemy sie nim jeszcze raz), potem ustawiamy nowe.
+  // Bez tego kroku kazdy, kto usiadzie przy otwartym panelu, zmienia lokalowi haslo.
+  const changePassword = async (currentPw: string, nextPw: string): Promise<string | null> => {
+    const mail = user?.email ?? profile?.email ?? "";
+    if (!mail) return t("settings.pw_wrong");
+    const { error: reauthErr } = await supabase.auth.signInWithPassword({ email: mail, password: currentPw });
+    if (reauthErr) return t("settings.pw_wrong");
+    const { error: updErr } = await supabase.auth.updateUser({ password: nextPw });
+    if (updErr) return updErr.message;
+    return null;
+  };
+
+  const saveNotifyPrefs = async (patch: Partial<typeof notifyPrefs>) => {
+    const next = { ...notifyPrefs, ...patch };
+    setNotifyPrefs(next);
+    if (!profile?.id) return;
+    const { error } = await (supabase as any).from("business_profiles").update({
+      notify_new_note: next.newNote,
+      notify_weekly_digest: next.weeklyDigest,
+      notify_news: next.news,
+    }).eq("id", profile.id);
+    if (error) {
+      setNotifyPrefs(notifyPrefs); // zgoda nie zapisana = przelacznik wraca, zeby nie klamal
+      toast.error(t("save.error", { msg: error.message }));
+    }
+  };
+
+  const submitReport = async (topic: string, body: string): Promise<boolean> => {
+    const { error } = await (supabase as any).from("bug_reports").insert({
+      user_id: user?.id ?? null,
+      description: `[Panel biznesowy - ${profile?.business_name ?? ""}] ${topic}\n\n${body}`,
+      status: "new",
+      source: "business",
+    });
+    if (error) { toast.error(t("support.error")); return false; }
+    toast.success(t("support.sent"));
+    return true;
+  };
+
   const handlePasswordReset = async () => {
     if (!user?.email) {
       toast.error(t("password.no_email"));
@@ -1833,6 +1923,18 @@ const BusinessDashboard = () => {
     </div>
   );
 
+  const completenessSteps: CompletenessStep[] = [
+    { id: "name", label: t("overview.step_name"), done: businessName.trim().length > 0, section: "profile" },
+    { id: "description", label: t("overview.step_description"), done: description.trim().length >= 20, section: "profile" },
+    { id: "category", label: t("overview.step_category"), done: !!mainCategory, section: "profile" },
+    { id: "address", label: t("overview.step_address"), done: !!(street.trim() && city.trim()), section: "profile" },
+    { id: "contact", label: t("overview.step_contact"), done: !!(phone.trim() || website.trim()), section: "profile" },
+    { id: "hours", label: t("overview.step_hours"), done: Object.keys(openingHours ?? {}).length > 0, section: "profile" },
+    { id: "cover", label: t("overview.step_cover"), done: !!(coverImageUrl || coverVideoUrl), section: "gallery" },
+    { id: "gallery", label: t("overview.step_gallery"), done: galleryUrls.length >= 3, section: "gallery" },
+    { id: "menu", label: t("overview.step_menu"), done: menuImageUrls.length > 0, section: "menu" },
+  ];
+
   const previewReady = businessName.trim().length > 0 && !!(coverImageUrl || coverVideoUrl || galleryUrls.length > 0);
 
   const previewMissingFields = (() => {
@@ -1846,7 +1948,7 @@ const BusinessDashboard = () => {
     : "";
 
   return (
-    <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
+    <>
 
       {/* ── Draft mode banner ── */}
       {isDraft && (() => {
@@ -1882,171 +1984,26 @@ const BusinessDashboard = () => {
         </div>
       )}
 
-      {/* ── Sidebar (desktop only) ── */}
-      <aside className={`hidden md:flex shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 z-20 transition-all duration-200 ${sidebarOpen ? 'w-56 px-3' : 'w-14 px-2'}`}>
-        {/* Logo + collapse toggle */}
-        <div className="mb-6">
-          <div className={`flex items-center gap-2 px-2 mb-2 ${!sidebarOpen && 'justify-center'}`}>
-            <TrasaLogo size={28} />
-            {sidebarOpen && <span className="font-black text-sm">spontaway</span>}
-          </div>
-          <button
-            onClick={() => setSidebarOpen(v => !v)}
-            title={sidebarOpen ? undefined : t('sidebar.expand')}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-xs ${!sidebarOpen && 'justify-center w-full'}`}
-          >
-            <svg className={`h-3.5 w-3.5 shrink-0 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M10 3L5 8l5 5"/>
-            </svg>
-            {sidebarOpen && <span>{t('sidebar.collapse')}</span>}
-          </button>
-        </div>
-        {/* Nav items */}
-        {([
-          { id: 'overview',   label: t('nav.overview'),  icon: LayoutDashboard, disabled: true,  hidden: true },
-          { id: 'profile',    label: t('nav.profile'),   icon: Store,          disabled: false, hidden: false },
-          { id: 'menu',       label: t('nav.menu'),      icon: BookOpen,       disabled: false, hidden: false },
-          { id: 'posts',      label: t('nav.posts'),     icon: Megaphone,      disabled: false, hidden: false },
-          { id: 'community',  label: t('nav.community'), icon: MessageSquareQuote, disabled: false, hidden: false },
-          { id: 'gallery',    label: t('nav.appearance'), icon: Images,        disabled: false, hidden: false },
-          { id: 'analytics',  label: t('nav.analytics'), icon: TrendingUp,     disabled: true,  hidden: false },
-          { id: 'settings',   label: t('nav.settings'),  icon: Settings,       disabled: false, hidden: false },
-        ] as const).filter(item => !item.hidden).map(item => (
-          <button
-            key={item.id}
-            id={`tour-${item.id}`}
-            onClick={async () => { if (item.disabled) return; if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); } setActiveSection(item.id); }}
-            disabled={item.disabled}
-            title={item.disabled ? t('nav.disabled_soon') : (!sidebarOpen ? item.label : undefined)}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {sidebarOpen && (
-              <span className="flex items-center gap-1.5">
-                {item.label}
-                {item.disabled && <span className="text-[9px] font-bold text-slate-300 bg-slate-100 rounded-full px-1.5 py-0.5">{t('nav.soon')}</span>}
-              </span>
-            )}
-          </button>
-        ))}
-        {/* Logout + support at bottom */}
-        <div className={`mt-auto px-1 space-y-1 ${!sidebarOpen && 'flex flex-col items-center'}`}>
-          <button onClick={() => setShowSupportModal(true)} title={t('sidebar.support')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-            {sidebarOpen && t('sidebar.support')}
-          </button>
-          {!isDraft && (
-            <>
-              <button
-                onClick={handlePasswordReset}
-                disabled={resetPasswordLoading}
-                title={t('sidebar.change_password')}
-                className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 disabled:opacity-50 ${sidebarOpen ? 'px-2' : 'justify-center'}`}
-              >
-                {resetPasswordLoading
-                  ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                  : <KeyRound className="h-3.5 w-3.5 shrink-0" />
-                }
-                {sidebarOpen && (resetPasswordLoading ? t('sidebar.sending') : t('sidebar.change_password'))}
-              </button>
-              <button onClick={handleLogout} title={t('sidebar.logout')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-                <LogOut className="h-3.5 w-3.5 shrink-0" />
-                {sidebarOpen && t('sidebar.logout')}
-              </button>
-            </>
-          )}
-          <button onClick={startTour} title={t('sidebar.repeat_tour')} className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-            <HelpCircle className="h-3.5 w-3.5 shrink-0" />
-            {sidebarOpen && t('sidebar.repeat_tour')}
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main ── */}
-      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${(previewMode || isDraft) ? 'pt-12 sm:pt-9' : ''}`}>
-
-        {/* ── Top bar ── */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
-          {/* Mobile: logo */}
-          <TrasaLogo size={28} className="md:hidden" />
-          <div id="tour-business-name" className="flex-1 flex items-center gap-2 min-w-0">
-            <h1 className="text-sm font-bold text-slate-800 truncate">{businessName || t("business_name_fallback")}</h1>
-            <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
-            {/* Status miękkiego zapisu (tylko live) - lokal widzi, że zmiany lecą same. */}
-            {!isDraft && !previewMode && saveStatus !== 'idle' && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 shrink-0">
-                {saveStatus === 'saving'
-                  ? <><Loader2 className="h-3 w-3 animate-spin" />{t("save.autosaving")}</>
-                  : <><Check className="h-3 w-3 text-emerald-500" />{t("save.autosaved")}</>}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Przelacznik jezyka PL/EN (changeLanguage zapisuje wybor do localStorage) */}
-            <div className="flex gap-0.5 bg-slate-100 rounded-full p-0.5 shrink-0">
-              {(["pl", "en"] as const).map((code) => {
-                const active = code === ((i18n.language || "").toLowerCase().startsWith("en") ? "en" : "pl");
-                return (
-                  <button
-                    key={code}
-                    onClick={() => { if (!active) { markBusinessLangChoice(code); i18n.changeLanguage(code); } }}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase transition-colors ${active ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                  >
-                    {code}
-                  </button>
-                );
-              })}
-            </div>
-            {/* "Przetestuj w aplikacji" — temporarily disabled on frontend */}
-            {isAdminUser && (profile as any).preview_token && (
-              <button
-                onClick={async () => {
-                  const url = `${SHARE_BASE_URL}/#/biznes/${placeId}?t=${(profile as any).preview_token}`;
-                  const result = await share({ title: t("topbar.preview_title"), url });
-                  if (!result.ok) return;
-                  toast.success(result.method === "clipboard" ? t("topbar.link_copied") : t("topbar.shared"));
-                }}
-                className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-primary px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/15 transition-colors"
-              >
-                {t("topbar.copy_link")}
-              </button>
-            )}
-            {!isDraft && (
-              <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
-                <LogOut className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Mobile horizontal tabs ── */}
-        <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
-          {([
-            { id: 'overview', label: t('tabs.overview'), disabled: true,  hidden: true },
-            { id: 'profile', label: t('tabs.profile'), disabled: false, hidden: false },
-            { id: 'menu', label: t('tabs.menu'), disabled: false, hidden: false },
-            { id: 'posts', label: t('tabs.posts'), disabled: false, hidden: false },
-            { id: 'community', label: t('tabs.community'), disabled: false, hidden: false },
-            { id: 'gallery', label: t('tabs.appearance'), disabled: false, hidden: false },
-            { id: 'analytics', label: t('tabs.analytics'), disabled: true,  hidden: false },
-            { id: 'settings', label: t('tabs.settings'), disabled: false, hidden: false },
-          ] as const).filter(item => !item.hidden).map(item => (
-            <button
-              key={item.id}
-              id={`tour-mobile-${item.id}`}
-              onClick={async () => { if (item.disabled) return; if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); } setActiveSection(item.id); }}
-              disabled={item.disabled}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-primary/10 text-primary' : 'text-slate-500'}`}
-            >
-              {item.label}{item.disabled && ` · ${t('nav.soon')}`}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Content ── */}
-        {/* pb-40 gdy isDirty: sticky save bar (button h-12 + pt-3 + pb-6 + pb-safe-6) zajmuje
-            ~110-130 px zaleznie od safe-area. pb-40 (160px) daje margines bez ucinania ostatniej sekcji. */}
-        <div className="flex-1 p-4 md:p-6 max-w-4xl w-full pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] md:pb-10">
+      <BizShell
+        title={SECTION_META[activeSection].title(t)}
+        subtitle={SECTION_META[activeSection].subtitle(t)}
+        active={activeSection}
+        onSelect={async (section) => {
+          // Przejscie miedzy sekcjami dopina miekki zapis - inaczej lokal traci to,
+          // co wpisal sekunde wczesniej (debounce nie zdazyl).
+          if (isDirty) { if (isDraft) await autoSaveDraft(); else await persistProfile({ silent: true }); }
+          setActiveSection(section);
+        }}
+        businessName={businessName}
+        city={city}
+        avatarUrl={logoUrl || coverImageUrl || null}
+        planLabel={PLAN_LABELS[plan]}
+        isPremium={plan !== 'basic'}
+        saveStatus={!isDraft && !previewMode ? saveStatus : 'idle'}
+        onLogout={handleLogout}
+        onSupport={() => setShowSupportModal(true)}
+        onUpgrade={() => setShowSupportModal(true)}
+      >
 
           {/* Banners (always visible) */}
           <div className="space-y-3 mb-4">
@@ -2090,100 +2047,26 @@ const BusinessDashboard = () => {
 
           {/* ── PRZEGLĄD ── */}
           {activeSection === 'overview' && (
-            <div className="space-y-5">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <h2 className="text-lg font-black text-foreground">{t("overview.title")}</h2>
-                  <p className="text-sm text-slate-400">{t("overview.subtitle")}</p>
-                </div>
-                <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5 shrink-0">
-                  {(['7d', '30d', '90d'] as Exclude<AnalyticsRange, 'custom'>[]).map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setAnalyticsRange(r)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      {r === '7d' ? t("range.7d") : r === '30d' ? t("range.30d") : t("range.months3")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Stats 4 cards */}
-              {plan === 'premium' ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: t('overview.stat_views'), value: stats.views, icon: BarChart2, color: 'text-primary', bg: 'bg-primary/10' },
-                    { label: t('overview.stat_addplan'), value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: t('overview.stat_clicks'), value: stats.websiteClicks + stats.phoneClicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
-                    { label: t('overview.stat_total'), value: stats.views + stats.onRoutes + stats.websiteClicks + stats.phoneClicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
-                  ].map(({ label, value, icon: Icon, color, bg }) => (
-                    <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                      <div className={`h-8 w-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-                        <Icon className={`h-4 w-4 ${color}`} />
-                      </div>
-                      <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '-' : value}</p>
-                      <p className="text-xs text-slate-400 leading-snug">{label}</p>
-                      <p className="text-[10px] text-slate-300 mt-0.5">{t("overview.last_prefix")} {analyticsRange === '7d' ? t("range.7d") : analyticsRange === '30d' ? t("range.30d") : t("range.months3")}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 opacity-30 pointer-events-none select-none">
-                    {[t('locked.views'), t('locked.routes'), t('locked.clicks'), t('locked.activity')].map(l => (
-                      <div key={l} className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-2xl font-black">-</p><p className="text-xs text-slate-400">{l}</p></div>
-                    ))}
-                  </div>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-                    <span className="text-lg">🔒</span>
-                    <p className="text-xs font-semibold">{t("analytics.locked_title")}</p>
-                  </div>
-                </div>
-              )}
-              {/* Activity feed */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t("activity.title")}</p>
-                {recentEvents.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">{t("activity.empty")}</p>
-                ) : (
-                  <div className="flex flex-col divide-y divide-slate-50">
-                    {recentEvents.map((ev, i) => {
-                      const labels: Record<string, { txt: string; dot: string }> = {
-                        view: { txt: t('activity.view'), dot: 'bg-primary' },
-                        add_to_route: { txt: t('activity.add_route'), dot: 'bg-emerald-400' },
-                        click_phone: { txt: t('activity.click_phone'), dot: 'bg-violet-400' },
-                        click_website: { txt: t('activity.click_website'), dot: 'bg-violet-400' },
-                        click_booking: { txt: t('activity.click_booking'), dot: 'bg-amber-400' },
-                      };
-                      const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
-                      return (
-                        <div key={i} className="flex items-center gap-3 py-2.5">
-                          <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
-                          <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
-                          <p className="text-[10px] text-slate-400 shrink-0">
-                            {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: dateLocale() })}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+            <OverviewSection
+              range={analyticsRange === 'custom' ? '30d' : analyticsRange}
+              onRange={setAnalyticsRange}
+              isPremium={plan !== 'basic'}
+              loading={analyticsLoading}
+              stats={stats}
+              chart={chartData.map(d => ({ date: d.date, value: d.views }))}
+              recentEvents={recentEvents}
+              steps={completenessSteps}
+              onGoTo={setActiveSection}
+              onUpgrade={() => setShowSupportModal(true)}
+            />
           )}
 
-          {/* ── GALERIA ── */}
           {activeSection === 'gallery' && (
             <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-black">{t("gallery.title")}</h2>
-                <p className="text-sm text-slate-400">{t("gallery.subtitle")}</p>
-              </div>
-
               <div className="flex flex-col lg:flex-row gap-5 items-start">
               <div className="flex-1 min-w-0 space-y-4">
               {/* ── SEKCJA 1: Okładka wizytówki (zdjęcie lub filmik) + Podgląd ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-foreground">{t("gallery.cover_title")}</p>
@@ -2258,7 +2141,7 @@ const BusinessDashboard = () => {
               </div>{/* end outer section card */}
 
               {/* ── SEKCJA 3: Galeria dodatkowa ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-foreground">{t("gallery.extra_title")}</p>
@@ -2358,297 +2241,43 @@ const BusinessDashboard = () => {
 
           {/* ── DANE LOKALU ── */}
           {activeSection === 'profile' && (
-            <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{t("profile.title")}</h2><p className="text-sm text-slate-400">{t("profile.subtitle")}</p></div>
-
-              <div className="flex flex-col lg:flex-row gap-5 items-start">
-              <div className="flex-1 min-w-0 space-y-5">
-              {/* ── Nazwa lokalu ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <Label htmlFor="business_name" className="text-sm font-bold text-foreground">{t("profile.name_label")}</Label>
-                <Input
-                  id="business_name"
-                  value={businessName}
-                  onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
-                  placeholder={t("profile.name_placeholder")}
-                  maxLength={80}
-                  className="mt-2"
+            <ProfileSection
+              value={{ businessName, description, street, city, postalCode, phone, email, website, instagram, facebook }}
+              onChange={(patch) => {
+                if (patch.businessName !== undefined) setBusinessName(patch.businessName);
+                if (patch.description !== undefined) setDescription(patch.description);
+                if (patch.street !== undefined) setStreet(patch.street);
+                if (patch.city !== undefined) setCity(patch.city);
+                if (patch.postalCode !== undefined) setPostalCode(patch.postalCode);
+                if (patch.phone !== undefined) setPhone(patch.phone);
+                if (patch.email !== undefined) setEmail(patch.email);
+                if (patch.website !== undefined) setWebsite(patch.website);
+                if (patch.instagram !== undefined) setInstagram(patch.instagram);
+                if (patch.facebook !== undefined) setFacebook(patch.facebook);
+                setIsDirty(true);
+              }}
+              mains={mainCategories}
+              subs={bizSubcategories}
+              onEditCategories={() => setCategoryPickerOpen(true)}
+              hours={
+                <BusinessHoursEditor
+                  value={openingHours}
+                  onChange={(h) => { setOpeningHours(h); setIsDirty(true); }}
                 />
-              </div>
-              {/* ── Logo - avatar style ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-sm font-bold text-foreground mb-4">{t("profile.logo_title")}</p>
-                <div className="flex items-center gap-5">
-                  <div className="relative shrink-0">
-                    <div className="h-20 w-20 rounded-full overflow-hidden border-[3px] border-[#D45113] bg-muted">
-                      {uploading === 'logo'
-                        ? <div className="w-full h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                        : logoUrl
-                          ? <img src={logoUrl} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center"><Store className="h-8 w-8 text-muted-foreground/40" /></div>
-                      }
-                    </div>
-                    <button
-                      onClick={() => logoInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-foreground flex items-center justify-center shadow-md active:scale-95 transition-transform"
-                    >
-                      <Camera className="h-3.5 w-3.5 text-background" />
-                    </button>
-                    <input ref={logoInputRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleLogoUpload} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{businessName || t("business_name_fallback")}</p>
-                    <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-primary font-medium active:opacity-70">
-                      {logoUrl ? t('profile.change_logo') : t('profile.add_logo')}
-                    </button>
-                    <p className="text-xs text-muted-foreground mt-0.5">{t("profile.logo_hint")}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="street" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.street")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                  <BizInput id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="city" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.city")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                    <BizInput id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="postal_code" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.postal")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                    <BizInput id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
-                  </div>
-                </div>
-                {!isDraft && (
-                  <>
-                    <div className="space-y-1">
-                      <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.phone")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.email")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="website" className="text-xs flex items-center gap-1.5 flex-wrap">{t("profile.website")} <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" placeholder="https://twojlokal.pl" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="instagram" className="text-xs flex items-center gap-1.5 flex-wrap">Instagram <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="instagram" value={instagram} maxLength={200} onChange={e => { setInstagram(e.target.value); setIsDirty(true); }} type="text" placeholder="@twojlokal" />
-                      <p className="text-[10px] text-muted-foreground">{t("profile.instagram_hint")}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="facebook" className="text-xs flex items-center gap-1.5 flex-wrap">Facebook <span className="text-[10px] font-normal text-muted-foreground">{t("profile.optional")}</span></Label>
-                      <BizInput id="facebook" value={facebook} maxLength={200} onChange={e => { setFacebook(e.target.value); setIsDirty(true); }} type="text" placeholder={t("profile.facebook_placeholder")} />
-                      <p className="text-[10px] text-muted-foreground">{t("profile.facebook_hint")}</p>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* ── Godziny otwarcia (osobna sekcja) ── */}
-              {!isDraft && (
-                <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                  <BusinessHoursEditor
-                    value={openingHours}
-                    onChange={(next) => { setOpeningHours(next); setIsDirty(true); }}
-                  />
-                </div>
-              )}
-
-              {/* ── Kategoria główna + podkategorie (osobna sekcja) ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                {/* Kategoria główna */}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("profile.main_category")}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {MAIN_CATEGORIES.map(cat => {
-                      const active = mainCategory === cat.id;
-                      return (
-                        <button key={cat.id} type="button"
-                          onClick={() => { const newMain = active ? "" : cat.id; setMainCategory(newMain); setBizSubcategories([]); if (secondaryCategory === newMain) setSecondaryCategory(""); setIsDirty(true); }}
-                          className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
-                          <span className="text-xl shrink-0">{cat.emoji}</span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold leading-tight">{cat.label}</p>
-                            <p className="hidden md:block text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Podkategoria */}
-                {mainCategory && (
-                  <div className="pt-2 border-t border-border/40">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("profile.subcategory")}</p>
-                      <span className={`text-[11px] font-bold ${bizSubcategories.length >= 3 ? 'text-slate-700' : 'text-muted-foreground'}`}>{bizSubcategories.length}/3</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(MAIN_CATEGORIES.find(c => c.id === mainCategory)?.subcategories ?? []).map(sub => {
-                        const active = bizSubcategories.includes(sub.label);
-                        const limitReached = bizSubcategories.length >= 3;
-                        const disabled = !active && limitReached;
-                        return (
-                          <button key={sub.id} type="button"
-                            disabled={disabled}
-                            onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub.label) : (prev.length >= 3 ? prev : [...prev, sub.label])); setIsDirty(true); }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-slate-700 border-slate-700 text-white' : disabled ? 'bg-background border-border text-muted-foreground/40 cursor-not-allowed' : 'bg-background border-border text-muted-foreground hover:border-slate-300 hover:text-foreground'}`}>
-                            <span>{sub.emoji}</span>{sub.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {/* Własna podkategoria */}
-                    <div className="mt-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-                      <div>
-                        <p className="text-xs font-bold text-foreground leading-tight">{t("profile.custom_cat_title")}</p>
-                        <p className="text-[11px] text-muted-foreground leading-snug">{t("profile.custom_cat_desc")}</p>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          value={customSubcategory}
-                          onChange={e => { setCustomSubcategory(e.target.value); setCustomSubcategoryStatus(null); setIsDirty(true); }}
-                          maxLength={40}
-                          placeholder={t("profile.custom_cat_placeholder")}
-                          className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-foreground placeholder:text-slate-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/60 transition-colors"
-                        />
-                        <button
-                          type="button"
-                          disabled={!customSubcategory.trim() || customSubcategoryStatus === 'pending' || customSubcategoryStatus === 'approved'}
-                          onClick={() => { if (customSubcategory.trim()) { setCustomSubcategoryStatus('pending'); setIsDirty(true); } }}
-                          className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-[#D45113] hover:bg-[#D45113] text-white disabled:opacity-40 disabled:hover:bg-[#D45113] transition-colors"
-                        >
-                          {t("profile.propose")}
-                        </button>
-                      </div>
-                      {customSubcategory.trim() && customSubcategoryStatus && (
-                        <p className={`text-[11px] font-medium ${
-                          customSubcategoryStatus === 'approved' ? 'text-green-600' :
-                          customSubcategoryStatus === 'rejected' ? 'text-red-500' :
-                          'text-amber-600'
-                        }`}>
-                          {customSubcategoryStatus === 'approved' ? t('profile.cat_approved') :
-                           customSubcategoryStatus === 'rejected' ? t('profile.cat_rejected') :
-                           t('profile.cat_pending')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Kategoria dodatkowa (opcjonalnie) */}
-                {mainCategory && (
-                  <div className="pt-2 border-t border-border/40">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                      {t("category.secondary_label")} <span className="normal-case font-normal">{t("profile.optional")}</span>
-                    </p>
-                    <p className="text-[11px] text-muted-foreground leading-snug mb-2">{t("category.secondary_hint")}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {MAIN_CATEGORIES.filter(cat => cat.id !== mainCategory).map(cat => {
-                        const active = secondaryCategory === cat.id;
-                        return (
-                          <button key={cat.id} type="button"
-                            onClick={() => { setSecondaryCategory(active ? "" : cat.id); setIsDirty(true); }}
-                            className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
-                            <span className="text-xl shrink-0">{cat.emoji}</span>
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold leading-tight">{cat.label}</p>
-                              <p className="hidden md:block text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Tagi wizytówki (osobna sekcja) ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("profile.tags_label")} <span className="normal-case font-normal">{t("profile.tags_hint")}</span></p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {(tagsExpanded ? VIBE_TAG_SUGGESTIONS : VIBE_TAG_SUGGESTIONS.slice(0, 4)).map(tag => {
-                      const active = tags.includes(tag);
-                      const disabled = !active && tags.length >= 3;
-                      return (
-                        <button key={tag} type="button" disabled={disabled}
-                          onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors disabled:opacity-40 ${active ? 'bg-primary border-primary text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
-                          #{tag}
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setTagsExpanded(v => !v)}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-border text-muted-foreground hover:border-slate-400 transition-colors"
-                    >
-                      {tagsExpanded ? t('profile.collapse') : t('profile.more', { count: VIBE_TAG_SUGGESTIONS.length - 4 })}
-                      <svg className={`h-3 w-3 transition-transform ${tagsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l4 4 4-4"/></svg>
-                    </button>
-                  </div>
-                  {/* Custom tag input - hashtag (#) widoczny by default; strip wiodacych # zeby nie bylo ## */}
-                  <div className="flex gap-2">
-                    <div className="flex-1 flex items-center rounded-xl border border-slate-200/80 bg-slate-50 px-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/25 focus-within:border-primary/40">
-                      <span className="text-xs font-semibold text-muted-foreground select-none">#</span>
-                      <input
-                        value={customVibeTag} maxLength={20}
-                        onChange={e => setCustomVibeTag(e.target.value.replace(/^#+/, ""))}
-                        onKeyDown={e => { const v = customVibeTag.trim().replace(/^#+/, ""); if (e.key === 'Enter' && v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
-                        placeholder={t("profile.custom_tag_placeholder")}
-                        disabled={tags.length >= 3}
-                        className="flex-1 bg-transparent px-1.5 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none disabled:opacity-40"
-                      />
-                    </div>
-                    <button type="button" disabled={!customVibeTag.trim() || tags.length >= 3}
-                      onClick={() => { const v = customVibeTag.trim().replace(/^#+/, ""); if (v && tags.length < 3) { setTags(prev => [...prev, v]); setCustomVibeTag(""); setIsDirty(true); } }}
-                      className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40">
-                      {t("card.add")}
-                    </button>
-                  </div>
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {tags.map(t => (
-                        <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-full text-xs font-semibold text-orange-700">
-                          #{t}
-                          <button type="button" onClick={() => { setTags(prev => prev.filter(x => x !== t)); setIsDirty(true); }} className="text-orange-400 hover:text-orange-700 ml-0.5">×</button>
-                        </span>
-                      ))}
-                      <span className="text-[10px] text-slate-400 self-center">{tags.length}/3</span>
-                    </div>
-                  )}
-                </div>
-              {/* ── Opis (osobna sekcja) ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("profile.description_label")}</p>
-                <div className="space-y-1">
-                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder={t("profile.description_placeholder")} className="w-full rounded-2xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/40 resize-none" />
-                  <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
-                </div>
-              </div>
-              </div> {/* end flex-1 min-w-0 */}
-
-              {/* Desktop sticky card preview */}
-              <div className="hidden lg:block w-72 shrink-0 lg:sticky lg:top-20 lg:self-start">
+              }
+              preview={
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
-                  businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
+                  businessName={businessName} mainCategory={mainCategories[0] ?? mainCategory}
+                  subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
                   colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
                 />
-              </div>
-              </div> {/* end flex flex-col lg:flex-row */}
-            </div>
+              }
+            />
           )}
 
-          {/* ── MENU / CENNIK ── */}
           {activeSection === 'menu' && (() => {
             const menuLabel = mainCategory === 'food' ? t('menu.menu') : t('menu.pricelist');
             const hint = mainCategory === 'food'
@@ -2656,10 +2285,9 @@ const BusinessDashboard = () => {
               : t('menu.hint_pricelist');
             return (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{menuLabel}</h2><p className="text-sm text-slate-400">{hint}</p></div>
               <div className="flex flex-col lg:flex-row gap-5 items-start">
                 <div className="flex-1 min-w-0">
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-sm font-bold text-foreground">{menuLabel} <span className="font-normal text-muted-foreground text-xs">{t("menu.max", { max: MAX_MENU_IMAGES })}</span></p>
                       <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
@@ -2713,12 +2341,11 @@ const BusinessDashboard = () => {
           {/* ── AKTUALNOŚCI ── */}
           {activeSection === 'posts' && (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{t("posts.title")}</h2><p className="text-sm text-slate-400">{t("posts.subtitle")}</p></div>
               <div className="flex flex-col lg:flex-row gap-5 items-start">
                 {/* Form */}
                 <div className="flex-1 space-y-5">
                   {/* Events */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.current_event")}</p>
                     <p className="text-xs text-muted-foreground -mt-2">{t("posts.event_desc")}</p>
                     <div className="space-y-1">
@@ -2730,7 +2357,7 @@ const BusinessDashboard = () => {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <Label htmlFor="event_title_en" className="text-xs flex items-center gap-1.5 flex-wrap">
-                          🌐 {t("posts.event_en_label")}
+                          <Globe className="h-3.5 w-3.5 text-slate-400" />{t("posts.event_en_label")}
                           <span className="text-[10px] font-normal text-muted-foreground">{eventTitleEnOverridden ? t("posts.event_en_edited") : t("posts.event_en_auto")}</span>
                         </Label>
                         <button type="button" onClick={handleTranslateEvent} disabled={!eventTitle.trim() || translatingEvent}
@@ -2749,7 +2376,7 @@ const BusinessDashboard = () => {
                     </div>
                   </div>
                   {/* Zaplanowane wydarzenia (kolejka + historia) */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("posts.events_label")}</p>
                     <p className="text-xs text-muted-foreground -mt-2">{t("posts.events_desc")}</p>
                     {/* Formularz dodania */}
@@ -2900,7 +2527,6 @@ const BusinessDashboard = () => {
           {/* ── OD UŻYTKOWNIKÓW (notki + zdjęcia userów o tym miejscu) ── */}
           {activeSection === 'community' && (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">{t("community.title")}</h2><p className="text-sm text-slate-400">{t("community.subtitle")}</p></div>
 
               {communityLoading ? (
                 <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-slate-300" /></div>
@@ -2911,9 +2537,9 @@ const BusinessDashboard = () => {
                   <p className="text-xs text-slate-400 max-w-sm">{t("community.empty_desc")}</p>
                 </div>
               ) : (
-                <div className="grid lg:grid-cols-2 gap-5 items-start">
+                <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
                   {/* Notki */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t("community.notes_label", { count: communityNotes.length })}</p>
                     {communityNotes.length === 0 ? (
                       <p className="text-xs text-slate-400 py-4">{t("community.no_notes")}</p>
@@ -2929,14 +2555,24 @@ const BusinessDashboard = () => {
                                 <p className="text-xs font-semibold text-slate-700">{n.username || t("community.anon_user")}</p>
                                 <p className="text-sm text-slate-600 leading-relaxed mt-0.5 break-words">{n.note}</p>
                               </div>
-                              <button
-                                onClick={() => reportCommunity('place_note', n.key, key, n.note)}
-                                disabled={reported}
-                                title={t("community.report")}
-                                className="shrink-0 text-slate-300 hover:text-primary disabled:text-emerald-500 disabled:hover:text-emerald-500 transition-colors p-1"
-                              >
-                                {reported ? <Check className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
-                              </button>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <ThanksButton
+                                  businessId={profile.id}
+                                  username={n.username}
+                                  kind="note"
+                                  refKey={key}
+                                  alreadySent={thankedRefs.has(key)}
+                                  onSent={(r) => setThankedRefs((prev) => new Set(prev).add(r))}
+                                />
+                                <button
+                                  onClick={() => reportCommunity('place_note', n.key, key, n.note)}
+                                  disabled={reported}
+                                  title={t("community.report")}
+                                  className="text-slate-300 hover:text-primary disabled:text-emerald-500 disabled:hover:text-emerald-500 transition-colors p-1"
+                                >
+                                  {reported ? <Check className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                                </button>
+                              </div>
                             </div>
                           );
                         })}
@@ -2944,7 +2580,7 @@ const BusinessDashboard = () => {
                     )}
                   </div>
                   {/* Zdjęcia */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t("community.photos_label", { count: communityPhotos.length })}</p>
                     {communityPhotos.length === 0 ? (
                       <p className="text-xs text-slate-400 py-4">{t("community.no_photos")}</p>
@@ -2969,346 +2605,73 @@ const BusinessDashboard = () => {
                               >
                                 {reported ? <Check className="h-3 w-3" /> : <Flag className="h-3 w-3" />}
                               </button>
+                              {/* Podziekowanie za zdjecie - to samo, co przy notatce, tylko ciasniej. */}
+                              {ph.username && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (thankedRefs.has(key)) return;
+                                    const { data, error } = await (supabase as any).rpc("notify_business_thanks", {
+                                      p_business_id: profile.id, p_username: ph.username, p_kind: "photo", p_ref: key,
+                                    });
+                                    if (error) { toast.error(error.message || t("community.thanks_error")); return; }
+                                    if ((data as any)?.sent) { toast.success(t("community.thanks_sent", { user: ph.username })); setThankedRefs((prev) => new Set(prev).add(key)); return; }
+                                    if ((data as any)?.reason === "already") { toast.info(t("community.thanks_already")); setThankedRefs((prev) => new Set(prev).add(key)); return; }
+                                    if ((data as any)?.reason === "limit") { toast.info(t("community.thanks_limit")); return; }
+                                    toast.info(t("community.thanks_no_user"));
+                                  }}
+                                  title={t("community.thanks_cta")}
+                                  className={`absolute top-1 left-1 h-6 w-6 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors ${
+                                    thankedRefs.has(key) ? "bg-emerald-500/85 text-white" : "bg-black/45 text-white/90 hover:bg-primary"
+                                  }`}
+                                >
+                                  {thankedRefs.has(key) ? <Check className="h-3 w-3" /> : <Heart className="h-3 w-3" />}
+                                </button>
+                              )}
                             </div>
                           );
                         })}
                       </div>
                     )}
                   </div>
+
+                  <GuestInsights
+                    noteCount={communityNotes.length}
+                    photoCount={communityPhotos.length}
+                    notes={communityNotes.map((n) => n.note ?? "")}
+                  />
                 </div>
               )}
               <p className="text-[11px] text-slate-400 leading-relaxed max-w-2xl">{t("community.moderation_hint")}</p>
             </div>
           )}
 
-          {/* ── ANALITYKA ── */}
           {activeSection === 'settings' && (
-            <div className="space-y-5 max-w-lg">
-              <div>
-                <h2 className="text-lg font-black">{t("settings.title")}</h2>
-                <p className="text-sm text-slate-400">{t("settings.subtitle")}</p>
+            (!previewMode && !isDraft && user && (profile as any)?.owner_user_id === user.id) ? (
+              <SettingsSection
+                email={user.email ?? profile?.email ?? ""}
+                planLabel={PLAN_LABELS[plan]}
+                planHint={plan === 'basic' ? t("settings.plan_basic_hint") : t("settings.plan_premium_hint")}
+                isPremium={plan !== 'basic'}
+                prefs={notifyPrefs}
+                onPrefsChange={saveNotifyPrefs}
+                onChangePassword={changePassword}
+                onForgotPassword={handlePasswordReset}
+                forgotPending={resetPasswordLoading}
+                onSubmitReport={submitReport}
+                onUpgrade={() => setShowSupportModal(true)}
+                onSupport={() => setShowSupportModal(true)}
+                deleteAccount={<BusinessDeleteAccount />}
+              />
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <p className="text-sm text-slate-500">{t("settings.login_prompt")}</p>
               </div>
-              {(!previewMode && !isDraft && user && (profile as any)?.owner_user_id === user.id) ? (
-                <div className="space-y-3">
-                  <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                    <p className="text-sm font-semibold text-slate-700">{t("settings.logged_as")}</p>
-                    <p className="text-xs text-slate-400 mt-0.5 break-all">{user.email}</p>
-                  </div>
-                  <div>
-                    <BusinessDeleteAccount />
-                    <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">{t("settings.delete_hint")}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                  <p className="text-sm text-slate-500">{t("settings.login_prompt")}</p>
-                </div>
-              )}
-            </div>
+            )
           )}
 
-          {activeSection === 'analytics' && (
-            <div className="space-y-5">
-              {/* Header + range picker */}
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <h2 className="text-lg font-black">{t("analytics.title")}</h2>
-                  <p className="text-sm text-slate-400">
-                    {analyticsRange === 'custom' && customDateRange?.from
-                      ? `${format(customDateRange.from, 'd MMM', { locale: dateLocale() })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` - ${format(customDateRange.to, 'd MMM yyyy', { locale: dateLocale() })}` : ''}`
-                      : t('analytics.subtitle')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5">
-                    {(['7d', '30d', '90d'] as Exclude<AnalyticsRange, 'custom'>[]).map(r => (
-                      <button
-                        key={r}
-                        onClick={() => setAnalyticsRange(r)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        {r === '7d' ? t("range.7d") : r === '30d' ? t("range.30d") : t("range.90d")}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Custom date range picker */}
-                  <div className="relative" ref={calendarRef}>
-                    <button
-                      onClick={() => setShowCalendar(v => !v)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${analyticsRange === 'custom' ? 'bg-foreground text-background border-transparent' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
-                    >
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="2" y="3" width="12" height="11" rx="2"/>
-                        <path d="M5 1v2M11 1v2M2 7h12"/>
-                      </svg>
-                      {t("analytics.range")}
-                    </button>
-                    {showCalendar && (
-                      <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                        <Calendar
-                          mode="range"
-                          selected={customDateRange}
-                          onSelect={(range) => {
-                            setCustomDateRange(range);
-                            if (range?.from) {
-                              setAnalyticsRange('custom');
-                              if (range.to) setShowCalendar(false);
-                            }
-                          }}
-                          disabled={(d) => d > new Date()}
-                          locale={dateLocale()}
-                          className="p-3"
-                          classNames={{
-                            months: "flex flex-col",
-                            caption: "flex justify-center pt-1 relative items-center mb-3",
-                            caption_label: "text-sm font-bold",
-                            nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                            nav_button_previous: "absolute left-1",
-                            nav_button_next: "absolute right-1",
-                            table: "w-full border-collapse",
-                            head_row: "flex",
-                            head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
-                            row: "flex w-full mt-1",
-                            cell: "w-9 text-center p-0 relative",
-                            day: "h-9 w-9 rounded-full text-sm hover:bg-muted transition-colors",
-                            day_selected: "bg-foreground text-background hover:bg-foreground hover:text-background",
-                            day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
-                            day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
-                            day_range_middle: "rounded-none bg-slate-100 text-foreground",
-                            day_today: "font-bold text-primary",
-                            day_outside: "opacity-30",
-                            day_disabled: "opacity-20 cursor-not-allowed",
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              {plan !== 'premium' ? (
-                <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center shadow-sm">
-                  <span className="text-3xl">🔒</span>
-                  <p className="font-bold text-base mt-3">{t("analytics.locked_title")}</p>
-                  <p className="text-sm text-slate-400 mt-1 mb-4">{t("analytics.locked_desc")}</p>
-                  <button onClick={() => setShowUpgradeBanner(true)} className="px-5 py-2.5 rounded-2xl bg-amber-500 text-white text-sm font-bold">{t("analytics.learn_more")}</button>
-                </div>
-              ) : (
-                <>
-                  {/* Draft: mock data banner */}
-                  {isDraft && (
-                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
-                      <p className="text-sm font-bold text-orange-900">{t("analytics.draft_title")}</p>
-                      <p className="text-xs text-primary mt-0.5">{t("analytics.draft_desc")}</p>
-                    </div>
-                  )}
-                  {/* Stat cards */}
-                  {(() => {
-                    const s = isDraft
-                      ? { views: 1247, uniqueChoices: 156, onRoutes: 89, websiteClicks: 34, phoneClicks: 21 }
-                      : stats;
-                    return (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                      { label: t('analytics.stat_views'), value: s.views, desc: t('analytics.views_desc'), icon: BarChart2, color: 'text-primary', bg: 'bg-primary/10' },
-                      { label: t('analytics.stat_unique'), value: s.uniqueChoices, desc: t('analytics.unique_desc'), icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
-                      { label: t('analytics.stat_addplan'), value: s.onRoutes, desc: t('analytics.addplan_desc'), icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                      { label: t('analytics.stat_clicks'), value: s.websiteClicks + s.phoneClicks, desc: t('analytics.clicks_desc', { www: s.websiteClicks, tel: s.phoneClicks }), icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
-                    ].map(({ label, value, desc, icon: Icon, color, bg }) => (
-                      <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                        <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-                          <Icon className={`h-4 w-4 ${color}`} />
-                        </div>
-                        <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '-' : value}</p>
-                        <p className="text-xs font-semibold text-foreground mb-0.5">{label}</p>
-                        <p className="text-[10px] text-slate-400 leading-snug">{desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                    );
-                  })()}
-
-                  {/* Daily activity chart */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.activity_over_time")}</p>
-                      <div className="flex items-center gap-3">
-                        {[
-                          { key: 'views', label: t('analytics.legend_views'), color: '#EE5307' },
-                          { key: 'routes', label: t('analytics.legend_route'), color: '#10b981' },
-                          { key: 'clicks', label: t('analytics.legend_clicks'), color: '#8b5cf6' },
-                        ].map(({ key, label, color }) => (
-                          <div key={key} className="flex items-center gap-1.5">
-                            <div className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
-                            <span className="text-[10px] text-slate-400">{label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {analyticsLoading ? (
-                      <div className="flex items-center justify-center h-48">
-                        <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
-                      </div>
-                    ) : chartData.every(d => d.views === 0 && d.routes === 0 && d.clicks === 0) ? (
-                      <div className="flex flex-col items-center justify-center h-48 gap-2">
-                        <BarChart2 className="h-8 w-8 text-slate-200" />
-                        <p className="text-sm text-slate-400">{t("analytics.no_data")}</p>
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart
-                          data={chartData}
-                          barSize={chartData.length <= 10 ? 18 : chartData.length <= 35 ? 8 : 4}
-                          barCategoryGap="30%"
-                          margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                        >
-                          <XAxis
-                            dataKey="date"
-                            tick={{ fontSize: 10, fill: '#94a3b8' }}
-                            tickLine={false}
-                            axisLine={false}
-                            interval={chartData.length <= 10 ? 0 : chartData.length <= 35 ? 4 : 13}
-                          />
-                          <YAxis
-                            allowDecimals={false}
-                            tick={{ fontSize: 10, fill: '#cbd5e1' }}
-                            tickLine={false}
-                            axisLine={false}
-                            width={24}
-                          />
-                          <Tooltip
-                            cursor={{ fill: '#f8fafc' }}
-                            contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
-                            labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 6, fontSize: 12 }}
-                            formatter={(val: number, name: string) => {
-                              const map: Record<string, string> = { views: t('analytics.tt_views'), routes: t('analytics.tt_routes'), clicks: t('analytics.tt_clicks') };
-                              return [val, map[name] ?? name];
-                            }}
-                          />
-                          <Bar dataKey="views" fill="#EE5307" radius={[3, 3, 0, 0]} stackId="a" />
-                          <Bar dataKey="routes" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
-                          <Bar dataKey="clicks" fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-
-                  {/* Hourly traffic chart */}
-                  {(() => {
-                    const maxVal = Math.max(...hourlyData.map(h => h.total), 1);
-                    const peakHour = hourlyData.reduce((best, h) => h.total > best.total ? h : best, hourlyData[0] ?? { hour: -1, total: 0 });
-                    const hasData = hourlyData.some(h => h.total > 0);
-                    return (
-                      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("analytics.hourly_title")}</p>
-                          {hasData && !analyticsLoading && (
-                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-primary border border-orange-100">
-                              {t("analytics.peak", { from: `${peakHour.hour}:00`, to: `${peakHour.hour + 1}:00` })}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-300 mb-4">{t("analytics.hourly_desc")}</p>
-                        {analyticsLoading ? (
-                          <div className="flex items-center justify-center h-36">
-                            <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
-                          </div>
-                        ) : !hasData ? (
-                          <div className="flex flex-col items-center justify-center h-36 gap-2">
-                            <BarChart2 className="h-8 w-8 text-slate-200" />
-                            <p className="text-sm text-slate-400">{t("analytics.no_data")}</p>
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height={160}>
-                            <BarChart
-                              data={hourlyData}
-                              barSize={10}
-                              barCategoryGap="15%"
-                              margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                            >
-                              <XAxis
-                                dataKey="label"
-                                tick={{ fontSize: 10, fill: '#94a3b8' }}
-                                tickLine={false}
-                                axisLine={false}
-                                interval={2}
-                              />
-                              <YAxis allowDecimals={false} hide />
-                              <Tooltip
-                                cursor={{ fill: '#f8fafc' }}
-                                contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
-                                labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 4, fontSize: 12 }}
-                                formatter={(val: number) => [val, t('analytics.events')]}
-                                labelFormatter={(label) => t('analytics.hour', { label })}
-                              />
-                              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-                                {hourlyData.map((entry) => {
-                                  const ratio = entry.total / maxVal;
-                                  const fill = ratio >= 0.85
-                                    ? '#D45113'
-                                    : ratio >= 0.5
-                                    ? '#fb923c'
-                                    : ratio >= 0.2
-                                    ? '#93c5fd'
-                                    : '#dbeafe';
-                                  return <Cell key={entry.hour} fill={fill} />;
-                                })}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
-                        {hasData && !analyticsLoading && (
-                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50">
-                            {[
-                              { color: '#D45113', label: t('analytics.peak_traffic') },
-                              { color: '#93c5fd', label: t('analytics.activity') },
-                              { color: '#dbeafe', label: t('analytics.low_traffic') },
-                            ].map(({ color, label }) => (
-                              <div key={label} className="flex items-center gap-1.5">
-                                <div className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: color }} />
-                                <span className="text-[10px] text-slate-400">{label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Activity feed */}
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t("activity.title")}</p>
-                    {recentEvents.length === 0 ? (
-                      <p className="text-sm text-slate-400 text-center py-6">{t("activity.empty")}</p>
-                    ) : (
-                      <div className="flex flex-col divide-y divide-slate-50">
-                        {recentEvents.map((ev, i) => {
-                          const labels: Record<string, { txt: string; dot: string }> = {
-                            view: { txt: t('analytics.act_view'), dot: 'bg-primary' },
-                            add_to_route: { txt: t('analytics.act_add'), dot: 'bg-emerald-400' },
-                            click_phone: { txt: t('analytics.act_phone'), dot: 'bg-violet-400' },
-                            click_website: { txt: t('analytics.act_website'), dot: 'bg-violet-400' },
-                            click_booking: { txt: t('analytics.act_booking'), dot: 'bg-amber-400' },
-                          };
-                          const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
-                          return (
-                            <div key={i} className="flex items-center gap-3 py-3">
-                              <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
-                              <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
-                              <p className="text-xs text-slate-400 shrink-0">{formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: dateLocale() })}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-        </div>
-      </div>
+      </BizShell>
 
       {/* Mobile FAB — temporarily disabled on frontend */}
 
@@ -3316,7 +2679,10 @@ const BusinessDashboard = () => {
           paska "Zapisz zmiany". Feedback = status "Zapisywanie/Zapisano" w górnej belce. Na
           mobile, w trakcie zapisu, pokazujemy delikatny pasek na dole (belka bywa przewinięta). */}
       {!previewMode && !isDraft && saveStatus !== 'idle' && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-4 pb-4 pt-2 pointer-events-none">
+        <div
+          className="md:hidden fixed left-0 right-0 z-30 px-4 pt-2 pointer-events-none"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.25rem)" }}
+        >
           <div className="mx-auto w-fit flex items-center gap-1.5 rounded-full bg-white/95 border border-slate-200 shadow-sm px-3.5 py-1.5 text-[11px] font-semibold text-slate-500">
             {saveStatus === 'saving'
               ? <><Loader2 className="h-3 w-3 animate-spin" />{t("save.autosaving")}</>
@@ -3324,6 +2690,24 @@ const BusinessDashboard = () => {
           </div>
         </div>
       )}
+      {/* ── Kategorie w dwoch krokach (model: 2 glowne + 3 podkategorie) ── */}
+      <CategoryPickerModal
+        open={categoryPickerOpen}
+        initialMains={mainCategories}
+        initialSubs={bizSubcategories}
+        onCancel={() => setCategoryPickerOpen(false)}
+        onSave={({ mains, subs }) => {
+          setMainCategories(mains);
+          // `mainCategory` (pojedyncza) zostaje zgodna z pierwsza z listy - czytaja ja
+          // jeszcze apka, panel ops i podglad karty.
+          setMainCategory(mains[0] ?? "");
+          setSecondaryCategory("");
+          setBizSubcategories(subs);
+          setIsDirty(true);
+          setCategoryPickerOpen(false);
+        }}
+      />
+
       {/* ── Kadrowanie zdjecia (logo 1:1 kolo / galeria 4:3) ── */}
       {cropJob && cropJob.files[cropJob.index] && (
         <ImageCropModal
@@ -3355,14 +2739,16 @@ const BusinessDashboard = () => {
         </div>
       )}
 
-      {/* ── Mobile/Tablet FAB: Podglad wizytowki - tylko desktop (lg+) ma sticky sidebar preview ── */}
+      {/* ── Mobile/Tablet FAB: Podglad wizytowki - tylko desktop (lg+) ma sticky sidebar preview ──
+          Dolny pasek nawigacji (BizShell, ~60 px + safe-area) zajmuje dol ekranu, wiec FAB
+          i pasek zapisu siadaja NAD nim - inaczej zaslaniaja nawigacje. */}
       <button
         onClick={() => previewReady && setShowAppPreview(true)}
         disabled={!previewReady}
         title={!previewReady ? t("fab.incomplete") : t("fab.preview_title")}
         aria-label={t("fab.preview_aria")}
         className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-        style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", right: "1rem" }}
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.75rem)", right: "1rem" }}
       >
         <Eye className="h-4 w-4" />
         {t("fab.preview")}
@@ -3439,7 +2825,7 @@ const BusinessDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

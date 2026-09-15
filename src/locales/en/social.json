@@ -126,7 +126,10 @@
     "route_hidden_other": "{{count}} of your trips are not visible in Explore - add photos",
     "title": "Notifications",
     "list_invite": "{{user}} invited you to co-create a collection",
-    "list_invite_title": "{{user}} invited you to co-create “{{title}}”"
+    "list_invite_title": "{{user}} invited you to co-create “{{title}}”",
+    "business_thanks": "{{business}} says thanks for your note",
+    "business_thanks_photo": "{{business}} says thanks for your photo",
+    "business_fallback": "A venue"
   },
   "live": {
     "friend_request": "New friend request 👋",
