@@ -83,7 +83,7 @@ export function useModerateRanking() {
         const title = col.title || "Twoja lista";
         await sendClientPush(
           status === "approved"
-            ? { userId: col.user_id, title: "Lista zaakceptowana 🎉", body: `„${title}" jest już widoczna dla innych`, url: "/eksploruj" }
+            ? { userId: col.user_id, title: "Kolekcja zaakceptowana", body: `„${title}" jest już widoczna dla innych`, url: "/eksploruj" }
             : { userId: col.user_id, title: "Lista odrzucona", body: note?.trim() ? `Powód: ${note.trim()}` : `„${title}" nie przeszła moderacji`, url: "/moj-profil" },
         );
       }

@@ -11,7 +11,7 @@ import { EmptyState } from "./EmptyState";
 export interface Column<T> {
   key: string;
   label: string;
-  /** Szerokosc w px na desktopie. Brak = kolumna rozciagliwa. */
+  /** Szerokosc w px na desktopie. Bez tego kolumna sie rozciaga. */
   width?: number;
   align?: "right";
   render: (row: T) => ReactNode;

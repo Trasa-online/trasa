@@ -1,22 +1,42 @@
+// Dwa panele kolejki: kwarantanna zdjec (auto-moderacja Vision) i zgloszenia tresci.
+//
+// Zdjecie ogladamy na powierzchni `--photo`, ktora w ciemnym trybie jest JASNIEJSZA
+// niz reszta panelu - ocena ekspozycji nie moze zalezec od pory dnia.
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, ShieldAlert, Check, X, ImageOff, User, Flag } from "lucide-react";
+import { ShieldAlert, Check, X, ImageOff, Flag } from "lucide-react";
 import { format } from "date-fns";
+import { Card, Button, TextField, StatusBadge, FilterChips, Loading, Spinner, EmptyState } from "../../ui";
 import {
   useModerationImages, useReviewImage, signQuarantine, type ModImage,
   useContentReports, useResolveReport, type ContentReport,
 } from "./useReports";
 
-// ── KWARANTANNA (auto-moderacja zdjec: Google Vision SafeSearch) ─────────────
+const fmt = (d: string) => { try { return format(new Date(d), "dd.MM HH:mm"); } catch { return ""; } };
+const ErrMsg = () => <p className="py-10 text-center text-[13px] text-[var(--bad)]">Nie udało się wczytać.</p>;
+
+// ── KWARANTANNA ──────────────────────────────────────────────────────────────
 export function QuarantinePanel() {
   const [reviewed, setReviewed] = useState(false);
   const { data, isLoading, isError } = useModerationImages(reviewed);
+
   return (
-    <div>
-      <Toggle value={reviewed} onChange={setReviewed} openLabel="Do sprawdzenia" doneLabel="Sprawdzone" n={data?.length} />
-      {isLoading ? <Spin /> : isError ? <ErrMsg /> : (data?.length ?? 0) === 0
-        ? <Empty text={reviewed ? "Brak sprawdzonych." : "Brak zdjęć w kwarantannie 🎉"} />
-        : <div className="space-y-2">{data!.map((m) => <QuarantineCard key={m.id} img={m} />)}</div>}
+    <div className="flex flex-col gap-3">
+      <FilterChips
+        chips={[{ id: "open", label: "Do sprawdzenia" }, { id: "done", label: "Sprawdzone" }]}
+        value={reviewed ? "done" : "open"}
+        onChange={(id) => setReviewed(id === "done")}
+      />
+      {isLoading ? <Loading /> : isError ? <ErrMsg /> : !data?.length ? (
+        <Card>
+          <EmptyState
+            fact={reviewed ? "Nic jeszcze nie zostało sprawdzone." : "Żadne zdjęcie nie czeka na sprawdzenie."}
+            next={reviewed
+              ? "Wpisy trafią tu po decyzji w zakładce „Do sprawdzenia”."
+              : "Auto-moderacja wrzuci tu zdjęcie, gdy Vision uzna je za ryzykowne."}
+          />
+        </Card>
+      ) : data.map((m) => <QuarantineCard key={m.id} img={m} />)}
     </div>
   );
 }
@@ -30,9 +50,15 @@ function QuarantineImg({ path }: { path: string | null }) {
     signQuarantine(path).then((u) => { if (ok) { setUrl(u); setLoading(false); } });
     return () => { ok = false; };
   }, [path]);
-  if (loading) return <div className="h-28 w-28 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Loader2 className="h-4 w-4 animate-spin text-slate-300" /></div>;
-  if (!url) return <div className="h-28 w-28 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><ImageOff className="h-5 w-5 text-slate-300" /></div>;
-  return <a href={url} target="_blank" rel="noreferrer" className="h-28 w-28 rounded-xl overflow-hidden bg-slate-900 shrink-0"><img src={url} alt="" className="h-full w-full object-cover" /></a>;
+
+  const box = "flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)]";
+  if (loading) return <div className={box}><Spinner className="h-4 w-4" /></div>;
+  if (!url) return <div className={box}><ImageOff className="h-5 w-5 text-[var(--stone)]" /></div>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className={box}>
+      <img src={url} alt="" className="h-full w-full object-cover" />
+    </a>
+  );
 }
 
 function scoreChips(scores: any): { k: string; v: string }[] {
@@ -47,55 +73,81 @@ function QuarantineCard({ img }: { img: ModImage }) {
   const [note, setNote] = useState("");
   const done = (defaultNote: string) => review.mutate({ id: img.id, note: note.trim() || defaultNote }, {
     onSuccess: () => toast.success("Oznaczono jako sprawdzone"),
-    onError: (e: any) => toast.error(e.message || "Błąd"),
+    onError: (e: any) => toast.error(e.message || "Nie udało się zapisać decyzji"),
   });
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+    <Card>
       <div className="flex gap-3">
         <QuarantineImg path={img.quarantine_path} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-700"><ShieldAlert className="h-3 w-3" />{img.verdict || "flagged"}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge tone="bad"><ShieldAlert className="mr-1 h-3 w-3" />{img.verdict || "flagged"}</StatusBadge>
             {scoreChips(img.scores).map((s) => (
-              <span key={s.k} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">{s.k}: {s.v}</span>
+              <StatusBadge key={s.k} tone="neutral" mono>{s.k}: {s.v}</StatusBadge>
             ))}
           </div>
-          <p className="text-xs text-slate-500 mt-1.5">
-            {img.author ? <span className="inline-flex items-center gap-1"><User className="h-3 w-3 text-slate-400" />@{img.author}</span> : "nieznany autor"}
-            {img.context ? ` · ${img.context}` : ""} · {fmt(img.created_at)}
+          <p className="mt-1.5 text-[12px] text-[var(--stone)]">
+            {img.author ? `@${img.author}` : "nieznany autor"}
+            {img.context ? ` · ${img.context}` : ""} · <span className="data">{fmt(img.created_at)}</span>
           </p>
-          {img.reviewer_note && <p className="text-xs text-slate-400 mt-1 italic">„{img.reviewer_note}"</p>}
+          {img.reviewer_note ? <p className="mt-1 text-[12px] italic text-[var(--stone)]">„{img.reviewer_note}”</p> : null}
         </div>
       </div>
-      {!img.reviewed_at && (
-        <div className="mt-3">
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notatka (opcjonalnie) - np. fałszywy alarm, zdjęcie z basenu…"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 mb-2" />
+
+      {!img.reviewed_at ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <TextField
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Notatka do decyzji, np. fałszywy alarm, zdjęcie z basenu"
+          />
           <div className="flex gap-2">
-            <button onClick={() => done("potwierdzono - treść nieodpowiednia")} disabled={review.isPending}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Potwierdź usunięcie</button>
-            <button onClick={() => done("fałszywy alarm")} disabled={review.isPending}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60"><X className="h-4 w-4" />Fałszywy alarm</button>
+            <Button
+              variant="danger" className="flex-1" disabled={review.isPending}
+              icon={<Check className="h-4 w-4" />}
+              onClick={() => done("potwierdzono - treść nieodpowiednia")}
+            >
+              Potwierdź usunięcie
+            </Button>
+            <Button
+              className="flex-1" disabled={review.isPending}
+              icon={<X className="h-4 w-4" />}
+              onClick={() => done("fałszywy alarm")}
+            >
+              Fałszywy alarm
+            </Button>
           </div>
         </div>
-      )}
-    </div>
+      ) : null}
+    </Card>
   );
 }
 
-// ── ZGLOSZENIA TRESCI (content_reports) ──────────────────────────────────────
-const TARGET_META: Record<string, string> = { route: "Wyjazd", collection: "Lista", user: "Profil" };
+// ── ZGLOSZENIA TRESCI ────────────────────────────────────────────────────────
+const TARGET_META: Record<string, string> = { route: "Wyjazd", collection: "Kolekcja", user: "Profil" };
 
 export function ReportsPanel() {
   const [open, setOpen] = useState(true);
   const { data, isLoading, isError } = useContentReports(open);
+
   return (
-    <div>
-      <Toggle value={!open} onChange={(v) => setOpen(!v)} openLabel="Otwarte" doneLabel="Rozpatrzone" n={data?.length} />
-      {isLoading ? <Spin /> : isError ? <ErrMsg /> : (data?.length ?? 0) === 0
-        ? <Empty text={open ? "Brak zgłoszeń 🎉" : "Brak rozpatrzonych."} />
-        : <div className="space-y-2">{data!.map((r) => <ReportCard key={r.id} report={r} />)}</div>}
+    <div className="flex flex-col gap-3">
+      <FilterChips
+        chips={[{ id: "open", label: "Otwarte" }, { id: "done", label: "Rozpatrzone" }]}
+        value={open ? "open" : "done"}
+        onChange={(id) => setOpen(id === "open")}
+      />
+      {isLoading ? <Loading /> : isError ? <ErrMsg /> : !data?.length ? (
+        <Card>
+          <EmptyState
+            fact={open ? "Nikt nic nie zgłosił." : "Żadne zgłoszenie nie zostało jeszcze rozpatrzone."}
+            next={open
+              ? "Zgłoszenia z aplikacji trafiają tu od razu, bez odświeżania strony."
+              : "Rozpatrzone sprawy pojawią się tu po decyzji w zakładce „Otwarte”."}
+          />
+        </Card>
+      ) : data.map((r) => <ReportCard key={r.id} report={r} />)}
     </div>
   );
 }
@@ -103,46 +155,33 @@ export function ReportsPanel() {
 function ReportCard({ report }: { report: ContentReport }) {
   const resolve = useResolveReport();
   const act = (status: "reviewed" | "dismissed") => resolve.mutate({ id: report.id, status }, {
-    onSuccess: () => toast.success(status === "reviewed" ? "Rozpatrzone" : "Odrzucone"),
-    onError: (e: any) => toast.error(e.message || "Błąd"),
+    onSuccess: () => toast.success(status === "reviewed" ? "Zgłoszenie rozpatrzone" : "Zgłoszenie odrzucone"),
+    onError: (e: any) => toast.error(e.message || "Nie udało się zapisać decyzji"),
   });
-  return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700"><Flag className="h-3 w-3" />{TARGET_META[report.target_type] ?? report.target_type}</span>
-            <p className="text-sm font-bold text-slate-900 truncate">{report.targetLabel ?? report.target_id.slice(0, 8)}</p>
-          </div>
-          <p className="text-sm text-slate-700 mt-1.5"><span className="font-semibold">{report.reason}</span>{report.note ? ` - ${report.note}` : ""}</p>
-          <p className="text-xs text-slate-400 mt-1">zgłosił {report.reporter ? `@${report.reporter}` : "użytkownik"} · {fmt(report.created_at)}</p>
-        </div>
-      </div>
-      {report.status === "open" && (
-        <div className="flex gap-2 mt-3">
-          <button onClick={() => act("reviewed")} disabled={resolve.isPending}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-60"><Check className="h-4 w-4" />Rozpatrzone</button>
-          <button onClick={() => act("dismissed")} disabled={resolve.isPending}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold disabled:opacity-60"><X className="h-4 w-4" />Odrzuć</button>
-        </div>
-      )}
-    </div>
-  );
-}
 
-// ── wspolne ──────────────────────────────────────────────────────────────────
-function Toggle({ value, onChange, openLabel, doneLabel, n }: { value: boolean; onChange: (v: boolean) => void; openLabel: string; doneLabel: string; n?: number }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
-        <button onClick={() => onChange(false)} className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${!value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{openLabel}</button>
-        <button onClick={() => onChange(true)} className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{doneLabel}</button>
+    <Card>
+      <div className="flex items-center gap-2">
+        <StatusBadge tone="warn"><Flag className="mr-1 h-3 w-3" />{TARGET_META[report.target_type] ?? report.target_type}</StatusBadge>
+        <p className="truncate text-[13px] font-semibold text-[var(--ink)]">{report.targetLabel ?? report.target_id.slice(0, 8)}</p>
       </div>
-      {typeof n === "number" && <span className="text-xs text-slate-400">{n}</span>}
-    </div>
+      <p className="mt-1.5 text-[13px] text-[var(--graphite)]">
+        <span className="font-semibold text-[var(--ink)]">{report.reason}</span>{report.note ? ` - ${report.note}` : ""}
+      </p>
+      <p className="mt-1 text-[12px] text-[var(--stone)]">
+        zgłosił {report.reporter ? `@${report.reporter}` : "użytkownik"} · <span className="data">{fmt(report.created_at)}</span>
+      </p>
+
+      {report.status === "open" ? (
+        <div className="mt-3 flex gap-2">
+          <Button variant="primary" className="flex-1" disabled={resolve.isPending} icon={<Check className="h-4 w-4" />} onClick={() => act("reviewed")}>
+            Rozpatrzone
+          </Button>
+          <Button className="flex-1" disabled={resolve.isPending} icon={<X className="h-4 w-4" />} onClick={() => act("dismissed")}>
+            Odrzuć
+          </Button>
+        </div>
+      ) : null}
+    </Card>
   );
 }
-const fmt = (d: string) => { try { return format(new Date(d), "dd.MM HH:mm"); } catch { return ""; } };
-const Spin = () => <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></div>;
-const ErrMsg = () => <p className="text-sm text-red-500 py-10 text-center">Nie udało się wczytać.</p>;
-const Empty = ({ text }: { text: string }) => <p className="text-sm text-slate-400 py-10 text-center">{text}</p>;

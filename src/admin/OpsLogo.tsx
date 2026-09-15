@@ -19,10 +19,10 @@ export function OpsLogo({ tile = 40, className }: { tile?: number; className?: s
         style={{ width: tile, height: tile, borderRadius: Math.round(tile * 0.24) }}
       />
       <span
-        className="font-black text-slate-900 tracking-tight leading-none"
+        className="font-semibold leading-none tracking-tight text-[var(--ink)]"
         style={{ fontSize: Math.max(14, Math.round(tile * 0.4)) }}
       >
-        spontaway<span className="text-slate-400 font-bold"> ops</span>
+        spontaway<span className="text-[var(--stone)]"> ops</span>
       </span>
     </div>
   );

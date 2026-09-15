@@ -1,74 +1,81 @@
-import { Loader2, TrendingUp, ListChecks, Route as RouteIcon, MapPin } from "lucide-react";
+// Leady = miejsca BEZ konta biznesowego, ktore userzy i tak dodaja do kolekcji i wyjazdow.
+// To jest lista "komu zaproponowac wizytowke", posortowana po liczbie dodan.
+import { MapPin } from "lucide-react";
 import { resolveStored } from "@/components/PlacePhoto";
+import { AppShell, PageHeader, Section, Metric, DataTable, Bar, type Column } from "../../ui";
 import { useLeadPlaces, type LeadPlace } from "./useLeadPlaces";
 
-// Leady = miejsca bez konta biznesowego, najczesciej dodawane do list/wyjazdow userow.
-// Sygnal sprzedazowy: komu warto zaproponowac wizytowke. + liczbowa analityka na gorze.
 export function LeadsPage() {
   const { data, isLoading, isError } = useLeadPlaces();
+  const places = data?.places ?? [];
+  const max = places[0]?.total ?? 1;
 
-  return (
-    <div className="max-w-3xl">
-      <div className="mb-5">
-        <h1 className="text-2xl font-black text-slate-900">Leady</h1>
-        <p className="text-sm text-slate-500 mt-1">Miejsca bez konta biznesowego, najczęściej dodawane do list i wyjazdów - potencjalni klienci.</p>
-      </div>
-
-      {/* Analityka liczbowa */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <Kpi icon={TrendingUp} label="Lead-miejsca" value={data?.kpis.leadCount} />
-        <Kpi icon={MapPin} label="Suma dodań" value={data?.kpis.totalAdds} />
-        <Kpi icon={ListChecks} label="W listach" value={data?.kpis.listAdds} />
-        <Kpi icon={RouteIcon} label="W wyjazdach" value={data?.kpis.tripAdds} />
-      </div>
-      {data?.kpis.topCity && <p className="text-xs text-slate-400 -mt-2 mb-4">Najwięcej leadów: <span className="font-semibold text-slate-600">{data.kpis.topCity}</span></p>}
-
-      {isLoading ? <Spin /> : isError ? <ErrMsg /> : (data?.places.length ?? 0) === 0
-        ? <Empty text="Brak leadów - żadne miejsce bez konta nie zostało dodane." />
-        : (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-50">
-            {data!.places.map((p, i) => <LeadRow key={p.key} lead={p} rank={i + 1} max={data!.places[0].total} />)}
+  const columns: Column<LeadPlace>[] = [
+    {
+      key: "name", label: "Miejsce", primary: true,
+      render: (p) => {
+        const photo = p.photo_url ? resolveStored(p.photo_url) : null;
+        return (
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)]">
+              {photo
+                ? <img src={photo} alt="" loading="lazy" className="h-full w-full object-cover" />
+                : <MapPin className="h-4 w-4 text-[var(--stone)]" />}
+            </span>
+            <span className="truncate font-medium text-[var(--ink)]">{p.place_name}</span>
           </div>
+        );
+      },
+    },
+    {
+      key: "where", label: "Miasto", secondary: true, width: 200,
+      render: (p) => <span>{[p.city, p.category].filter(Boolean).join(" · ") || "-"}</span>,
+    },
+    { key: "lists", label: "W kolekcjach", width: 120, align: "right", render: (p) => <span className="data">{p.listCount}</span> },
+    { key: "trips", label: "W wyjazdach", width: 120, align: "right", render: (p) => <span className="data">{p.tripCount}</span> },
+    {
+      key: "total", label: "Razem", width: 140, align: "right",
+      render: (p) => (
+        <div className="flex items-center justify-end gap-2">
+          <Bar pct={Math.round((p.total / max) * 100)} className="hidden w-16 md:block" />
+          <span className="data font-semibold text-[var(--ink)]">{p.total}</span>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <AppShell>
+      <PageHeader
+        title="Leady"
+        subtitle="Miejsca bez konta biznesowego, które użytkownicy sami dodają do kolekcji i wyjazdów."
+      />
+
+      <Section title="Skala">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <Metric label="Miejsca bez konta" value={data?.kpis.leadCount ?? "-"} />
+          <Metric label="Dodania razem" value={data?.kpis.totalAdds ?? "-"} />
+          <Metric label="W kolekcjach" value={data?.kpis.listAdds ?? "-"} />
+          <Metric label="W wyjazdach" value={data?.kpis.tripAdds ?? "-"} hint={data?.kpis.topCity ? `Najwięcej leadów: ${data.kpis.topCity}` : undefined} />
+        </div>
+      </Section>
+
+      <Section title="Ranking">
+        {isError ? (
+          <p className="py-12 text-center text-[13px] text-[var(--bad)]">Nie udało się wczytać leadów.</p>
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={places}
+            keyOf={(p) => p.key}
+            loading={isLoading}
+            empty={{
+              fact: "Żadne miejsce bez konta nie zostało jeszcze dodane.",
+              next: "Lista zapełni się, gdy użytkownicy zaczną dodawać miejsca do kolekcji i wyjazdów.",
+            }}
+          />
         )}
-    </div>
+      </Section>
+    </AppShell>
   );
 }
-
-function LeadRow({ lead, rank, max }: { lead: LeadPlace; rank: number; max: number }) {
-  const photo = lead.photo_url ? resolveStored(lead.photo_url) : null;
-  return (
-    <div className="flex items-center gap-3 p-3.5">
-      <span className="w-6 text-center text-sm font-black text-slate-300 shrink-0">{rank}</span>
-      <div className="h-12 w-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
-        {photo ? <img src={photo} alt="" className="h-full w-full object-cover" loading="lazy" /> : <MapPin className="h-4 w-4 text-slate-300 m-auto mt-4" />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-slate-900 truncate">{lead.place_name}</p>
-        <div className="flex flex-wrap items-center gap-x-2.5 text-xs text-slate-500 mt-0.5">
-          {lead.city && <span>{lead.city}</span>}
-          {lead.category && <span>{lead.category}</span>}
-          <span className="text-slate-400">{lead.listCount} list · {lead.tripCount} wyj.</span>
-        </div>
-        {/* mini-bar udzialu */}
-        <div className="h-1.5 mt-1.5 rounded-full bg-slate-100 overflow-hidden max-w-[220px]">
-          <div className="h-full bg-slate-900" style={{ width: `${Math.max(6, Math.round((lead.total / max) * 100))}%` }} />
-        </div>
-      </div>
-      <span className="shrink-0 inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-[4px] bg-slate-900 text-white text-sm font-black">{lead.total}</span>
-    </div>
-  );
-}
-
-function Kpi({ icon: Icon, label, value }: { icon: any; label: string; value?: number }) {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3.5">
-      <Icon className="h-4 w-4 text-slate-400 mb-1.5" />
-      <p className="text-2xl font-black text-slate-900 leading-none">{value ?? "-"}</p>
-      <p className="text-[11px] text-slate-500 mt-1">{label}</p>
-    </div>
-  );
-}
-
-const Spin = () => <div className="flex justify-center py-14"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>;
-const ErrMsg = () => <p className="text-sm text-red-500 py-12 text-center">Nie udało się wczytać.</p>;
-const Empty = ({ text }: { text: string }) => <p className="text-sm text-slate-400 py-12 text-center">{text}</p>;

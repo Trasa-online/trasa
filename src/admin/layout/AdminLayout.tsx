@@ -3,11 +3,12 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "../RequireAdmin";
 import { WaitlistPeek } from "./WaitlistPeek";
+import { CommandPalette } from "./CommandPalette";
 import { useAdminPending } from "../modules/home/useAdminHome";
 import { cn } from "@/lib/utils";
 import {
   Inbox, Users, MapPin, ListChecks, BarChart3, DollarSign,
-  ScrollText, Settings, Menu, X, Home, Search,
+  ScrollText, Settings, Menu, X, Home, Search, Store,
 } from "lucide-react";
 
 // Nawigacja: 11 plaskich pozycji -> 4 grupy (decyzja z briefu, 15.09.2026).
@@ -22,6 +23,7 @@ const GROUPS: { label?: string; items: { to: string; label: string; icon: typeof
   { label: "Dane", items: [
     { to: "/users", label: "Użytkownicy", icon: Users },
     { to: "/miejsca", label: "Miejsca", icon: MapPin },
+    { to: "/wizytowki", label: "Wizytówki", icon: Store },
     { to: "/zestawienia", label: "Leady", icon: ListChecks },
   ] },
   { label: "Liczby", items: [
@@ -88,6 +90,7 @@ function Mark() {
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { email } = useAdmin();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const pending = useAdminPending();
   const total = pending.data?.total;
 
@@ -106,11 +109,15 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </div>
 
         <div className="hidden min-w-0 flex-1 justify-center md:flex">
-          <div className="flex h-9 w-full max-w-[360px] items-center gap-2 rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-3 text-[var(--stone)] shadow-[var(--shadow-inset)]">
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="flex h-9 w-full max-w-[360px] items-center gap-2 rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-3 text-[var(--stone)] shadow-[var(--shadow-inset)] hover:bg-[var(--canvas)]"
+          >
             <Search className="h-4 w-4 shrink-0" />
-            <span className="flex-1 truncate text-[12px]">Szukaj albo skocz do modułu</span>
+            <span className="flex-1 truncate text-left text-[12px]">Skocz do modułu albo filtra kolejki</span>
             <span className="data text-[10px]">⌘K</span>
-          </div>
+          </button>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -150,6 +157,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }

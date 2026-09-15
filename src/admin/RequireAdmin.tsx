@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OpsLogo } from "@/admin/OpsLogo";
 import { AdminMfaGate } from "@/admin/AdminMfaGate";
+import { Spinner } from "@/admin/ui";
 import { toast } from "sonner";
 
 export type AdminTier = "super_admin" | "operator";
@@ -45,8 +46,8 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
 
   if (loading || checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="h-8 w-8 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)]">
+        <Spinner className="h-7 w-7 text-[var(--stone)]" />
       </div>
     );
   }
@@ -117,9 +118,9 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 sm:p-6">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)] p-4 sm:p-6">
       {/* Modal 50/50: lewa = logowanie, prawa = zdjecie. Radius 2px (ostre rogi). */}
-      <div className="w-full max-w-5xl grid lg:grid-cols-2 bg-white rounded-[2px] overflow-hidden shadow-2xl shadow-slate-900/10 border border-slate-200 min-h-[600px]">
+      <div className="grid min-h-[600px] w-full max-w-5xl overflow-hidden rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--surface)] lg:grid-cols-2">
         {/* LEWA: logowanie */}
         <div className="flex flex-col p-8 sm:p-12">
           <OpsLogo tile={44} />
@@ -127,57 +128,57 @@ function AdminLogin() {
           {sent ? (
             <>
               <div className="text-center mb-6">
-                <h1 className="text-2xl font-black text-slate-900">Wpisz kod z maila</h1>
-                <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  Wysłaliśmy 8-cyfrowy kod na <strong className="text-slate-700">{email}</strong>.
+                <h1 className="text-[26px] font-semibold text-[var(--ink)]">Wpisz kod z maila</h1>
+                <p className="mt-1 text-[14px] leading-relaxed text-[var(--stone)]">
+                  Wysłaliśmy 8-cyfrowy kod na <strong className="text-[var(--ink)]">{email}</strong>.
                 </p>
               </div>
               <form onSubmit={verifyCode} className="space-y-4">
                 <input inputMode="numeric" autoComplete="one-time-code" maxLength={8} autoFocus value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="00000000"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-lg tracking-[0.3em] font-semibold text-slate-900 placeholder:tracking-normal placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                  className="data w-full rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-center text-[18px] tracking-[0.3em] text-[var(--ink)] outline-none placeholder:tracking-normal placeholder:text-[var(--stone)] focus:border-[var(--accent)]" />
                 <button type="submit" disabled={loading || code.length < 8}
-                  className="w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60">
+                  className="w-full rounded-[var(--r-control)] bg-[var(--accent)] py-3 text-[14px] font-semibold text-[var(--on-accent)] transition-all hover:opacity-90 disabled:opacity-60">
                   {loading ? "Sprawdzam…" : "Zaloguj się"}
                 </button>
               </form>
-              <button onClick={() => { setSent(false); setCode(""); }} className="w-full mt-4 text-xs text-slate-400 hover:text-slate-600 font-medium">
+              <button onClick={() => { setSent(false); setCode(""); }} className="mt-4 w-full text-[12px] font-medium text-[var(--stone)] hover:text-[var(--ink)]">
                 ← Użyj innego adresu
               </button>
             </>
           ) : (
             <>
               <div className="text-center mb-6">
-                <h1 className="text-2xl font-black text-slate-900">Panel operacyjny</h1>
-                <p className="text-sm text-slate-500 mt-1">Zaloguj się kontem zespołu.</p>
+                <h1 className="text-[26px] font-semibold text-[var(--ink)]">Panel operacyjny</h1>
+                <p className="mt-1 text-[14px] text-[var(--stone)]">Zaloguj się kontem zespołu.</p>
               </div>
 
               <form onSubmit={usePassword ? loginPassword : sendCode} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700">Email</label>
+                  <label className="text-[13px] font-medium text-[var(--graphite)]">Email</label>
                   <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    className="w-full rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[14px] text-[var(--ink)] outline-none placeholder:text-[var(--stone)] focus:border-[var(--accent)]"
                     placeholder="ty@spontaway.com" />
                 </div>
 
                 {usePassword && (
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">Hasło</label>
+                    <label className="text-[13px] font-medium text-[var(--graphite)]">Hasło</label>
                     <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                      className="w-full rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[14px] text-[var(--ink)] outline-none placeholder:text-[var(--stone)] focus:border-[var(--accent)]"
                       placeholder="••••••••" />
                   </div>
                 )}
 
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60">
+                  className="w-full rounded-[var(--r-control)] bg-[var(--accent)] py-3 text-[14px] font-semibold text-[var(--on-accent)] transition-all hover:opacity-90 disabled:opacity-60">
                   {loading ? (usePassword ? "Logowanie…" : "Wysyłam…") : (usePassword ? "Zaloguj się" : "Wyślij kod logowania")}
                 </button>
               </form>
 
               <button
                 onClick={() => setUsePassword((v) => !v)}
-                className="w-full mt-4 text-xs text-slate-400 hover:text-slate-600 font-medium"
+                className="mt-4 w-full text-[12px] font-medium text-[var(--stone)] hover:text-[var(--ink)]"
               >
                 {usePassword ? "← Wróć do logowania kodem" : "Wolisz zalogować się hasłem?"}
               </button>
@@ -186,9 +187,8 @@ function AdminLogin() {
           </div>
         </div>
         {/* PRAWA: losowe zdjecie podrozy (Unsplash) - ukryte na malych ekranach. */}
-        <div className="relative hidden lg:block bg-slate-100">
+        <div className="relative hidden bg-[var(--photo)] lg:block">
           <img src={LOGIN_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-tr from-slate-900/25 via-transparent to-transparent" />
         </div>
       </div>
     </div>
@@ -197,13 +197,13 @@ function AdminLogin() {
 
 function AccessDenied({ email }: { email: string }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-6 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--canvas)] px-6 text-center">
       <TrasaLogo size={48} className="mb-5" />
-      <h1 className="text-xl font-black text-slate-900 mb-1">Brak dostępu</h1>
-      <p className="text-sm text-slate-500 max-w-[36ch]">
-        Konto <strong className="text-slate-700">{email}</strong> nie ma uprawnień do panelu operacyjnego.
+      <h1 className="mb-1 text-[20px] font-semibold text-[var(--ink)]">Nie masz dostępu</h1>
+      <p className="max-w-[36ch] text-[14px] text-[var(--stone)]">
+        Konto <strong className="text-[var(--ink)]">{email}</strong> nie ma uprawnień do panelu operacyjnego.
       </p>
-      <button onClick={() => supabase.auth.signOut()} className="mt-6 text-sm text-slate-700 font-semibold underline">
+      <button onClick={() => supabase.auth.signOut()} className="mt-6 text-[14px] font-semibold text-[var(--graphite)] underline">
         Wyloguj się
       </button>
     </div>

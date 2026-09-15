@@ -100,27 +100,27 @@ export function WaitlistPeek() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 transition-colors hover:bg-slate-50"
+        className="flex items-center gap-1.5 rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--graphite)] shadow-[var(--shadow-inset)] transition-colors hover:bg-[var(--canvas)]"
         title="Zapisy na powiadomienie o premierze"
       >
-        <Mail className={`h-3.5 w-3.5 ${isFetching ? "text-blue-500" : "text-slate-400"} transition-colors`} />
-        <span>{isLoading ? "..." : count}</span>
-        <span className="hidden sm:inline font-semibold text-slate-400">czeka na premierę</span>
+        <Mail className={`h-3.5 w-3.5 transition-colors ${isFetching ? "text-[var(--accent)]" : "text-[var(--stone)]"}`} />
+        <span className="data">{isLoading ? "…" : count}</span>
+        <span className="hidden text-[var(--stone)] sm:inline">czeka na premierę</span>
       </button>
 
       {open && (
-        <div className="fixed right-3 top-[3.75rem] z-50 w-[min(320px,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-[300px]">
-          <div className="flex items-baseline justify-between border-b border-slate-100 px-3 py-2">
-            <span className="text-xs font-bold text-slate-700">Czekają na premierę</span>
-            <span className="text-[11px] text-slate-400">{count} bez konta</span>
+        <div className="fixed right-3 top-[3.75rem] z-50 w-[min(320px,calc(100vw-1.5rem))] overflow-hidden rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--surface)] sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-[300px]">
+          <div className="flex items-baseline justify-between border-b border-[var(--line)] px-3 py-2">
+            <span className="text-[12px] font-semibold text-[var(--ink)]">Czekają na premierę</span>
+            <span className="data text-[11px] text-[var(--stone)]">{count} bez konta</span>
           </div>
 
           {data?.rows.length ? (
-            <ul className="max-h-[min(60vh,320px)] divide-y divide-slate-50 overflow-y-auto">
+            <ul className="max-h-[min(60vh,320px)] divide-y divide-[var(--line)] overflow-y-auto">
               {data.rows.map((r) => (
                 <li key={`${r.email}-${r.created_at}`} className="px-3 py-2">
-                  <p className="truncate text-[12px] font-medium text-slate-800" title={r.email}>{r.email}</p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="data truncate text-[12px] text-[var(--ink)]" title={r.email}>{r.email}</p>
+                  <p className="text-[11px] text-[var(--stone)]">
                     {whenLabel(r.created_at)}
                     {r.source ? ` · ${SOURCE_LABEL[r.source] ?? r.source}` : ""}
                   </p>
@@ -128,13 +128,13 @@ export function WaitlistPeek() {
               ))}
             </ul>
           ) : (
-            <p className="px-3 py-4 text-center text-[12px] text-slate-400">
-              {isLoading ? "Wczytuję..." : "Nikt nie czeka - wszyscy zapisani mają już konto."}
+            <p className="px-3 py-4 text-center text-[12px] text-[var(--stone)]">
+              {isLoading ? "Wczytuję…" : "Nikt nie czeka - wszyscy zapisani mają już konto."}
             </p>
           )}
 
           {(count > 25 || converted > 0) && (
-            <p className="border-t border-slate-100 px-3 py-2 text-[11px] text-slate-400">
+            <p className="border-t border-[var(--line)] px-3 py-2 text-[11px] text-[var(--stone)]">
               {count > 25 ? `Pokazuję 25 najnowszych z ${count}. ` : ""}
               {converted > 0 ? `${converted} z listy ma już konto (nie pokazuję).` : ""}
             </p>

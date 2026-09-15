@@ -1,105 +1,119 @@
+// Miejsca w bazie. Wiersz prowadzi do panelu z ruchem (wyswietlenia, dodania, kliki).
 import { useState } from "react";
-import { Loader2, Search, MapPin, Eye, Route as RouteIcon, ExternalLink, Phone, X } from "lucide-react";
+import { MapPin } from "lucide-react";
+import {
+  AppShell, PageHeader, Toolbar, Select, DataTable, StatusBadge, Loading, EmptyState,
+  FilterChips, Metric, Panel, type Column,
+} from "../../ui";
 import { usePlaces, useCities, usePlaceAnalytics, adminPhotoUrl, type PlaceRow } from "./usePlaces";
 
-const RANGES = [7, 30, 90];
+const RANGES = [
+  { id: "7", label: "7 dni" },
+  { id: "30", label: "30 dni" },
+  { id: "90", label: "90 dni" },
+];
 
 export function PlacesPage() {
   const [search, setSearch] = useState("");
   const [city, setCity] = useState("");
   const [selected, setSelected] = useState<PlaceRow | null>(null);
-  const [range, setRange] = useState(30);
+  const [range, setRange] = useState("30");
   const places = usePlaces(search, city);
   const cities = useCities();
 
-  return (
-    <div className="max-w-3xl">
-      <div className="mb-5">
-        <h1 className="text-2xl font-black text-slate-900">Miejsca</h1>
-        <p className="text-sm text-slate-500 mt-1">Wszystkie lokale w bazie. Kliknij, żeby zobaczyć ruch (wyświetlenia, dodania, kliki).</p>
-      </div>
+  const rows = places.data ?? [];
 
-      <div className="flex gap-2 mb-4">
-        <div className="flex-1 flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10">
-          <Search className="h-4 w-4 text-slate-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Szukaj miejsca…" className="flex-1 bg-transparent text-sm outline-none text-slate-900" />
-        </div>
-        <select value={city} onChange={(e) => setCity(e.target.value)} className="bg-white border border-slate-200 rounded-xl px-3 h-10 text-sm text-slate-700">
-          <option value="">Wszystkie miasta</option>
-          {(cities.data ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-
-      {places.isLoading ? <div className="flex justify-center py-14"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
-        : (places.data?.length ?? 0) === 0 ? <p className="text-sm text-slate-400 py-12 text-center">Brak miejsc dla tego filtra.</p>
-        : (
-          <div className="space-y-2">
-            {places.data!.map((p) => {
-              const img = adminPhotoUrl(p.photo_url);
-              return (
-                <button key={p.id} onClick={() => setSelected(p)} className="w-full flex items-center gap-3 bg-white border border-slate-100 rounded-[4px] p-2.5 text-left hover:border-slate-300 transition-colors">
-                  <div className="h-12 w-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
-                    {img ? <img src={img} alt="" className="h-full w-full object-cover" /> : <MapPin className="h-5 w-5 text-slate-300 m-auto mt-3.5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{p.place_name}</p>
-                    <p className="text-xs text-slate-500">{p.city} · {p.category}</p>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${p.claimed ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"}`}>
-                    {p.claimed ? "wizytówka" : "stan zero"}
-                  </span>
-                </button>
-              );
-            })}
-            {places.data!.length === 60 && <p className="text-center text-xs text-slate-400 py-2">Pokazano pierwsze 60 - zawęź wyszukiwaniem.</p>}
+  const columns: Column<PlaceRow>[] = [
+    {
+      key: "name", label: "Miejsce", primary: true,
+      render: (p) => {
+        const img = adminPhotoUrl(p.photo_url);
+        return (
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-control)] bg-[var(--photo)]">
+              {img
+                ? <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
+                : <MapPin className="h-4 w-4 text-[var(--stone)]" />}
+            </span>
+            <span className="truncate font-medium text-[var(--ink)]">{p.place_name}</span>
           </div>
-        )}
+        );
+      },
+    },
+    { key: "city", label: "Miasto", secondary: true, width: 180, render: (p) => <span>{p.city ?? "-"}</span> },
+    { key: "category", label: "Kategoria", width: 180, render: (p) => <span className="data text-[12px]">{p.category ?? "-"}</span> },
+    {
+      key: "claimed", label: "Wizytówka", width: 140, align: "right",
+      render: (p) => p.claimed
+        ? <StatusBadge tone="ok" mono>PRZEJĘTE</StatusBadge>
+        : <StatusBadge tone="neutral" mono>STAN ZERO</StatusBadge>,
+    },
+  ];
 
-      {selected && <PlaceModal place={selected} range={range} setRange={setRange} onClose={() => setSelected(null)} />}
-    </div>
+  return (
+    <AppShell>
+      <PageHeader title="Miejsca" subtitle="Lokale w bazie. Wejdź w wiersz, żeby zobaczyć ruch miejsca." />
+
+      <Toolbar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Szukaj miejsca"
+        count={rows.length === 60 ? "60 z większej listy" : `${rows.length} miejsc`}
+      >
+        <Select label="Miasto" value={city} onChange={setCity} options={(cities.data ?? []).map((c) => ({ value: c, label: c }))} />
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        keyOf={(p) => p.id}
+        loading={places.isLoading}
+        onRowClick={(p) => setSelected(p)}
+        empty={{ fact: "Żadne miejsce nie pasuje do filtrów.", next: "Zmień miasto albo wyczyść szukanie." }}
+      />
+
+      {rows.length === 60 ? (
+        <p className="text-center text-[12px] text-[var(--stone)]">
+          Widać pierwsze 60 miejsc. Zawęź szukaniem albo miastem, żeby zobaczyć resztę.
+        </p>
+      ) : null}
+
+      {selected ? (
+        <PlaceTraffic place={selected} range={range} setRange={setRange} onClose={() => setSelected(null)} />
+      ) : null}
+    </AppShell>
   );
 }
 
-function PlaceModal({ place, range, setRange, onClose }: { place: PlaceRow; range: number; setRange: (n: number) => void; onClose: () => void }) {
-  const { data, isLoading } = usePlaceAnalytics(place.id, range);
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-900 truncate">{place.place_name}</h3>
-            <p className="text-xs text-slate-500">{place.city} · {place.category}{place.claimed ? " · wizytówka" : " · stan zero"}</p>
-          </div>
-          <div className="flex gap-1 bg-slate-100 rounded-full p-0.5">
-            {RANGES.map((d) => (
-              <button key={d} onClick={() => setRange(d)} className={`px-2.5 py-1 rounded-[4px] text-xs font-semibold ${range === d ? "bg-slate-900 text-white" : "text-slate-500"}`}>{d}d</button>
-            ))}
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-[4px] hover:bg-slate-100 shrink-0"><X className="h-4 w-4 text-slate-500" /></button>
-        </div>
-        <div className="p-5">
-          {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div> : (
-            <div className="grid grid-cols-2 gap-3">
-              <Kpi icon={Eye} label="Wyświetlenia" value={data?.views ?? 0} />
-              <Kpi icon={RouteIcon} label="Dodania do trasy" value={data?.onRoutes ?? 0} />
-              <Kpi icon={ExternalLink} label="Kliki strona" value={data?.websiteClicks ?? 0} />
-              <Kpi icon={Phone} label="Kliki telefon" value={data?.phoneClicks ?? 0} />
-            </div>
-          )}
-          {!isLoading && (data?.views ?? 0) === 0 && (
-            <p className="text-center text-sm text-slate-400 py-6">Brak ruchu w tym okresie (stan zero). Dane pojawią się gdy miejsce zacznie być oglądane.</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+function PlaceTraffic({ place, range, setRange, onClose }: {
+  place: PlaceRow; range: string; setRange: (v: string) => void; onClose: () => void;
+}) {
+  const { data, isLoading, isError } = usePlaceAnalytics(place.id, Number(range));
+  const views = data?.views ?? 0;
 
-function Kpi({ icon: Icon, label, value }: { icon: any; label: string; value: number }) {
   return (
-    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
-      <div className="flex items-center gap-1.5 text-slate-400 mb-1"><Icon className="h-3.5 w-3.5" /><span className="text-[11px] font-medium">{label}</span></div>
-      <div className="text-2xl font-black text-slate-900">{value}</div>
-    </div>
+    <Panel
+      title={place.place_name}
+      subtitle={`${place.city ?? "bez miasta"} · ${place.category ?? "bez kategorii"} · ${place.claimed ? "wizytówka przejęta" : "stan zero"}`}
+      onClose={onClose}
+    >
+      <FilterChips chips={RANGES} value={range} onChange={setRange} className="mb-4" />
+
+      {isLoading ? <Loading /> : isError ? (
+        <EmptyState fact="Dane o ruchu nie przyszły." next="Spróbuj za chwilę - odpowiada ta sama funkcja, co analityka produktu." />
+      ) : views === 0 ? (
+        <EmptyState
+          fact="W tym okresie nikt nie otworzył tego miejsca."
+          next="Zmień zakres na 90 dni albo sprawdź, czy miejsce w ogóle pokazuje się w aplikacji."
+        />
+      ) : (
+        <div className="grid grid-cols-2 gap-2.5">
+          <Metric label="Wyświetlenia" value={views} />
+          <Metric label="Dodania do wyjazdu" value={data?.onRoutes ?? 0} />
+          <Metric label="Kliki w stronę" value={data?.websiteClicks ?? 0} />
+          <Metric label="Kliki w telefon" value={data?.phoneClicks ?? 0} />
+        </div>
+      )}
+    </Panel>
   );
 }

@@ -1,4 +1,4 @@
-// Naglowek strony. Zastepuje 13 recznych <h1 className="text-2xl font-black ..."> .
+// Naglowek strony. Zastepuje 13 recznych <h1> z wlasnym rozmiarem i waga.
 import type { ReactNode } from "react";
 
 export function PageHeader({ title, subtitle, actions }: {

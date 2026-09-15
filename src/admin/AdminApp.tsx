@@ -9,6 +9,7 @@ import { CostsPage } from "./modules/costs/CostsPage";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 import { LeadsPage } from "./modules/leads/LeadsPage";
 import { PlacesPage } from "./modules/places/PlacesPage";
+import { BusinessesPage } from "./modules/businesses/BusinessesPage";
 import { AuditPage } from "./modules/audit/AuditPage";
 
 // Panel operacyjny. Nawigacja: Dzis, Kolejka, Dane, Liczby, System (przebudowa 15.09.2026).
@@ -31,6 +32,7 @@ export default function AdminApp() {
 
           <Route path="/users" element={<UsersPage />} />
           <Route path="/miejsca" element={<PlacesPage />} />
+          <Route path="/wizytowki" element={<BusinessesPage />} />
           <Route path="/zestawienia" element={<LeadsPage />} />
           <Route path="/analityka" element={<AnalyticsPage />} />
           <Route path="/koszty" element={<CostsPage />} />

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OpsLogo } from "@/admin/OpsLogo";
+import { Spinner } from "@/admin/ui";
 
 // Bramka MFA (TOTP) dla panelu ops. Wymuszona dla WSZYSTKICH adminow:
 //  - brak zweryfikowanego czynnika  -> ekran "Wlacz 2FA" (skan QR + kod, jednorazowo),
@@ -9,14 +10,14 @@ import { OpsLogo } from "@/admin/OpsLogo";
 // ZASADA: children renderujemy WYLACZNIE gdy state === "ok". Kazdy blad/niepewnosc
 // trzyma uzytkownika przed bramka (nigdy nie przepuszcza po cichu).
 
-const CARD = "w-full max-w-sm bg-white rounded-[2px] border border-slate-200 p-8";
-const CODE_INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-lg tracking-[0.4em] font-semibold text-slate-900 placeholder:tracking-normal placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400";
-const PRIMARY_BTN = "w-full py-3 rounded-[4px] bg-slate-900 hover:opacity-95 text-white font-bold text-sm active:scale-[0.98] transition-all disabled:opacity-60";
-const LINK_BTN = "w-full mt-4 text-xs text-slate-400 hover:text-slate-600 font-medium";
+const CARD = "w-full max-w-sm rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--surface)] p-8";
+const CODE_INPUT = "data w-full rounded-[var(--r-control)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-center text-[18px] tracking-[0.4em] text-[var(--ink)] outline-none placeholder:tracking-normal placeholder:text-[var(--stone)] focus:border-[var(--accent)]";
+const PRIMARY_BTN = "w-full rounded-[var(--r-control)] bg-[var(--accent)] py-3 text-[14px] font-semibold text-[var(--on-accent)] transition-all hover:opacity-90 disabled:opacity-60";
+const LINK_BTN = "mt-4 w-full text-[12px] font-medium text-[var(--stone)] hover:text-[var(--ink)]";
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)] p-4">
       <div className={CARD}>
         <OpsLogo tile={38} className="mb-6" />
         {children}
@@ -25,10 +26,10 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-function Spinner() {
+function FullScreenSpinner() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="h-8 w-8 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
+    <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)]">
+      <Spinner className="h-7 w-7 text-[var(--stone)]" />
     </div>
   );
 }
@@ -108,25 +109,25 @@ function MfaEnroll({ onDone }: { onDone: () => void }) {
 
   return (
     <Shell>
-      <h1 className="text-xl font-black text-slate-900">Włącz 2FA</h1>
-      <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+      <h1 className="text-[20px] font-semibold text-[var(--ink)]">Włącz 2FA</h1>
+      <p className="mt-1 text-[14px] leading-relaxed text-[var(--stone)]">
         Zeskanuj kod w aplikacji uwierzytelniającej (Google Authenticator, Authy, 1Password), potem wpisz 6-cyfrowy kod, żeby dokończyć.
       </p>
       <div className="mt-5 flex justify-center">
         {qrSrc
-          ? <img src={qrSrc} alt="Kod QR do 2FA" className="h-44 w-44 rounded-[2px] border border-slate-200 bg-white" />
-          : <div className="h-44 w-44 grid place-items-center"><div className="h-6 w-6 rounded-full border-2 border-slate-300 border-t-transparent animate-spin" /></div>}
+          ? <img src={qrSrc} alt="Kod QR do 2FA" className="h-44 w-44 rounded-[var(--r-control)] border border-[var(--line)] bg-white" />
+          : <div className="grid h-44 w-44 place-items-center"><Spinner className="h-6 w-6 text-[var(--stone)]" /></div>}
       </div>
       {secret && (
-        <p className="mt-3 text-center text-[11px] text-slate-400 leading-relaxed">
+        <p className="mt-3 text-center text-[11px] leading-relaxed text-[var(--stone)]">
           Nie możesz zeskanować? Wpisz klucz ręcznie:<br />
-          <span className="font-mono text-slate-600 break-all select-all">{secret}</span>
+          <span className="data select-all break-all text-[var(--graphite)]">{secret}</span>
         </p>
       )}
       <form onSubmit={submit} className="mt-5 space-y-3">
         <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="000000" className={CODE_INPUT} />
-        {err && <p className="text-xs text-red-500">{err}</p>}
+        {err && <p className="text-[12px] text-[var(--bad)]">{err}</p>}
         <button type="submit" disabled={busy || code.length < 6 || !factorId} className={PRIMARY_BTN}>
           {busy ? "Sprawdzam…" : "Potwierdź i włącz"}
         </button>
@@ -151,14 +152,14 @@ function MfaChallenge({ factorId, onDone }: { factorId: string; onDone: () => vo
 
   return (
     <Shell>
-      <h1 className="text-xl font-black text-slate-900">Kod z aplikacji</h1>
-      <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+      <h1 className="text-[20px] font-semibold text-[var(--ink)]">Kod z aplikacji</h1>
+      <p className="mt-1 text-[14px] leading-relaxed text-[var(--stone)]">
         Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej, żeby wejść do panelu.
       </p>
       <form onSubmit={submit} className="mt-5 space-y-3">
         <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} autoFocus
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="000000" className={CODE_INPUT} />
-        {err && <p className="text-xs text-red-500">{err}</p>}
+        {err && <p className="text-[12px] text-[var(--bad)]">{err}</p>}
         <button type="submit" disabled={busy || code.length < 6} className={PRIMARY_BTN}>
           {busy ? "Sprawdzam…" : "Zaloguj się"}
         </button>
@@ -171,8 +172,8 @@ function MfaChallenge({ factorId, onDone }: { factorId: string; onDone: () => vo
 function MfaError({ onRetry }: { onRetry: () => void }) {
   return (
     <Shell>
-      <h1 className="text-xl font-black text-slate-900">Nie udało się sprawdzić 2FA</h1>
-      <p className="text-sm text-slate-500 mt-1 leading-relaxed">Spróbuj ponownie za chwilę.</p>
+      <h1 className="text-[20px] font-semibold text-[var(--ink)]">Nie udało się sprawdzić 2FA</h1>
+      <p className="mt-1 text-[14px] leading-relaxed text-[var(--stone)]">Spróbuj ponownie za chwilę.</p>
       <button onClick={onRetry} className={`${PRIMARY_BTN} mt-5`}>Spróbuj ponownie</button>
       <button onClick={() => supabase.auth.signOut()} className={LINK_BTN}>Wyloguj się</button>
     </Shell>
@@ -202,7 +203,7 @@ export function AdminMfaGate({ children }: { children: ReactNode }) {
 
   useEffect(() => { recheck(); }, []);
 
-  if (state === "checking") return <Spinner />;
+  if (state === "checking") return <FullScreenSpinner />;
   if (state === "enroll") return <MfaEnroll onDone={() => setState("ok")} />;
   if (state === "challenge") return <MfaChallenge factorId={factorId} onDone={() => setState("ok")} />;
   if (state === "error") return <MfaError onRetry={recheck} />;

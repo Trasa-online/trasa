@@ -1,14 +1,17 @@
 // Potwierdzenie akcji nieodwracalnej. NAZYWA SKUTEK, nie pyta "na pewno?".
 // Wzor: "Usuniesz zdjęcie @kasia.wjr. Tego nie da się cofnąć."
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
-export function ConfirmDialog({ open, consequence, confirmLabel, onConfirm, onCancel, busy }: {
+export function ConfirmDialog({ open, consequence, confirmLabel, onConfirm, onCancel, busy, children, confirmDisabled }: {
   open: boolean;
   consequence: string;
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
   busy?: boolean;
+  /** Pole wymagane do decyzji, np. powod usuniecia (trafia do audytu). */
+  children?: ReactNode;
+  confirmDisabled?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -23,6 +26,7 @@ export function ConfirmDialog({ open, consequence, confirmLabel, onConfirm, onCa
       <div className="absolute inset-0 bg-black/45" onClick={onCancel} />
       <div className="relative w-full max-w-[420px] rounded-[var(--r-card)] border border-[var(--line)] bg-[var(--surface)] p-5">
         <p className="text-[14px] leading-5 text-[var(--ink)]">{consequence}</p>
+        {children ? <div className="mt-3">{children}</div> : null}
         <div className="mt-4 flex gap-2">
           <button
             type="button" onClick={onCancel} disabled={busy}
@@ -31,7 +35,7 @@ export function ConfirmDialog({ open, consequence, confirmLabel, onConfirm, onCa
             Anuluj
           </button>
           <button
-            type="button" onClick={onConfirm} disabled={busy}
+            type="button" onClick={onConfirm} disabled={busy || confirmDisabled}
             className="h-10 flex-1 rounded-[var(--r-control)] bg-[var(--bad)] text-[13px] font-semibold text-white disabled:opacity-60"
           >
             {busy ? "…" : confirmLabel}
