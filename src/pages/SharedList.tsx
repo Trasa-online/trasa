@@ -777,7 +777,13 @@ export default function SharedList() {
         return (
           <RoutePlaceRow
             key={pin.id}
-            pin={{ ...pin, category: catOf(pin), photo_url: pinCover(pin) }}
+            // ⛔ `tags: []` - STARE kolekcje maja `discovery_items.tags` (pigulki z czasow
+            // przebudowy list 2026-08-17) i wiersz miejsca renderowal je pod nazwa. Nowe
+            // kolekcje ich nie zapisuja, wiec ta sama lista wygladala inaczej zaleznie od
+            // tego, kiedy powstala (prosba Nat 2026-09-15, zeby je zdjac). Kolumna ZOSTAJE
+            // w bazie - powrot to skasowanie tej jednej linii.
+            // ⚠️ Tagi miejsca w WYJEZDZIE (`pins.tags`) to co innego i zostaja.
+            pin={{ ...pin, tags: [], category: catOf(pin), photo_url: pinCover(pin) }}
             index={i}
             categoryLabel={categoryLabel(catOf(pin))}
             onOpen={() => openDetail(pin)}
