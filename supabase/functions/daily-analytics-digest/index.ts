@@ -6,6 +6,7 @@
 //   - Trasy: nowe (24h, w tym ukończone) + łącznie + aktywacja (% userów z ≥1 trasą)
 //   - Zaangażowanie/retencja: DAU / WAU / MAU (PostHog, distinct person_id)
 //   - Top eventy (24h) z PostHoga
+//   - Waitlista: ile osob czeka, kto doszedl w ciagu doby, ile juz ma konto
 //
 // Źródła: Supabase (konta/trasy) + PostHog (eventy/aktywni). Wysyłka: Resend.
 // Cron: codziennie 07:00 UTC (~9:00 Europe/Warsaw) via pg_cron + pg_net.
@@ -129,6 +130,14 @@ Deno.serve(async (req) => {
 
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
+  // `{"dry_run": true}` = zbuduj raport i ODDAJ go w odpowiedzi, ale NIE wysylaj maila.
+  // Bez tego kazde sprawdzenie zmiany w raporcie kosztuje cztery skrzynki zespolu.
+  let dryRun = false;
+  try {
+    const body = await req.json();
+    dryRun = body?.dry_run === true;
+  } catch { /* brak ciala zadania = normalny przebieg */ }
+
   try {
     const now = Date.now();
     const since24 = new Date(now - 86_400_000).toISOString();
@@ -162,6 +171,16 @@ Deno.serve(async (req) => {
       phRows(`SELECT event, count() AS c FROM events WHERE timestamp >= now() - INTERVAL 1 DAY GROUP BY event ORDER BY c DESC LIMIT 10`),
     ]);
 
+    // ── Waitlista (RPC waitlist_digest_stats - service_role only, zwraca adresy) ──
+    // "Czeka" liczy TYLKO zapisy bez konta: kto sie juz zarejestrowal, ten nie czeka
+    // na premiere. Ta sama zasada, co licznik w panelu ops.
+    let waitlist = { waiting: 0, converted: 0, new_24h: 0, rows: [] as any[] };
+    {
+      const { data, error } = await sb.rpc("waitlist_digest_stats", { p_limit: 10 });
+      if (error) console.error("waitlist_digest_stats error:", error.message);
+      else if (data) waitlist = data as typeof waitlist;
+    }
+
     const dateLabel = new Date(now).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", timeZone: "Europe/Warsaw" });
     const subject = `spontaway - raport ${dateLabel}: +${newAccounts} kont, +${newRoutes} tras`;
 
@@ -182,6 +201,19 @@ Deno.serve(async (req) => {
           <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;color:#979797;font-size:13px;width:28px;">${i + 1}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:14px;color:#0E0E0E;">${label} <span style="color:#cfcfcf;font-size:12px;">${ev}</span></td>
           <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;text-align:right;">${c}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const waitlistRows = (waitlist.rows ?? [])
+      .map((r: any) => {
+        const when = new Date(r.created_at).toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", timeZone: "Europe/Warsaw" });
+        const badge = r.is_new
+          ? ` <span style="background:#FDF184;color:#5B2C06;font-size:11px;font-weight:700;padding:1px 6px;border-radius:999px;">nowy</span>`
+          : "";
+        return `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:14px;color:#0E0E0E;">${r.email}${badge}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#979797;text-align:right;white-space:nowrap;">${when} · ${r.source ?? "-"}</td>
         </tr>`;
       })
       .join("");
@@ -212,6 +244,15 @@ Deno.serve(async (req) => {
           ${card("MAU", String(mau), "aktywni 30 dni")}
         </tr></table>
 
+        <h2 style="font-size:14px;color:#0E0E0E;margin:18px 4px 8px;">Waitlista</h2>
+        <table style="width:100%;border-collapse:separate;border-spacing:8px 0;"><tr>
+          ${card("Czeka na premierę", String(waitlist.waiting), waitlist.new_24h > 0 ? `+${waitlist.new_24h} w ciągu doby` : "bez zmian w ciągu doby")}
+          ${card("Ma już konto", String(waitlist.converted), "nie liczą się do czekających")}
+        </tr></table>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:12px;overflow:hidden;margin-top:8px;">
+          ${waitlistRows || `<tr><td style="padding:12px;color:#979797;font-size:13px;">Nikt nie czeka - każdy zapisany ma już konto.</td></tr>`}
+        </table>
+
         <h2 style="font-size:14px;color:#0E0E0E;margin:18px 4px 8px;">Top eventy (24h)</h2>
         <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:12px;overflow:hidden;">
           ${eventsRows || `<tr><td style="padding:12px;color:#979797;font-size:13px;">Brak eventów w tym oknie.</td></tr>`}
@@ -220,12 +261,27 @@ Deno.serve(async (req) => {
         <p style="font-size:11px;color:#cfcfcf;margin:24px 4px 8px;">Konta i trasy: Supabase (źródło prawdy). DAU/WAU/MAU i eventy: PostHog. Raport automatyczny, codziennie ~9:00.</p>
       </div>`;
 
+    if (dryRun) {
+      return jsonResponse({
+        sent: false,
+        dry_run: true,
+        subject,
+        waitlist,
+        summary: { newAccounts, totalAccounts, newRoutes, totalRoutes, newCompleted, activationPct, dau, wau, mau, topEvents: (topEvents ?? []).length },
+        html,
+      });
+    }
+
     await sendEmail({ resendKey, subject, html });
 
     return jsonResponse({
       sent: true,
       to: ALERT_EMAILS,
-      summary: { newAccounts, totalAccounts, newRoutes, totalRoutes, newCompleted, activationPct, dau, wau, mau, topEvents: (topEvents ?? []).length },
+      summary: {
+        newAccounts, totalAccounts, newRoutes, totalRoutes, newCompleted, activationPct, dau, wau, mau,
+        topEvents: (topEvents ?? []).length,
+        waitlistWaiting: waitlist.waiting, waitlistNew24h: waitlist.new_24h, waitlistConverted: waitlist.converted,
+      },
     });
   } catch (err) {
     console.error("[daily-analytics-digest] failed:", String(err));
