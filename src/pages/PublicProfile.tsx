@@ -132,17 +132,33 @@ export default function PublicProfile() {
     queryKey: ["public-list-feed", profile?.id],
     enabled: !!profile?.id,
     queryFn: async () => {
-      const { data: cols } = await (supabase as any)
-        .from("discovery_collections")
-        .select("id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
-        .eq("user_id", profile!.id).eq("kind", "ranking")
-        // TYLKO publiczne polecajki (visited). Prywatne wishlisty "Do zobaczenia" (to_visit) NIGDY
-        // na cudzym profilu - guard nawet gdyby jakaś została jako public+approved.
-        .eq("list_status", "visited")
-        // Soft-moderacja: publiczne widoczne od razu (pending + approved), tylko rejected/hidden ukryte.
-        .eq("is_public", true).eq("hidden_by_admin", false).neq("moderation_status", "rejected")
-        .order("updated_at", { ascending: false });
-      const rows = (cols ?? []) as any[];
+      const COLS = "id, user_id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at";
+      // Te same bramki dla obu zapytan: TYLKO publiczne polecajki (visited). Prywatne wishlisty
+      // "Do zobaczenia" (to_visit) NIGDY na cudzym profilu - guard nawet gdyby ktoras zostala
+      // jako public+approved. Soft-moderacja: pending + approved widoczne, rejected/hidden nie.
+      const guarded = (q: any) => q.eq("kind", "ranking").eq("list_status", "visited")
+        .eq("is_public", true).eq("hidden_by_admin", false).neq("moderation_status", "rejected");
+      // WSPOLTWORZONE kolekcje tez naleza do tego profilu (prosba Nat 2026-09-15; na WLASNYM
+      // profilu dziala to od tego samego dnia). Bez tego kolekcja, do ktorej ktos zostal
+      // zaproszony, nie pokazywala sie u niego nigdzie poza "Zapisane".
+      // ⚠️ Odczyt `discovery_collection_members` przez OSOBE TRZECIA dziala od migracji
+      // 20260915k - wczesniej polityka wpuszczala tylko wlasciciela i czlonkow, wiec ta lista
+      // wracala pusta i wspoltworzone kolekcje po cichu znikaly z cudzego profilu.
+      const { data: memberRows } = await (supabase as any)
+        .from("discovery_collection_members").select("collection_id").eq("user_id", profile!.id);
+      const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
+      // ⛔ DWA zapytania zamiast `.or(...)`: lista id w `id.in.(…)` ma przecinki w srodku
+      // nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje pustke.
+      const [mineRes, sharedRes] = await Promise.all([
+        guarded((supabase as any).from("discovery_collections").select(COLS).eq("user_id", profile!.id)),
+        memberIds.length
+          ? guarded((supabase as any).from("discovery_collections").select(COLS).in("id", memberIds))
+          : Promise.resolve({ data: [] }),
+      ]);
+      const seen = new Set<string>();
+      const rows = [...((mineRes.data ?? []) as any[]), ...((sharedRes.data ?? []) as any[])]
+        .filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)))
+        .sort((a, b) => new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime());
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const { data: items } = await (supabase as any)
@@ -160,9 +176,20 @@ export default function PublicProfile() {
       // "odwiedzone przez autora / wszystkie" - ten sam chip co na kafelku w eksploracji.
       const visits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
       // Wspoltworcy - zeby bylo widac, ze kolekcja jest wspolna (prosba Nat 2026-09-15).
-      const owners = new Map(rows.map((r) => [r.id, profile!.id]));
-      const mem = await fetchCollectionMembersBulk(ids, owners).catch(() => new Map());
-      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0, co_authors: mem.get(r.id) ?? [] }));
+      const mem = await fetchCollectionMembersBulk(ids, new Map(rows.map((r) => [r.id, r.user_id]))).catch(() => new Map());
+      // Wlasciciele kolekcji, ktorych ten user tylko WSPOLTWORZY - pigulka autora ma pokazac ich,
+      // nie wlasciciela profilu.
+      const ownerIds = Array.from(new Set(rows.map((r) => r.user_id).filter((x) => x && x !== profile!.id)));
+      const owners = new Map<string, any>();
+      if (ownerIds.length) {
+        const { data: profs } = await (supabase as any)
+          .from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color").in("id", ownerIds);
+        for (const pr of (profs ?? []) as any[]) owners.set(pr.id, pr);
+      }
+      return rows.map((r) => ({
+        ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0,
+        co_authors: mem.get(r.id) ?? [], _owner: owners.get(r.user_id) ?? null,
+      }));
     },
   });
 
@@ -510,10 +537,11 @@ export default function PublicProfile() {
                   kind: "list", id: l.id, title: l.title || t("feed.list_fallback"),
                   cover: places.find((x: any) => x.photo)?.photo ?? null,
                   where: l.city || scopeLabel(l),
-                  authorName: profile.first_name || "",
-                  authorHandle: profile.username ? `@${profile.username}` : null,
-                  authorAvatar: profile.avatar_url, authorId: profile.id,
-                  authorFrame: profile.avatar_frame, authorFrameColor: profile.avatar_frame_color,
+                  // Kolekcja WSPOLTWORZONA pokazuje swojego wlasciciela, nie wlasciciela profilu.
+                  authorName: (l._owner ?? profile).first_name || "",
+                  authorHandle: (l._owner ?? profile).username ? `@${(l._owner ?? profile).username}` : null,
+                  authorAvatar: (l._owner ?? profile).avatar_url, authorId: l.user_id ?? profile.id,
+                  authorFrame: (l._owner ?? profile).avatar_frame, authorFrameColor: (l._owner ?? profile).avatar_frame_color,
                   showAuthor: true,
                   coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
                   at: new Date(l.updated_at ?? 0).getTime(),
