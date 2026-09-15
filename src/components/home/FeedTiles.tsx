@@ -274,11 +274,16 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
       )}
       <p className={`line-clamp-2 font-bold leading-[1.15] ${feed ? "text-[22px]" : "text-[17px]"} ${it.showAuthor ? (feed ? "mt-2.5" : "mt-1.5") : ""}`}>{it.title}</p>
       <div className={`flex flex-wrap ${feed ? "mt-2.5 gap-1.5" : "mt-1.5 gap-1"}`}>
-        {/* "odwiedzone przez autora / wszystkie" - sama liczba miejsc, gdy autor nic nie odhaczyl
-            (wiekszosc list; "0/15" wygladaloby jak brak, a nie jak informacja). */}
+        {/* "odwiedzone przez autora / wszystkie". ZERO TEZ POKAZUJEMY jako "0/7" (prosba Nat
+            2026-09-15) - do tej pory przy zerze zostawala sama liczba miejsc, przez co kafelek
+            kolekcji, w ktorej autor jeszcze nigdzie nie byl, wygladal jakby licznika w ogole
+            nie mial. Widok samej kolekcji (`HighlightChips`) pokazywal "0 / 7" od poczatku,
+            wiec byla to niespojnosc, nie decyzja. Sama liczba zostaje WYLACZNIE tam, gdzie
+            `visitedCount` nie zostal podany - wtedy nie wiemy, ile autor odwiedzil, a "0"
+            twierdziloby, ze nic. */}
         <Chip ink={theme.ink} size={size}>
           <MapPin className={feed ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2.4} />
-          {it.visitedCount ? `${it.visitedCount}/${it.placesCount}` : it.placesCount}
+          {it.visitedCount != null ? `${it.visitedCount}/${it.placesCount}` : it.placesCount}
         </Chip>
         {it.where && <Chip ink={theme.ink} size={size}>{it.where}</Chip>}
         {/* "Nowe miejsce!" - w tym samym rzedzie co reszta chipow, dociagniete do PRAWEJ
