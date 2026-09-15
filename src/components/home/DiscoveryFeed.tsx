@@ -2521,7 +2521,9 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 kind: "list", id: col.id, title: col.title,
                 cover: places.find((x) => x.photo)?.photo ?? null,
                 where: col.city || scopeLabel(col),
-                authorName: col.author_username ? `@${col.author_username}` : (col.author_name ?? ""),
+                // Nazwa i @nick OBOK siebie (prosba Nat 2026-09-15) - wyjazdy zostaja przy samym nicku.
+                authorName: col.author_name ?? "",
+                authorHandle: col.author_username ? `@${col.author_username}` : null,
                 authorAvatar: col.author_avatar ?? null, authorId: col.user_id ?? null,
                 authorFrame: col.author_frame ?? null, authorFrameColor: col.author_frame_color ?? null,
                 showAuthor: !!(col.author_username || col.author_name),

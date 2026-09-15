@@ -24,7 +24,9 @@ import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
 import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
-import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { GridTile, type GridItem } from "@/components/home/FeedTiles";
+import { listTheme } from "@/lib/listThemes";
+import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
 import { scopeLabel } from "@/lib/tripScope";
 // Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
@@ -32,7 +34,6 @@ import TrasaBigCard from "@/components/home/TrasaBigCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { resolveStored } from "@/components/PlacePhoto";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
-import { shortRelativeTime } from "@/lib/relativeTime";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 // Stala pusta referencja - inaczej useMemo nizej liczylby sie na nowo w kazdym renderze.
@@ -132,7 +133,7 @@ export default function PublicProfile() {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
+        .select("id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
         .eq("user_id", profile!.id).eq("kind", "ranking")
         // TYLKO publiczne polecajki (visited). Prywatne wishlisty "Do zobaczenia" (to_visit) NIGDY
         // na cudzym profilu - guard nawet gdyby jakaś została jako public+approved.
@@ -155,7 +156,9 @@ export default function PublicProfile() {
         const _cover = pickPlaceCover(photoMap, pinCoverKeys(it));
         (byCol[it.collection_id] ??= []).push({ ...it, _cover });
       }
-      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [] }));
+      // "odwiedzone przez autora / wszystkie" - ten sam chip co na kafelku w eksploracji.
+      const visits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
+      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0 }));
     },
   });
 
@@ -300,15 +303,10 @@ export default function PublicProfile() {
   const [savedListIds, setSavedListIds] = useState<Set<string>>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
   });
-  const [initSavedLists] = useState<Set<string>>(() => {
-    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
-  });
 
   const isTripLiked = (id: string) => likeOverride["t:" + id] ?? initLikedTrips.has(id);
   const isTripSaved = (id: string) => saveOverride["t:" + id] ?? initSavedTrips.has(id);
   const isListSaved = (id: string) => savedListIds.has(id);
-  // Licznik = baza (z DB) skorygowana o roznice miedzy stanem biezacym a poczatkowym.
-  const delta = (now: boolean, was: boolean) => (now ? 1 : 0) - (was ? 1 : 0);
 
   const onTripLike = (tr: any) => {
     if (!user) { navigate("/auth"); return; }
@@ -492,29 +490,34 @@ export default function PublicProfile() {
             listCards.length === 0 ? (
               <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_lists")} desc={t("public.no_lists_desc")} />
             ) : (
-              // Ten sam odstep i to samo rozmieszczenie licznikow co na wlasnym profilu
-              // (prosba Nat 2026-09-10) - dotad karta listy wygladala inaczej u siebie
-              // i u kogos innego, choc to ta sama tresc.
-              <div className="space-y-10">
-              {listCards.map((l: any) => (
-                <ProfileFeedCard
-                  key={l.id}
-                  avatarUrl={profile.avatar_url}
-                  authorId={profile.id}
-                  fallback={displayName}
-                  eyebrow=""
-                  timestamp={shortRelativeTime(l.updated_at)}
-                  title={l.title || t("feed.list_fallback")}
-                  description={l.description}
-                  tiles={l.tiles}
-                  counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
-                  // Sam licznik przy dacie (prosba Nat 2026-09-10). Stopka z osobna zakladka
-                  // zostawala pod karta jako samotna ikona bez liczby - druga informacja o tym
-                  // samym. Zapisanie listy zyje w jej widoku, gdzie stoi pelne CTA.
-                  countsInHeader
-                  onOpen={() => navigate(`/lista/${l.id}`)}
-                />
-              ))}
+              // Kolekcje wygladaja TAK SAMO jak w eksploracji i na wlasnym profilu
+              // (prosba Nat 2026-09-15). Wczesniej byl tu `ProfileFeedCard` (rzad miniatur),
+              // wiec ta sama kolekcja miala TRZECI wyglad - u siebie kafelek, u kogos innego
+              // karta. Licznika zapisow NIE podajemy: to informacja zwrotna dla autora,
+              // a nie element kafelka u ogladajacego.
+              <div className="space-y-4">
+              {listCards.map((l: any) => {
+                const places = (l.tiles ?? []).map((it: any) => ({
+                  name: it.place_name as string,
+                  category: (it.category ?? null) as string | null,
+                  photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+                }));
+                const item: GridItem = {
+                  kind: "list", id: l.id, title: l.title || t("feed.list_fallback"),
+                  cover: places.find((x: any) => x.photo)?.photo ?? null,
+                  where: l.city || scopeLabel(l),
+                  authorName: profile.first_name || "",
+                  authorHandle: profile.username ? `@${profile.username}` : null,
+                  authorAvatar: profile.avatar_url, authorId: profile.id,
+                  authorFrame: profile.avatar_frame, authorFrameColor: profile.avatar_frame_color,
+                  showAuthor: true,
+                  at: new Date(l.updated_at ?? 0).getTime(),
+                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  theme: listTheme(l.theme, l.id), places,
+                  visitedCount: l.visited_count ?? 0,
+                };
+                return <GridTile key={l.id} it={item} size="feed" onOpen={() => navigate(`/lista/${l.id}`)} />;
+              })}
               </div>
             )
           ) : tripCards.length === 0 ? (

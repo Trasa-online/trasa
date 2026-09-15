@@ -40,6 +40,9 @@ export type GridItem = {
   /** Chip lokalizacji: miasto, a gdy go brak - kraje. */
   where: string;
   authorName: string;
+  /** `@nick` pokazywany OBOK nazwy (prosba Nat 2026-09-15, kafelek kolekcji). Gdy go nie ma,
+   *  pigulka pokazuje sam `authorName` - tak zostaja kafelki wyjazdow. */
+  authorHandle?: string | null;
   authorAvatar: string | null;
   authorId: string | null;
   /** Ramka awatara autora (profiles.avatar_frame / _color). */
@@ -111,13 +114,23 @@ function Chip({ children, ink, dark, size, className = "" }: { children: React.R
  *  polprzezroczysta w kolorze tekstu (na kolorowym tle listy). */
 function AuthorPill({ it, tone, ink, size }: { it: GridItem; tone: "brand" | "tint"; ink?: string; size: TileSize }) {
   const feed = size === "feed";
+  // ⚠️ Czesc zapytan podstawia username jako nazwe, gdy autor nie ma imienia
+  // (`author_name: first_name || username`). Bez tego porownania pigulka pokazywalaby
+  // "nyszje @nyszje". Nick zostaje tylko wtedy, gdy realnie wnosi cos ponad nazwe.
+  const bare = (s: string) => s.replace(/^@/, "").trim().toLowerCase();
+  const handle = it.authorHandle && bare(it.authorHandle) !== bare(it.authorName) ? it.authorHandle : null;
   return (
     <span
       className={`inline-flex max-w-full items-center rounded-full font-bold leading-none ${feed ? "gap-2 py-1 pl-1 pr-3 text-[13px]" : "gap-1.5 py-[3px] pl-[3px] pr-2.5 text-[11px]"} ${tone === "brand" ? "bg-primary text-white shadow-sm" : ""}`}
       style={tone === "brand" || !ink ? undefined : { backgroundColor: tintBg(ink), color: ink }}
     >
       <FramedAvatar src={it.authorAvatar} frame={it.authorFrame} color={it.authorFrameColor} size={feed ? 24 : 20} imgClassName="ring-1 ring-white/70" />
-      <span className="truncate">{it.authorName}</span>
+      {/* Nazwa i @nick obok siebie (kolekcje). Gdy autor nie ma imienia, `authorName` jest
+          pusty i zostaje sam nick - zeby nie bylo pustego miejsca ani nicku dwa razy. */}
+      <span className="truncate">{it.authorName || it.authorHandle}</span>
+      {!!handle && !!it.authorName && (
+        <span className="shrink-0 font-semibold opacity-70">{handle}</span>
+      )}
     </span>
   );
 }
@@ -250,21 +263,16 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
   const overflow = it.placesCount > LIST_TILES ? it.placesCount - (LIST_TILES - 1) : 0;
   const shown = overflow ? it.places.slice(0, LIST_TILES - 1) : it.places.slice(0, LIST_TILES);
   return (
+    // UKLAD (prosba Nat 2026-09-15): NAJPIERW podpis - autor, tytul i chipy - a POD NIM
+    // okladki miejsc. Wczesniej siatka stala na gorze, a tekst pod nia. Przewijajac kolekcje
+    // widac teraz od razu, czyja jest i o czym, zanim wzrok zejdzie na zdjecia.
     <div className={`w-full ${feed ? "rounded-3xl p-3.5" : "rounded-[20px] p-2.5"}`} style={{ backgroundColor: theme.bg, color: theme.ink }}>
-      <div className={`grid grid-cols-3 ${feed ? "gap-2" : "gap-1.5"}`}>
-        {shown.map((p, i) => <MiniPlace key={`${p.name}-${i}`} place={p} size={size} />)}
-        {overflow > 0 && (
-          <div className={`flex aspect-[2/3] items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.18)] ${feed ? "rounded-xl" : "rounded-[10px]"}`} style={{ backgroundColor: tintBg(theme.ink) }}>
-            <span className={`font-brand leading-none ${feed ? "text-[24px]" : "text-[17px]"}`}>+{overflow}</span>
-          </div>
-        )}
-      </div>
       {it.showAuthor && (
-        <div className={`flex ${feed ? "mt-3.5" : "mt-2.5"}`}>
+        <div className="flex">
           <AuthorPill it={it} tone="tint" ink={theme.ink} size={size} />
         </div>
       )}
-      <p className={`line-clamp-2 font-bold leading-[1.15] ${feed ? "mt-2.5 text-[22px]" : "mt-1.5 text-[17px]"}`}>{it.title}</p>
+      <p className={`line-clamp-2 font-bold leading-[1.15] ${feed ? "text-[22px]" : "text-[17px]"} ${it.showAuthor ? (feed ? "mt-2.5" : "mt-1.5") : ""}`}>{it.title}</p>
       <div className={`flex flex-wrap ${feed ? "mt-2.5 gap-1.5" : "mt-1.5 gap-1"}`}>
         {/* "odwiedzone przez autora / wszystkie" - sama liczba miejsc, gdy autor nic nie odhaczyl
             (wiekszosc list; "0/15" wygladaloby jak brak, a nie jak informacja). */}
@@ -292,6 +300,14 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
             <BrandBookmark className={feed ? "h-[13px] w-[13px]" : "h-[10px] w-[10px]"} />
             <span aria-label={t("stats.saves_aria", { count: it.savesCount })}>{it.savesCount}</span>
           </Chip>
+        )}
+      </div>
+      <div className={`grid grid-cols-3 ${feed ? "mt-3.5 gap-2" : "mt-2.5 gap-1.5"}`}>
+        {shown.map((p, i) => <MiniPlace key={`${p.name}-${i}`} place={p} size={size} />)}
+        {overflow > 0 && (
+          <div className={`flex aspect-[2/3] items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.18)] ${feed ? "rounded-xl" : "rounded-[10px]"}`} style={{ backgroundColor: tintBg(theme.ink) }}>
+            <span className={`font-brand leading-none ${feed ? "text-[24px]" : "text-[17px]"}`}>+{overflow}</span>
+          </div>
         )}
       </div>
     </div>
