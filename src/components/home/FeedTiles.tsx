@@ -267,13 +267,11 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
     // okladki miejsc. Wczesniej siatka stala na gorze, a tekst pod nia. Przewijajac kolekcje
     // widac teraz od razu, czyja jest i o czym, zanim wzrok zejdzie na zdjecia.
     <div className={`w-full ${feed ? "rounded-3xl p-3.5" : "rounded-[20px] p-2.5"}`} style={{ backgroundColor: theme.bg, color: theme.ink }}>
-      {it.showAuthor && (
-        <div className="flex">
-          <AuthorPill it={it} tone="tint" ink={theme.ink} size={size} />
-        </div>
-      )}
-      <p className={`line-clamp-2 font-bold leading-[1.15] ${feed ? "text-[22px]" : "text-[17px]"} ${it.showAuthor ? (feed ? "mt-2.5" : "mt-1.5") : ""}`}>{it.title}</p>
-      <div className={`flex flex-wrap ${feed ? "mt-2.5 gap-1.5" : "mt-1.5 gap-1"}`}>
+      {/* Rzad 1: autor i WSZYSTKIE chipy na tej samej wysokosci (prosba Nat 2026-09-15).
+          Wczesniej chipy mialy wlasny rzad pod tytulem - kafelek miał przez to trzy osobne
+          linie podpisu nad zdjeciami. `items-center`, bo pigulka autora jest wyzsza od chipow. */}
+      <div className={`flex flex-wrap items-center ${feed ? "gap-1.5" : "gap-1"}`}>
+        {it.showAuthor && <AuthorPill it={it} tone="tint" ink={theme.ink} size={size} />}
         {/* "odwiedzone przez autora / wszystkie". ZERO TEZ POKAZUJEMY jako "0/7" (prosba Nat
             2026-09-15) - do tej pory przy zerze zostawala sama liczba miejsc, przez co kafelek
             kolekcji, w ktorej autor jeszcze nigdzie nie byl, wygladal jakby licznika w ogole
@@ -307,6 +305,7 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
           </Chip>
         )}
       </div>
+      <p className={`line-clamp-2 font-bold leading-[1.15] ${feed ? "mt-2.5 text-[22px]" : "mt-1.5 text-[17px]"}`}>{it.title}</p>
       <div className={`grid grid-cols-3 ${feed ? "mt-3.5 gap-2" : "mt-2.5 gap-1.5"}`}>
         {shown.map((p, i) => <MiniPlace key={`${p.name}-${i}`} place={p} size={size} />)}
         {overflow > 0 && (

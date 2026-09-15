@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -53,6 +53,9 @@ import ListScopeSheet from "@/components/lists/ListScopeSheet";
 import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
 import { fetchCollectionMembers, collectionMembersKey } from "@/lib/collectionInvite";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
+
+/** Ile pigulek wspoltworcow miesci sie w belce, zanim przechodzimy na "+N". */
+const CO_AUTHORS_SHOWN = 2;
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { fetchCollectionNotes, saveCollectionNote, collectionNotesKey } from "@/lib/collectionNotes";
 import { fetchCollectionPhotos, addCollectionPhoto, removeCollectionPhoto, photosByPlace, collectionPhotoKey, collectionPhotosKey } from "@/lib/collectionPhotos";
@@ -427,13 +430,22 @@ export default function SharedList() {
   // cache, ten narzucal ksztalt drugiemu: arkusz dostawal tablice stringow zamiast obiektow
   // i kazdy wspoltworca wyswietlal sie jako "Użytkownik" bez awatara (zgloszenie Nat
   // 2026-09-15). Przeksztalcenie robi teraz `select`, ktore NIE dotyka cache.
-  const { data: memberIds = EMPTY_ARRAY } = useQuery({
+  const { data: members = EMPTY_ARRAY } = useQuery({
     queryKey: collectionMembersKey(id),
     enabled: !!id && !!user,
     staleTime: 60_000,
     queryFn: () => fetchCollectionMembers(id!),
-    select: (rows) => rows.map((m) => m.user_id),
   });
+  // `select` juz tu nie ma: belka potrzebuje awatarow i nickow wspoltworcow, wiec trzymamy
+  // PELNE wiersze (queryFn i tak dociaga profile), a same id liczymy obok.
+  const memberIds = useMemo(() => (members as any[]).map((m) => m.user_id), [members]);
+  // Wspoltworcy do belki: bez wlasciciela (stoi juz jako autor) i bez wierszy bez nicku,
+  // ktorych i tak nie da sie pokazac ani otworzyc.
+  const coAuthors = useMemo(
+    () => (members as any[]).filter((m) => m.user_id !== col?.user_id && m.username),
+    [members, col?.user_id],
+  );
+  const extraCoAuthors = Math.max(0, coAuthors.length - CO_AUTHORS_SHOWN);
   // Notki WSZYSTKICH uczestnikow: RLS wpuszcza kazdego, kto widzi kolekcje, wiec czytelnik
   // publicznej kolekcji tez widzi caly watek - tak samo, jak przy opublikowanym wyjezdzie.
   const { data: allNotes = EMPTY_ARRAY } = useQuery({
@@ -835,7 +847,11 @@ export default function SharedList() {
               <ChevronLeft className="h-5 w-5 text-foreground" strokeWidth={2.4} />
             </button>
             {/* Awatar + username WYSRODKOWANE (#5 - przeniesione ze skraju). Miasto/liczba miejsc -> pod tytul. */}
-            <div className="flex-1 min-w-0 flex justify-center">
+            {/* Autor + WSPOLTWORCY (prosba Nat 2026-09-15: "awatar i handle osob, ktore rowniez
+                sa w danej kolekcji"). Rzad sie ZAWIJA: miedzy guzikiem wstecz a akcja zostaje
+                ~280 px, wiec trzy pigulki obok siebie by sie nie zmiescily, a poziomy scroll
+                w belce gryzlby sie z gestami. Przy zero wspoltworcach wyglada jak dotad. */}
+            <div className="flex-1 min-w-0 flex flex-wrap justify-center items-center gap-1.5">
               {/* Autor jako pigulka (redesign 2026-09-13, TripHeaderChips) - awatar z ramka zostaje. */}
               {author?.username ? (
                 <AuthorPill src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
@@ -844,6 +860,24 @@ export default function SharedList() {
                 <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-3.5 font-semibold text-foreground">
                   <img src={avatarSrc(col.author_avatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
                   <span className="truncate text-[14px]">{authorName}</span>
+                </span>
+              )}
+              {coAuthors.slice(0, CO_AUTHORS_SHOWN).map((m: any) => (
+                <button
+                  key={m.user_id}
+                  onClick={() => m.username && navigate(`/profil/${m.username}`)}
+                  className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2.5 active:opacity-70 transition-opacity"
+                >
+                  <FramedAvatar src={m.avatar_url} frame={m.avatar_frame} color={m.avatar_frame_color} size={20} />
+                  <span className="truncate text-[13px] font-bold text-foreground">@{m.username ?? "?"}</span>
+                </button>
+              ))}
+              {/* ⚠️ `!!extraCoAuthors`, nie `coAuthors.length > CO_AUTHORS_SHOWN`: bramka i18n
+                  czyta `>` w JSX jako poczatek tekstu i zglaszala to jako polski napis
+                  na sztywno. Porownanie siedzi wiec w zmiennej, nie w znaczniku. */}
+              {!!extraCoAuthors && (
+                <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1.5 text-[13px] font-bold text-foreground">
+                  {"+" + extraCoAuthors}
                 </span>
               )}
             </div>

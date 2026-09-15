@@ -304,21 +304,40 @@ const TravelerProfile = () => {
     if (res.ok && res.method === "clipboard") toast.success(t("invite.link_copied"));
   };
 
-  // Feed LIST (zakladka Listy): wlasne listy + kafelki miejsc + liczniki z kolumn.
+  // Feed LIST (zakladka Listy): wlasne ORAZ WSPOLTWORZONE kolekcje + kafelki miejsc + liczniki.
   const { data: listCards = [] } = useQuery({
     queryKey: ["profile-list-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data: cols } = await (supabase as any)
-        .from("discovery_collections")
-        .select("id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
-        .eq("user_id", user!.id).eq("kind", "ranking")
-        // Zakładka Listy = moje CURATED listy (grupy). Publiczne polecajki (visited). Luźno
-        // zapisane miejsca (auto-lista "Do zobaczenia", to_visit) to NIE lista - pokazują się
-        // jako kafelki w Zapisane→Miejsca, nie tutaj.
-        .eq("list_status", "visited")
-        .order("updated_at", { ascending: false });
-      const rows = (cols ?? []) as any[];
+      const COLS = "id, user_id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at";
+      // Zakładka Listy = moje CURATED listy (grupy). Publiczne polecajki (visited). Luźno
+      // zapisane miejsca (auto-lista "Do zobaczenia", to_visit) to NIE lista - pokazują się
+      // jako kafelki w Zapisane→Miejsca, nie tutaj.
+      //
+      // WSPOLTWORZONE TEZ TU TRAFIAJA (prosba Nat 2026-09-15): kolekcja, do ktorej ktos mnie
+      // zaprosil, jest moja do wspoltworzenia - dodaje do niej miejsca i notki - wiec ma stac
+      // w "Moje kolekcje", a nie tylko w "Zapisane". Rozpoznaje ja pigulka autora: stoi tam
+      // wlasciciel, nie ja.
+      const { data: memberRows } = await (supabase as any)
+        .from("discovery_collection_members")
+        .select("collection_id")
+        .eq("user_id", user!.id);
+      const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
+      // ⛔ DWA zapytania zamiast jednego `.or(...)`: lista id w `id.in.(…)` ma przecinki
+      // w srodku nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje
+      // pusty wynik (patrz memory `feedback_postgrest_or_filter_quoting`).
+      const [mine, shared] = await Promise.all([
+        (supabase as any).from("discovery_collections").select(COLS)
+          .eq("user_id", user!.id).eq("kind", "ranking").eq("list_status", "visited"),
+        memberIds.length
+          ? (supabase as any).from("discovery_collections").select(COLS)
+              .in("id", memberIds).eq("kind", "ranking").eq("list_status", "visited")
+          : Promise.resolve({ data: [] }),
+      ]);
+      const seen = new Set<string>();
+      const rows = [...((mine.data ?? []) as any[]), ...((shared.data ?? []) as any[])]
+        .filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)))
+        .sort((a, b) => new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime());
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const { data: items } = await (supabase as any)
@@ -336,7 +355,20 @@ const TravelerProfile = () => {
       }
       // "odwiedzone przez autora / wszystkie" - ten sam chip co na kafelku w eksploracji.
       const visits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
-      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0 }));
+      // Wlasciciele kolekcji WSPOLTWORZONYCH - ich pigulka autora ma stanac na kafelku.
+      const ownerIds = Array.from(new Set(rows.map((r) => r.user_id).filter((id) => id && id !== user!.id)));
+      const owners = new Map<string, any>();
+      if (ownerIds.length) {
+        const { data: profs } = await (supabase as any)
+          .from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color")
+          .in("id", ownerIds);
+        for (const pr of (profs ?? []) as any[]) owners.set(pr.id, pr);
+      }
+      return rows.map((r) => ({
+        ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0,
+        _shared: r.user_id !== user!.id,
+        _owner: owners.get(r.user_id) ?? null,
+      }));
     },
   });
 
@@ -969,11 +1001,14 @@ const TravelerProfile = () => {
                   kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
                   cover: places.find((x: any) => x.photo)?.photo ?? null,
                   where: l.city || scopeLabel(l),
-                  authorName: (profile as any)?.first_name || "",
-                  authorHandle: profile?.username ? `@${profile.username}` : null,
-                  authorAvatar: profile?.avatar_url ?? null, authorId: user.id,
-                  authorFrame: (profile as any)?.avatar_frame ?? null,
-                  authorFrameColor: (profile as any)?.avatar_frame_color ?? null,
+                  // Kolekcja WSPOLTWORZONA pokazuje swojego wlasciciela, nie mnie - inaczej
+                  // w "Moje kolekcje" cudza kolekcja wygladalaby na moja.
+                  authorName: (l._owner ?? profile)?.first_name || "",
+                  authorHandle: (l._owner ?? profile)?.username ? `@${(l._owner ?? profile).username}` : null,
+                  authorAvatar: (l._owner ?? profile)?.avatar_url ?? null,
+                  authorId: l.user_id ?? user.id,
+                  authorFrame: (l._owner ?? profile)?.avatar_frame ?? null,
+                  authorFrameColor: (l._owner ?? profile)?.avatar_frame_color ?? null,
                   showAuthor: true,
                   at: new Date(l.updated_at ?? 0).getTime(),
                   placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
@@ -981,7 +1016,8 @@ const TravelerProfile = () => {
                   visitedCount: l.visited_count ?? 0,
                   // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla
                   // autora ("ile osob to zapisalo"), nie element kafelka w eksploracji.
-                  savesCount: Number(l.saves_count ?? 0),
+                  // Licznik zapisow tylko na WLASNYCH - to informacja zwrotna dla autora.
+                  savesCount: l._shared ? undefined : Number(l.saves_count ?? 0),
                 };
                 return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}
