@@ -2097,6 +2097,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));
             }
           }}
+          // Glowny scroller zakladki Miejsca: stukniecie w pasek statusu wraca na PIERWSZA
+          // karte (patrz src/lib/scrollTop.ts). Snap sam dociaga ja do krawedzi.
+          data-scroll-main
           className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain pt-3 scroll-pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]"
         >
           {displayQueue.slice(0, exploreVisible).map((place) => {
