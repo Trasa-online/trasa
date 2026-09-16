@@ -22,9 +22,6 @@
   "saving": "Zapisywanie…",
   "use_route": "Użyj tej trasy",
   "plan_own_route": "Zaplanuj własną trasę w {{city}}",
-  "date_sheet_title": "Kiedy planujesz ten wyjazd?",
-  "date_sheet_desc": "Data jest tylko dla Ciebie. Możesz zapisać wyjazd bez niej.",
-  "save_without_date": "Zapisz bez daty",
   "categories": {
     "restaurant": "Restauracja",
     "cafe": "Kawiarnia",

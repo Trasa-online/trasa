@@ -1325,8 +1325,10 @@ const SHOW_SEARCH_SHORTCUTS = false;
 function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave, plannedDate }: {
   id: string; photo: string | null; title: string; city?: string | null;
   placeCount: number; pins: LatLng[]; onOpen: () => void; onUnsave: () => void;
-  // Data, na kiedy user planuje te trase (saved_routes.planned_date). Wybiera ja przy zapisie,
-  // wiec musi ja tu zobaczyc - inaczej ten wybor nie ma zadnego skutku.
+  // Data, na kiedy user planuje te trase (saved_routes.planned_date). ⚠️ NOWE zapisy jej nie
+  // maja: od 2026-09-16 zakladka zapisuje wyjazd natychmiast, bez pytania o date (arkusz
+  // z kalendarzem byl zbednym krokiem przed czynnoscia jednego tapniecia). Pokazujemy wiec
+  // wylacznie daty ustawione WCZESNIEJ - stad `plannedDate` bywa puste i to nie jest blad.
   plannedDate?: string | null;
 }) {
   const { t } = useTranslation("homefeed");

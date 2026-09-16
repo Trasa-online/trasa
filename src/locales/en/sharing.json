@@ -22,9 +22,6 @@
   "saving": "Saving…",
   "use_route": "Use this route",
   "plan_own_route": "Plan your own route in {{city}}",
-  "date_sheet_title": "When are you planning this trip?",
-  "date_sheet_desc": "The date is just for you. You can save the trip without one.",
-  "save_without_date": "Save without a date",
   "categories": {
     "restaurant": "Restaurant",
     "cafe": "Cafe",

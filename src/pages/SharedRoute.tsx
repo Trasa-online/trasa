@@ -235,7 +235,6 @@ export default function SharedRoute() {
   );
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);                   // gosc: zapis CALEGO wyjazdu
-  const [showDateSheet, setShowDateSheet] = useState(false);
   const [datesSheetOpen, setDatesSheetOpen] = useState(false);
   const [daysSheetOpen, setDaysSheetOpen] = useState(false);
   const [askRemoveDay, setAskRemoveDay] = useState<number | null>(null);
@@ -594,14 +593,19 @@ export default function SharedRoute() {
   // Zapis = JEDEN wiersz w saved_routes (dokladnie to samo, co bookmark na karcie w eksploracji)
   // plus opcjonalna data, ktora nalezy do ZAPISUJACEGO, nie do trasy. Zadnej kopii pinow i zadnej
   // zmiany ekranu - ma byc odczuwalne jak zakladka, nie jak przejscie gdzie indziej.
-  const saveToMine = async (tripDate?: Date) => {
+  // ZAPIS JEST NATYCHMIASTOWY (prosba Nat 2026-09-16). Wczesniej tapniecie zakladki otwieralo
+  // kalendarz "Kiedy planujesz ten wyjazd?" i dopiero on zapisywal - a zakladka to gest jednego
+  // tapniecia, jak polubienie. Pytanie o date w tym miejscu bylo dodatkowym krokiem przed
+  // czynnoscia, ktora user uwazal za zakonczona; kto arkusz zamknal, ten nie zapisal nic.
+  // ⛔ `planned_date` NIE jest juz wysylane - dzieki temu `upsert` nie kasuje daty, ktora
+  // ktos ustawil, zanim arkusz znikl. Stare wartosci dalej pokazuje kafelek w "Zapisane".
+  const saveToMine = async () => {
     if (!user) { navigate("/auth"); return; }
     if (!route || saving) return;
     setSaving(true);
-    setShowDateSheet(false);
     try {
       const { error } = await (supabase as any).from("saved_routes").upsert(
-        { user_id: user.id, route_id: id, planned_date: tripDate ? format(tripDate, "yyyy-MM-dd") : null },
+        { user_id: user.id, route_id: id },
         { onConflict: "user_id,route_id" },
       );
       if (error) throw error;
@@ -2338,7 +2342,7 @@ export default function SharedRoute() {
                 onClick={() => {
                   if (!user) { navigate("/auth"); return; }
                   if (isRouteSaved) { void unsaveFromMine(); return; }
-                  setShowDateSheet(true);
+                  void saveToMine();
                 }}
                 disabled={saving}
                 aria-label={isRouteSaved ? t("saved_trip") : t("save_trip")}
@@ -3074,24 +3078,6 @@ export default function SharedRoute() {
 
       {/* Gosc: kiedy planuje ten wyjazd. Data nalezy do ZAPISUJACEGO, nie do trasy, i jest
           opcjonalna ("Zapisz bez daty"). Arkusz na `Sheet`, wiec gest "w dol" ma z pudelka. */}
-      <Sheet open={showDateSheet} onOpenChange={setShowDateSheet}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">
-          <SheetTitle className="sr-only">{t("date_sheet_title")}</SheetTitle>
-          <div className="px-5 pb-1 text-center">
-            <p className="text-lg font-black leading-tight">{t("date_sheet_title")}</p>
-            <p className="text-xs text-muted-foreground mt-1">{t("date_sheet_desc")}</p>
-          </div>
-          <FullCalendarPicker onConfirm={(d) => void saveToMine(d)} />
-          <button
-            onClick={() => void saveToMine()}
-            disabled={saving}
-            className="mx-5 mt-1 w-[calc(100%-2.5rem)] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors disabled:opacity-50"
-          >
-            {t("save_without_date")}
-          </button>
-        </SheetContent>
-      </Sheet>
-
       {/* Wlasciciel: zakres dat wyjazdu. Zakres wielodniowy wlacza podzial miejsc na dni. */}
       <Sheet open={datesSheetOpen} onOpenChange={setDatesSheetOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">
