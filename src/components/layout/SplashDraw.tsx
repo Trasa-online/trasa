@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { MARK_H, MARK_S_PATH, MARK_STAR_BOX, MARK_W } from "@/components/spontawayMarkPaths";
 import { MarkStar, MARK_ORANGE } from "@/components/SpontawayMark";
+import SplashCredit from "@/components/layout/SplashCredit";
 
 // EKRAN STARTOWY (cold start): znak spontaway SKLADA SIE - "S" rysuje sie od lewej do prawej,
 // a na jego koncu ZAPALA SIE GWIAZDKA.
@@ -124,6 +125,7 @@ export default function SplashDraw({ done, onHidden }: {
           </span>
         </span>
       </div>
+      <SplashCredit />
     </div>
   );
 }

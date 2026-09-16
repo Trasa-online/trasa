@@ -14,6 +14,7 @@
 // ekranu startowego pokazywalyby wtedy dwa rozne znaki.
 
 import { SpontawayMark } from "@/components/SpontawayMark";
+import SplashCredit from "@/components/layout/SplashCredit";
 
 export default function SplashPulse() {
   return (
@@ -26,6 +27,7 @@ export default function SplashPulse() {
           „gradient na znaku S" - i slusznie, bo tak to wyglada, choc zadnego gradientu nie ma
           w kodzie. Znak ma byc ZAWSZE kryjacym #F75708; oddech niesie sama skala. */}
       <SpontawayMark size={104} className="animate-splash-pulse" />
+      <SplashCredit />
     </div>
   );
 }

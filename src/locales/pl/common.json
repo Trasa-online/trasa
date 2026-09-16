@@ -162,5 +162,8 @@
         "desc": "Włącz ją w ustawieniach telefonu: Ustawienia → Spontaway → Lokalizacja."
       }
     }
+  },
+  "splash": {
+    "made_in": "Stworzone w Polsce"
   }
 }

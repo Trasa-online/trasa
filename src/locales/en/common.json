@@ -162,5 +162,8 @@
         "desc": "Turn it on in your phone settings: Settings → Spontaway → Location."
       }
     }
+  },
+  "splash": {
+    "made_in": "Made in Poland, Shared Worldwide"
   }
 }
