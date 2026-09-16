@@ -70,7 +70,7 @@ export async function createEmptyWyjazd(
   // tripType: "planning" = wyjazd przyszly (etap propozycji), "completed" = przeszly
   // (wspomnienie). Jedno i drugie powstaje jako PUSTY szkic - miejsca dodaje sie juz
   // w widoku wyjazdu, nie w kreatorze (decyzja Nat 2026-09-05).
-  opts?: { groupSessionId?: string | null; startDate?: string | null; endDate?: string | null; countries?: string[]; tripType?: "planning" | "completed" },
+  opts?: { groupSessionId?: string | null; startDate?: string | null; endDate?: string | null; countries?: string[]; tripType?: "planning" | "completed"; dayCount?: number },
 ): Promise<string | null> {
   const { data: route, error } = await (supabase as any)
     .from("routes")
@@ -83,7 +83,9 @@ export async function createEmptyWyjazd(
       countries: opts?.countries ?? [],
       trip_type: opts?.tripType ?? "planning",
       status: "draft",
-      day_number: 1,
+      // Liczba dni wyjazdu BEZ dat (zgloszenie testerki 2026-09-16). Przy wybranym zakresie
+      // zostaje 1 i nie jest czytana - tam liczbe dni wyznaczaja daty.
+      day_number: Math.max(1, opts?.dayCount ?? 1),
       // Daty z kreatora (krok "Kiedy jedziecie?"); zakres wielodniowy wlacza podzial na dni
       // w widoku wyjazdu (pins.day_index).
       start_date: opts?.startDate ?? null,

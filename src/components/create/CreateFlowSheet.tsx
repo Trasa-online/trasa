@@ -267,7 +267,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     haptics.light();
     const title = tripName(null, tripCountries, naming);
     const id = await createEmptyWyjazd(user.id, null, title,
-      { ...tripDatesForSave(startArg, daysArg), countries: tripCountries, tripType: tripMode === "past" ? "completed" : "planning" });
+      { ...tripDatesForSave(startArg, daysArg), countries: tripCountries,
+        // Bez daty liczba dni musi gdzies zamieszkac - inaczej wybor z krokomierza przepada.
+        dayCount: startArg ? 1 : daysArg,
+        tripType: tripMode === "past" ? "completed" : "planning" });
     if (!id) { setCreating(false); haptics.error(); toast.error(t("toast.trip_failed")); return; }
     if (tripPeople.length) {
       // ⚠️ `inviteUsersToRoute` NIE RZUCA przy porazce - oddaje `{ ok: false }`. Sam `try/catch`
@@ -575,9 +578,32 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 onConfirm={(d, numDays) => { setTripStart(d); setTripDays(numDays); afterDates(d, numDays); }}
                 onClear={tripStart ? () => { setTripStart(null); setTripDays(1); } : undefined}
               />
+              {/* ILE DNI bez wybranego terminu (zgloszenie testerki 2026-09-16: "od razu
+                  chcialabym miec mozliwosc dodania dni"). Wiersz pojawia sie TYLKO gdy nie ma
+                  daty - przy wybranym zakresie liczbe dni wyznacza kalendarz i dwa sterowania
+                  obok siebie kazalyby zgadywac, ktore wygrywa.
+                  Krokomierz INLINE, nie osobny ekran za chevronem: to jedna liczba, a dodatkowe
+                  przejscie tam i z powrotem kosztuje wiecej niz sama zmiana. */}
+              {!tripStart && (
+                <div className="mx-5 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border/60 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold text-foreground">{t("days_row_title")}</p>
+                    <p className="text-[12px] text-muted-foreground leading-snug">{t("days_row_desc")}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button onClick={() => { haptics.light(); setTripDays((n) => Math.max(1, n - 1)); }} disabled={tripDays <= 1}
+                      aria-label={t("days_row_less")}
+                      className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-xl font-bold active:scale-90 transition-transform disabled:opacity-30">-</button>
+                    <span className="min-w-[2ch] text-center text-lg font-black tabular-nums">{tripDays}</span>
+                    <button onClick={() => { haptics.light(); setTripDays((n) => Math.min(MAX_TRIP_DAYS, n + 1)); }} disabled={tripDays >= MAX_TRIP_DAYS}
+                      aria-label={t("days_row_more")}
+                      className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-xl font-bold active:scale-90 transition-transform disabled:opacity-30">+</button>
+                  </div>
+                </div>
+              )}
               <div className="px-5 pt-2">
                 <button
-                  onClick={() => { setTripStart(null); setTripDays(1); afterDates(null, 1); }}
+                  onClick={() => { setTripStart(null); afterDates(null, tripDays); }}
                   disabled={creating}
                   className="w-full py-3 text-sm font-medium text-muted-foreground active:text-foreground transition-colors disabled:opacity-50"
                 >

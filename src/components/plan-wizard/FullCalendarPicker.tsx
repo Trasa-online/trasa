@@ -112,17 +112,43 @@ const FullCalendarPicker = ({ onConfirm, allowPast = false, onClear, maxDays = D
       </div>
 
       {showYearPicker ? (
-        /* Wybor roku (grid) - klik ustawia rok, wraca do widoku miesiaca. */
-        <div className="grid grid-cols-4 gap-2 px-4 pb-4">
-          {years.map((y) => (
-            <button
-              key={y}
-              onClick={() => { setMonth(new Date(y, month.getMonth(), 1)); setShowYearPicker(false); }}
-              className={`py-3 rounded-2xl text-base font-semibold transition-colors ${y === month.getFullYear() ? "bg-foreground text-background" : "bg-muted text-foreground active:bg-muted/70"}`}
-            >
-              {y}
-            </button>
-          ))}
+        /* Wybor ROKU i MIESIACA - dwie takie same siatki pod soba (prosba testerki 2026-09-16:
+           "taka sama tabelke na miesiace bardzo chce"). Wczesniej byly tu same lata, a do
+           odleglego miesiaca trzeba bylo doklikac sie strzalkami po jednym.
+           ⚠️ Tapniecie ROKU NIE zamyka juz panelu - zmienia tylko rok, zeby zaraz pod spodem
+           wybrac miesiac. Zamyka dopiero wybor miesiaca: to on konczy "skocz do konkretnego
+           miejsca w kalendarzu". */
+        <div className="px-4 pb-4 space-y-4">
+          <div className="grid grid-cols-4 gap-2">
+            {years.map((y) => (
+              <button
+                key={y}
+                onClick={() => setMonth(new Date(y, month.getMonth(), 1))}
+                className={`py-3 rounded-2xl text-base font-semibold transition-colors ${y === month.getFullYear() ? "bg-foreground text-background" : "bg-muted text-foreground active:bg-muted/70"}`}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 12 }, (_, m) => {
+              const d = new Date(month.getFullYear(), m, 1);
+              // Miesiac w calosci przeszly wygaszamy, gdy kalendarz nie dopuszcza przeszlosci -
+              // inaczej mozna wskoczyc w miesiac, w ktorym kazdy dzien jest nieklikalny.
+              const past = !allowPast && new Date(month.getFullYear(), m + 1, 0) < today;
+              const on = m === month.getMonth();
+              return (
+                <button
+                  key={m}
+                  disabled={past}
+                  onClick={() => { setMonth(d); setShowYearPicker(false); }}
+                  className={`py-3 rounded-2xl text-base font-semibold capitalize transition-colors disabled:opacity-30 ${on ? "bg-foreground text-background" : "bg-muted text-foreground active:bg-muted/70"}`}
+                >
+                  {format(d, "LLL", { locale: dateLocale() })}
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <div className="px-2">

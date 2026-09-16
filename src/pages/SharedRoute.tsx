@@ -1183,7 +1183,16 @@ export default function SharedRoute() {
     if (orphans.length) {
       await (supabase as any).from("pins").update({ day_index: next }).in("id", orphans.map((pn) => pn.id));
     }
-    const { error } = await (supabase as any).from("routes").update({ day_number: next }).eq("id", id);
+    // Z DATAMI liczba dni = dlugosc zakresu, wiec przesuwamy koniec. Bez dat zapisujemy
+    // `day_number`. ⛔ Nie zapisuj obu naraz - rozjada sie przy pierwszej zmianie terminu.
+    let error: any = null;
+    if (tripStart) {
+      const end = new Date(tripStart.getTime() + (next - 1) * 86400000);
+      const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      ({ error } = await (supabase as any).from("routes").update({ end_date: iso(end) }).eq("id", id));
+    } else {
+      ({ error } = await (supabase as any).from("routes").update({ day_number: next }).eq("id", id));
+    }
     if (error) { toast.error(t("toast.dates_failed")); return; }
     setDaysSheetOpen(false);
     haptics.success();
@@ -2241,10 +2250,12 @@ export default function SharedRoute() {
                         <CalendarIcon className="h-4 w-4" />{route.start_date ? t("aria.change_dates") : t("aria.add_dates")}
                       </DropdownMenuItem>
                     )}
-                    {/* Liczba dni BEZ dat (zgloszenie testerki 2026-09-16). Przy wybranym zakresie
-                        tej pozycji nie ma - tam liczbe dni wyznaczaja daty i dwa zrodla prawdy
-                        rozjechalyby sie przy pierwszej zmianie terminu. */}
-                    {isOwner && !route.start_date && (
+                    {/* "Dostosuj ilosc dni" - dostepne ZAWSZE (zgloszenie testerki 2026-09-16,
+                        drugie podejscie: "gdzie user moglby dodawac i usuwac dni"). Przy wyjezdzie
+                        Z DATAMI krokomierz przesuwa `end_date`, bez dat rusza `day_number` - to
+                        nadal JEDNO zrodlo prawdy na wyjazd, tylko inne w zaleznosci od tego, czy
+                        termin jest ustalony. */}
+                    {isOwner && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDayDraft(dayCount); setDaysSheetOpen(true); }} className="gap-2.5 py-2.5">
                         <CalendarIcon className="h-4 w-4" />{t("day.count_action")}
                       </DropdownMenuItem>
@@ -2288,7 +2299,21 @@ export default function SharedRoute() {
                 className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight bg-transparent border-b-2 border-primary outline-none"
               />
             ) : (
-              <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
+              /* TAPNIECIE W NAZWE = zmiana nazwy (zgloszenie testerki 2026-09-16: "zamiast
+                 kropek od razu intuicyjnie klikam na sama nazwe"). Menu "..." zostaje - to
+                 skrot, nie zamiennik. Gosc dostaje zwykly naglowek, bez guzika: nie ma czego
+                 tapnac, a przycisk bez akcji uczy, ze nic sie nie dzieje. */
+              canEdit ? (
+                <button
+                  onClick={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
+                  className="flex-1 min-w-0 text-left active:opacity-60 transition-opacity"
+                  aria-label={t("aria.rename_trip")}
+                >
+                  <span className="block text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</span>
+                </button>
+              ) : (
+                <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
+              )
             )}
             {/* Wszystkie akcje wyjazdu pod JEDNYM guzikiem z trzema kropkami (prosba Nat
                 2026-09-10). Cztery kolka obok tytulu konkurowaly z nim wzrokowo, a trzy z nich

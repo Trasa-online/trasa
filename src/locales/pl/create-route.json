@@ -107,5 +107,9 @@
   "name": {
     "title_list": "Nazwa kolekcji",
     "hint_list": "Podpowiadamy nazwę z wybranego miejsca. Możesz ją zmienić."
-  }
+  },
+  "days_row_title": "Ile dni?",
+  "days_row_desc": "Rozpisz wyjazd na dni, nawet bez terminu.",
+  "days_row_less": "Mniej dni",
+  "days_row_more": "Więcej dni"
 }

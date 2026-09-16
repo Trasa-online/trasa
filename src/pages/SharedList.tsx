@@ -162,8 +162,15 @@ export default function SharedList() {
     if (!user) return;
     const ok = await saveCollectionNote(id!, user.id, item.place_name, value);
     if (!ok) { toast.error(t("toast.note_failed")); return; }
-    queryClient.invalidateQueries({ queryKey: collectionNotesKey(id) });
-    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    // ⛔ Uniewazniamy WSZYSTKIE kolekcje, nie tylko biezaca. Notka o miejscu jest JEDNA na
+    // (user, miejsce) i baza rozsiewa ja po pozostalych kolekcjach triggerem - sprawdzone na
+    // prodzie. Ale cache o tym nie wie: `collectionNotesKey(id)` czysci tylko ten jeden widok,
+    // a sasiednia kolekcja trzyma swoja odpowiedz przez `staleTime` 30 s i pokazuje pusto.
+    // Tak wygladalo zgloszenie testerki "notatki nie przenosza sie miedzy kolekcjami" - dane
+    // BYLY przeniesione, tylko ekran pokazywal stare. Prefiks bez id lapie wszystkie klucze.
+    queryClient.invalidateQueries({ queryKey: ["collection-notes"] });
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items"] });
+    queryClient.invalidateQueries({ queryKey: ["place-notes"] });
     if (value.trim()) void markVisitedAuto(item);
   };
 
@@ -242,8 +249,12 @@ export default function SharedList() {
         console.error("[SharedList] zdjecie nie zapisane:", failed[0]?.error);
         toast.error(t("toast.photo_failed"));
       }
-      queryClient.invalidateQueries({ queryKey: collectionPhotosKey(id) });
-      queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+      // ⛔ Prefiks bez id: zdjecie miejsca rozchodzi sie na WSZYSTKIE moje kolekcje z tym
+      // miejscem (trigger `trg_dip_spread`, migracja 20260916h), wiec czyszczenie samego
+      // biezacego widoku zostawialoby sasiednie kolekcje ze starym stanem - dokladnie tak
+      // wygladalo zgloszenie "zdjecia nie przenosza sie miedzy kolekcjami".
+      queryClient.invalidateQueries({ queryKey: ["collection-photos"] });
+      queryClient.invalidateQueries({ queryKey: ["shared-list-items"] });
       // Zdjecie z miejsca = bylem tam - odhaczamy automatycznie (patrz markVisitedAuto).
       if (fresh.length) void markVisitedAuto(item);
     } catch (e: any) {
@@ -264,7 +275,7 @@ export default function SharedList() {
     if (photoId) {
       const ok = await removeCollectionPhoto(photoId);
       if (!ok) { toast.error(t("toast.photo_delete_failed")); return; }
-      queryClient.invalidateQueries({ queryKey: collectionPhotosKey(id) });
+      queryClient.invalidateQueries({ queryKey: ["collection-photos"] });
     }
     const { error } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
     if (error && !photoId) { toast.error(t("toast.photo_delete_failed")); return; }
@@ -281,7 +292,7 @@ export default function SharedList() {
             if (user) await linkPhotoToPlace({ userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl: url });
             // Wiersz z autorem odtwarzamy na nowo (stary `id` juz nie istnieje).
             if (user) await addCollectionPhoto(id!, item.place_name, user.id, url);
-            queryClient.invalidateQueries({ queryKey: collectionPhotosKey(id) });
+            queryClient.invalidateQueries({ queryKey: ["collection-photos"] });
             queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
             queryClient.invalidateQueries({ queryKey: ["place-photos"] });
           })();
@@ -1016,7 +1027,20 @@ export default function SharedList() {
                 className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight bg-transparent border-b-2 border-primary outline-none"
               />
             ) : (
-              <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+              /* Tapniecie w nazwe otwiera jej zmiane - ten sam skrot, co w wyjezdzie
+                 (zgloszenie testerki 2026-09-16). Nazwe kolekcji zmienia WLASCICIEL, wiec
+                 wspoltworca i gosc widza zwykly naglowek. */
+              isOwner ? (
+                <button
+                  onClick={() => { haptics.light(); setNameVal(col.title || ""); setEditingName(true); }}
+                  className="flex-1 min-w-0 text-left active:opacity-60 transition-opacity"
+                  aria-label={t("aria.rename_list")}
+                >
+                  <span className="block text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</span>
+                </button>
+              ) : (
+                <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+              )
             )}
             {/* a) Ikony jak na wyjazdach: udostepnij / usun. Olowek usuniety (prosba Nat 2026-09-01,
                 tak samo jak wczesniej na wyjezdzie) - ten widok JEST edycja: miejsca, notki i

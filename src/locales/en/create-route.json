@@ -107,5 +107,9 @@
   "name": {
     "title_list": "Collection name",
     "hint_list": "We suggest a name from the place you picked. You can change it."
-  }
+  },
+  "days_row_title": "How many days?",
+  "days_row_desc": "Split the trip into days, even without dates.",
+  "days_row_less": "Fewer days",
+  "days_row_more": "More days"
 }
