@@ -200,7 +200,7 @@ const TravelerProfile = () => {
   const [tab, setTab] = useState<"listy" | "wyjazdy">(initialTab);
   // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
-  const [listyTab, setListyTab] = useState<"moje" | "ogolne" | "zapisane">("moje");
+  const [listyTab, setListyTab] = useState<"moje" | "wspolne" | "ogolne" | "zapisane">("moje");
   // "Opublikowane" jako pierwsze i domyslne (prosba Nat 2026-09-10) - to gotowa tresc,
   // po ktora user tu wraca; robocze to praca w toku.
   const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("wspomnienia");
@@ -221,7 +221,7 @@ const TravelerProfile = () => {
     const sub = searchParams.get("sub");
     if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") { subChosen.current = true; setWyjazdyTab(sub as any); }
     else if (!sub) { subChosen.current = false; setWyjazdyTab("wspomnienia"); }
-    if (sub === "moje" || sub === "ogolne" || sub === "zapisane") setListyTab(sub as any);
+    if (sub === "moje" || sub === "wspolne" || sub === "ogolne" || sub === "zapisane") setListyTab(sub as any);
     else if (!sub) setListyTab("moje");
   }, [searchParams]);
 
@@ -757,7 +757,54 @@ const TravelerProfile = () => {
   };
 
   // Snap wlaczamy tylko tam, gdzie scrolluje sie KOLEKCJE (kafelki jednakowej budowy).
-  const listSnap = tab === "listy" && (listyTab === "moje" ? listCards.length > 0 : listyTab === "zapisane" && (savedListCards as any[]).length > 0);
+  // Kolekcje wygladaja TAK SAMO jak w eksploracji (prosba Nat 2026-09-14): ten sam
+  // GridTile - kolorowe tlo z palety, mini-siatka miejsc, pigulka autora, chipy.
+  // ⛔ JEDNA funkcja dla "Moje kolekcje" i "Wspolne" - te same kafelki, tylko inny
+  //    zestaw danych. Skopiowany blok rozjechalby sie przy pierwszej zmianie kafelka.
+  const renderCollectionCards = (cards: any[]) => (
+    <div className="space-y-4">
+              {cards.map((l: any) => {
+                const places = (l.tiles ?? []).map((it: any) => ({
+                  name: it.place_name as string,
+                  category: (it.category ?? null) as string | null,
+                  photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+                }));
+                const item: GridItem = {
+                  kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
+                  cover: places.find((x: any) => x.photo)?.photo ?? null,
+                  where: l.city || scopeLabel(l),
+                  // Kolekcja WSPOLTWORZONA pokazuje swojego wlasciciela, nie mnie - inaczej
+                  // w "Moje kolekcje" cudza kolekcja wygladalaby na moja.
+                  authorName: (l._owner ?? profile)?.first_name || "",
+                  authorHandle: (l._owner ?? profile)?.username ? `@${(l._owner ?? profile).username}` : null,
+                  authorAvatar: (l._owner ?? profile)?.avatar_url ?? null,
+                  authorId: l.user_id ?? user.id,
+                  authorFrame: (l._owner ?? profile)?.avatar_frame ?? null,
+                  authorFrameColor: (l._owner ?? profile)?.avatar_frame_color ?? null,
+                  showAuthor: true,
+                  coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
+                  at: new Date(l.updated_at ?? 0).getTime(),
+                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  theme: listTheme(l.theme, l.id), places,
+                  visitedCount: l.visited_count ?? 0,
+                  // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla
+                  // autora ("ile osob to zapisalo"), nie element kafelka w eksploracji.
+                  // Licznik zapisow tylko na WLASNYCH - to informacja zwrotna dla autora.
+                  savesCount: l._shared ? undefined : Number(l.saves_count ?? 0),
+                };
+                return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
+              })}
+    </div>
+  );
+
+  // Kolekcje wlasne vs WSPOLTWORZONE. `_shared` ustawia zapytanie `profile-list-feed`
+  // (drugie zapytanie po `discovery_collection_members`).
+  const ownListCards = (listCards as any[]).filter((l) => !l._shared);
+  const sharedListCards = (listCards as any[]).filter((l) => l._shared);
+  const listSnap = tab === "listy" && (
+    listyTab === "moje" ? ownListCards.length > 0
+    : listyTab === "wspolne" ? sharedListCards.length > 0
+    : listyTab === "zapisane" && (savedListCards as any[]).length > 0);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
@@ -935,9 +982,14 @@ const TravelerProfile = () => {
             <TabSelect
               dotLabel={t("profile.new_content_aria")}
               value={listyTab}
-              onChange={(v) => { setListyTab(v as "moje" | "ogolne" | "zapisane"); goSub(v); }}
+              onChange={(v) => { setListyTab(v as "moje" | "wspolne" | "ogolne" | "zapisane"); goSub(v); }}
               options={[
                 { id: "moje", label: t("tabs.my_lists") },
+                // WSPOLNE = kolekcje, w ktorych wspoltworze, ale NIE jestem autorka (prosba Nat
+                // 2026-09-16: "kolekcja moze byc przypadkowo nie zapisana, ALE wspolna").
+                // Do 16.09 lezaly wymieszane w "Moje kolekcje" - byly tam, bo nie mialy wlasnego
+                // miejsca, nie dlatego, ze tam pasowaly.
+                { id: "wspolne", label: t("tabs.shared_lists") },
                 { id: "ogolne", label: t("tabs.general") },
                 // Kropka = w ktorejs zapisanej liscie autor dodal miejsce, ktorego jeszcze nie
                 // widzialem. Na profilu to jedyny sygnal dla kogos, kto nie scrolluje zapisanych.
@@ -970,7 +1022,7 @@ const TravelerProfile = () => {
             <div className="space-y-4">
               <TabHint text={t(`tab_hints.lists_${listyTab}`)} />
               {listyTab === "moje" ? (
-                listCards.length === 0 ? (
+                ownListCards.length === 0 ? (
               // Pusty stan LIST (Figma "Mój profil - Listy - pusty stan"): peachy znak trasy (S)
               // + instrukcja uzycia "+", bez guzika CTA (tworzenie idzie przez BottomNav "+").
               <div className="pt-16 pb-12 text-center px-8">
@@ -980,45 +1032,19 @@ const TravelerProfile = () => {
                   {t("empty.first_list_desc")}
                 </p>
               </div>
-            ) : (
-              // Kolekcje wygladaja TAK SAMO jak w eksploracji (prosba Nat 2026-09-14): ten sam
-              // GridTile - kolorowe tlo z palety, mini-siatka miejsc, pigulka autora, chipy.
-              // Wczesniej byl tu ProfileFeedCard (rzad miniatur), wiec ta sama kolekcja
-              // wygladala inaczej na profilu i w siatce.
-              <div className="space-y-4">
-              {listCards.map((l: any) => {
-                const places = (l.tiles ?? []).map((it: any) => ({
-                  name: it.place_name as string,
-                  category: (it.category ?? null) as string | null,
-                  photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
-                }));
-                const item: GridItem = {
-                  kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
-                  cover: places.find((x: any) => x.photo)?.photo ?? null,
-                  where: l.city || scopeLabel(l),
-                  // Kolekcja WSPOLTWORZONA pokazuje swojego wlasciciela, nie mnie - inaczej
-                  // w "Moje kolekcje" cudza kolekcja wygladalaby na moja.
-                  authorName: (l._owner ?? profile)?.first_name || "",
-                  authorHandle: (l._owner ?? profile)?.username ? `@${(l._owner ?? profile).username}` : null,
-                  authorAvatar: (l._owner ?? profile)?.avatar_url ?? null,
-                  authorId: l.user_id ?? user.id,
-                  authorFrame: (l._owner ?? profile)?.avatar_frame ?? null,
-                  authorFrameColor: (l._owner ?? profile)?.avatar_frame_color ?? null,
-                  showAuthor: true,
-                  coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
-                  at: new Date(l.updated_at ?? 0).getTime(),
-                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
-                  theme: listTheme(l.theme, l.id), places,
-                  visitedCount: l.visited_count ?? 0,
-                  // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla
-                  // autora ("ile osob to zapisalo"), nie element kafelka w eksploracji.
-                  // Licznik zapisow tylko na WLASNYCH - to informacja zwrotna dla autora.
-                  savesCount: l._shared ? undefined : Number(l.saves_count ?? 0),
-                };
-                return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
-              })}
-              </div>
-                )
+                ) : renderCollectionCards(ownListCards)
+              ) : listyTab === "wspolne" ? (
+                // WSPOLNE: kolekcje, do ktorych ktos mnie zaprosil. Ten sam kafelek, z pigulka
+                // WLASCICIELA - inaczej cudza kolekcja wygladalaby na moja.
+                sharedListCards.length === 0 ? (
+                  <div className="pt-16 pb-12 text-center px-8">
+                    <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+                    <p className="text-lg font-bold text-foreground">{t("empty.no_shared_lists")}</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
+                      {t("empty.no_shared_lists_desc")}
+                    </p>
+                  </div>
+                ) : renderCollectionCards(sharedListCards)
               ) : listyTab === "ogolne" ? (
                 // t("tabs.general") - lista OGÓLNA usera (wszystkie zapisane miejsca), dostępna z dropdownu list.
                 <div className="pt-1"><SavedPlacesGrid /></div>

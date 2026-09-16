@@ -16,7 +16,8 @@ export type AvatarFrameId = "stars" | "hearts" | "clouds" | "moon" | "moonstars"
 // dopisania trigger `guard_avatar_frame` odrzuci zapis bledem `frame_locked`), (3) etykiety
 // `frames.<id>` w settings.json PL i EN. Do tego glif w AvatarFrame.tsx. Migracja 20260916d.
 // `gift`: nakladka, ktorej NIE DA SIE zdobyc - odblokowuje wylacznie wpis w `frame_grants`
-// (migracja 20260916e). Arkusz CHOWA ja przed wszystkimi, ktorzy jej nie dostali: klodka bez
+// (migracje 20260916e i 20260916g). ⛔ Lista prezentow zyje w DWOCH miejscach i musza sie
+// zgadzac: tutaj (`gift: true`) oraz w SQL - `frame_unlocked` i `my_frame_gift`. Arkusz CHOWA ja przed wszystkimi, ktorzy jej nie dostali: klodka bez
 // zadnej drogi do odblokowania to sama frustracja. Tym rozni sie od `reward` (tecza), ktora
 // stoi na liscie od poczatku z postepem "0 z 3", bo jest do zdobycia.
 export const AVATAR_FRAMES: { id: AvatarFrameId; labelKey: string; reward?: boolean; gift?: boolean; fixedColor?: boolean }[] = [
@@ -25,7 +26,7 @@ export const AVATAR_FRAMES: { id: AvatarFrameId; labelKey: string; reward?: bool
   { id: "clouds",    labelKey: "frames.clouds" },
   { id: "moon",      labelKey: "frames.moon" },
   { id: "moonstars", labelKey: "frames.moonstars", gift: true },
-  { id: "banana",    labelKey: "frames.banana", fixedColor: true },
+  { id: "banana",    labelKey: "frames.banana", gift: true, fixedColor: true },
   { id: "rainbow",   labelKey: "frames.rainbow", reward: true, fixedColor: true },
 ];
 

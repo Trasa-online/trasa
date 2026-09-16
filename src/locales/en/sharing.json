@@ -300,5 +300,6 @@
   "people": {
     "trip_title": "Trip participants"
   },
-  "gallery_empty_day": "No photos for this day yet. Add them to a place from this day and they'll show up here."
+  "gallery_empty_day": "No photos for this day yet. Add them to a place from this day and they'll show up here.",
+  "share_trip_cta": "Share this trip"
 }

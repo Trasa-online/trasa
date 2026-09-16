@@ -151,11 +151,14 @@
     "no_own_lists": "Brak własnych kolekcji",
     "no_memories": "Brak wspomnień",
     "saved_lists_desc": "Zapisz cudzą kolekcję <b>bookmarkiem</b>, żeby zobaczyć ją tutaj",
-    "saved_trips_desc": "Zapisz cudzy wyjazd <b>bookmarkiem</b>, żeby zobaczyć go tutaj"
+    "saved_trips_desc": "Zapisz cudzy wyjazd <b>bookmarkiem</b>, żeby zobaczyć go tutaj",
+    "no_shared_lists": "Nie współtworzysz jeszcze żadnej kolekcji",
+    "no_shared_lists_desc": "Kolekcje, do których ktoś Cię zaprosi, pojawią się tutaj - nawet jeśli nie masz ich zapisanych."
   },
   "tabs": {
     "my_lists": "Moje kolekcje",
-    "general": "Ogólne"
+    "general": "Ogólne",
+    "shared_lists": "Wspólne"
   },
   "trip_tabs": {
     "drafts": "Robocze",
@@ -193,7 +196,8 @@
     "trips_wspomnienia": "Opublikowane wyjazdy. Widać je w eksploracji i na Twoim profilu.",
     "trips_wspomnienia_reorder": "Opublikowane wyjazdy. Przytrzymaj okładkę i przeciągnij, żeby ułożyć je po swojemu.",
     "trips_robocze": "Wyjazdy w przygotowaniu. Widzisz je tylko Ty, dopóki ich nie opublikujesz.",
-    "trips_zapisane": "Wyjazdy innych podróżnych, które masz u siebie zapisane."
+    "trips_zapisane": "Wyjazdy innych podróżnych, które masz u siebie zapisane.",
+    "lists_wspolne": "Kolekcje innych osób, w których możesz dodawać miejsca."
   },
   "starred": {
     "title": "Wyróżnione miejsca",

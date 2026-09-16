@@ -2300,6 +2300,26 @@ export default function SharedRoute() {
             {!isOwner && (
               <TripLikeButton liked={routeLike.liked} count={routeLike.count} onToggle={() => void toggleLike()} label={t("aria.like_trip")} />
             )}
+            {/* ZAPIS obok serca (prosba Nat 2026-09-16). Zszedl z dolnego paska, bo zapis
+                i polubienie to ta sama klasa gestu - "zostawiam slad na cudzym wyjezdzie" -
+                i powinny stac razem, a nie jedno przy tytule, drugie na dole ekranu.
+                Dolny pasek zwolnil sie przez to na udostepnianie pelnej szerokosci.
+                Pusta zakladka = jeszcze nie zapisane, pelna = zapisane. */}
+            {!isOwner && (
+              <button
+                onClick={() => {
+                  if (!user) { navigate("/auth"); return; }
+                  if (isRouteSaved) { void unsaveFromMine(); return; }
+                  setShowDateSheet(true);
+                }}
+                disabled={saving}
+                aria-label={isRouteSaved ? t("saved_trip") : t("save_trip")}
+                aria-pressed={isRouteSaved}
+                className="shrink-0 h-9 w-9 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
+              >
+                <BrandBookmark filled={isRouteSaved} className="h-[26px] w-[26px] text-foreground" />
+              </button>
+            )}
           </div>
           {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
               TripHeaderChips) - wczesniej szara linia z ikonami. */}
@@ -2937,31 +2957,17 @@ export default function SharedRoute() {
                Zapis calosci byl zdjety 2026-09-10 i wrocil 2026-09-11 na prosbe Nat. */
             !pickMode ? (
               <>
-                {/* CTA pokazuje STAN zakladki, nie tylko akcje: zapisane = szary guzik
-                    z wypelnionym bookmarkiem, a ponowne tapniecie zdejmuje zapis. */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (!user) { navigate("/auth"); return; }
-                      if (isRouteSaved) { void unsaveFromMine(); return; }
-                      setShowDateSheet(true);
-                    }}
-                    disabled={saving}
-                    className={`flex-1 min-w-0 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 ${
-                      isRouteSaved ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"
-                    }`}
-                  >
-                    {/* Pusta zakladka = jeszcze nie zapisane, pelna = zapisane (2026-09-15). */}
-                    <BrandBookmark filled={isRouteSaved} className="h-4 w-4" />
-                    {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
-                  </button>
-                  {/* Udostepnianie = zolte kolko z brazowa ikona bezposrednio na prawo od zapisu
-                      (prosba Nat 2026-09-13). */}
-                  <button onClick={() => handleShare()} aria-label={t("aria.share")}
-                    className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
-                    <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
-                  </button>
-                </div>
+                {/* UDOSTEPNIANIE na CALA SZEROKOSC (prosba Nat 2026-09-16). Zapis przeniosl sie
+                    do zakladki obok serca przy tytule, wiec dolny pasek nalezy teraz do jednej
+                    akcji - tej, ktora rozsiewa tresc dalej.
+                    ⚠️ Zolte tlo z brazowym napisem, nie pomaranczowe: udostepnianie w calej apce
+                    ma kolor zolty (kolko przy CTA kolekcji, arkusz udostepniania), a pomarancz
+                    zostaje dla akcji, ktora cos tworzy albo zapisuje. Na zoltym piszemy WYLACZNIE
+                    brazem - pomarancz ma na nim 3,08:1. */}
+                <button onClick={() => handleShare()}
+                  className="w-full py-3 rounded-full bg-[#FDF184] text-[#5B2C06] font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                  <Share2 className="h-4 w-4" strokeWidth={2.4} />{t("share_trip_cta")}
+                </button>
               </>
             ) : (
             <>

@@ -149,11 +149,14 @@
     "no_own_lists": "No collections of your own",
     "no_memories": "No memories yet",
     "saved_lists_desc": "Bookmark someone else's collection <b>to see it here</b>",
-    "saved_trips_desc": "Bookmark someone else's trip <b>to see it here</b>"
+    "saved_trips_desc": "Bookmark someone else's trip <b>to see it here</b>",
+    "no_shared_lists": "You're not co-creating any collection yet",
+    "no_shared_lists_desc": "Collections you're invited to show up here, even if you haven't saved them."
   },
   "tabs": {
     "my_lists": "My collections",
-    "general": "General"
+    "general": "General",
+    "shared_lists": "Shared"
   },
   "trip_tabs": {
     "drafts": "Drafts",
@@ -191,7 +194,8 @@
     "trips_wspomnienia": "Published trips. They show up in Explore and on your profile.",
     "trips_wspomnienia_reorder": "Published trips. Press and hold a cover, then drag to arrange them your way.",
     "trips_robocze": "Trips in progress. Only you can see them until you publish.",
-    "trips_zapisane": "Trips from other travellers that you saved."
+    "trips_zapisane": "Trips from other travellers that you saved.",
+    "lists_wspolne": "Other people's collections you can add places to."
   },
   "starred": {
     "title": "Starred places",
