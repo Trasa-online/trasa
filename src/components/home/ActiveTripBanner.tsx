@@ -31,24 +31,21 @@ import { tripName, type NamingStrings } from "@/lib/placeNaming";
 //     w dol. Krzyzyk zniknal - przy tej szerokosci zjadal tytul, a jego target mial 24 px
 //     zamiast wymaganych 44 (cala pigulka ma 56 px wysokosci, wiec target jest z zapasem).
 //
-// Schowanie pamietamy per wyjazd ORAZ per etap: nowy wyjazd albo przejscie roboczy -> w trakcie
-// przywraca skrot, bo to juz inna sytuacja.
-const HIDDEN_KEY = "trasa_trip_shortcut_hidden";
-const HIDDEN_MAX = 20;
+// SCHOWANIE ZYJE TYLKO DO ZAMKNIECIA APLIKACJI (prosba Nat 2026-09-16: "pojedyncze zamkniecie
+// nie powinno wywolywac calkowitego zamkniecia na zawsze"). Do tego dnia klucz szedl do
+// `localStorage`, wiec jedno machniecie palcem kasowalo skrot do tego wyjazdu NA STALE - a to
+// jest skrot do rzeczy NIEDOKONCZONEJ: przy kazdym nowym otwarciu apki ma dostac druga szanse.
+//
+// Dlatego trzymamy to w PAMIECI MODULU, bez zadnego magazynu: stan przezywa wyjscie z Eksploracji
+// i powroty miedzy zakladkami (komponent sie odmontowuje, modul nie), a ginie razem z procesem
+// aplikacji - czyli dokladnie przy "nowym otwarciu". Klucz jest per wyjazd ORAZ per etap, wiec
+// przejscie roboczy -> w trakcie i tak przywraca skrot wczesniej.
+const dismissedThisRun = new Set<string>();
 
-function readHidden(): string[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]");
-    return Array.isArray(raw) ? raw.filter((x) => typeof x === "string") : [];
-  } catch { return []; }
-}
-
-function rememberHidden(key: string) {
-  try {
-    const next = [key, ...readHidden().filter((k) => k !== key)].slice(0, HIDDEN_MAX);
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify(next));
-  } catch { /* localStorage niedostepny */ }
-}
+// Sprzatanie po poprzedniej wersji: klucz z `localStorage` nie jest juz czytany, ale bez tego
+// wisialby w przegladarce w nieskonczonosc.
+const LEGACY_HIDDEN_KEY = "trasa_trip_shortcut_hidden";
+try { localStorage.removeItem(LEGACY_HIDDEN_KEY); } catch { /* localStorage niedostepny */ }
 
 // Dystans w px, po ktorym puszczenie palca chowa skrot. Niski prog: to malutki element,
 // nie ma tu miejsca na dlugie pociagniecie.
@@ -79,14 +76,14 @@ export default function ActiveTripBanner() {
   const moved = useRef(false);
 
   const hideKey = trip ? `${trip.id}:${trip.stage}` : "";
-  // Czy ten skrot byl juz schowany - czytane RAZ na klucz. Celowo nie przy kazdym renderze:
-  // `dismiss` zapisuje do localStorage od razu, wiec odczyt w renderze ubilby komponent
-  // w trakcie animacji chowania (skrot znikalby skokiem zamiast zjechac w dol).
-  const wasHidden = useMemo(() => (hideKey ? readHidden().includes(hideKey) : false), [hideKey]);
+  // Czy ten skrot byl juz schowany W TYM URUCHOMIENIU - czytane RAZ na klucz. Celowo nie przy
+  // kazdym renderze: `dismiss` dopisuje do zbioru od razu, wiec odczyt w renderze ubilby
+  // komponent w trakcie animacji chowania (skrot znikalby skokiem zamiast zjechac w dol).
+  const wasHidden = useMemo(() => (hideKey ? dismissedThisRun.has(hideKey) : false), [hideKey]);
   const dismiss = useCallback(() => {
     if (!hideKey) return;
     haptics.light();
-    rememberHidden(hideKey);
+    dismissedThisRun.add(hideKey);
     setClosing(true);
     window.setTimeout(() => setHidden(true), 200);
   }, [hideKey]);
