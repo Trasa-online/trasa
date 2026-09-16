@@ -1,4 +1,4 @@
-import { Cloud, Heart } from "lucide-react";
+import { Cloud, Heart, Moon } from "lucide-react";
 import { DEFAULT_FRAME_COLOR, isFrameColor, type AvatarFrameId } from "@/lib/avatarFrames";
 import { STAR_PATH, STAR_VIEWBOX } from "@/components/BrandStar";
 
@@ -32,8 +32,42 @@ function StarGlyph({ px }: { px: number }) {
 // dowolny). Chmurka dostaje cienki bialy obrys, zeby ksztalt czytal sie takze na zdjeciu.
 const SPIN_S = 14;
 
-function Glyph({ kind, px }: { kind: Exclude<AvatarFrameId, "rainbow">; px: number }) {
+// BANAN (prosba Nat 2026-09-16) - jedyny glif z WLASNYMI kolorami zamiast `currentColor`:
+// banan musi byc zolty, wiec pipeta go nie dotyczy (`fixedColor` w AVATAR_FRAMES, arkusz
+// chowa wtedy wybor koloru). Ksztalt to sylwetka banana z zestawu lucide, ale rysowana
+// WYPELNIENIEM - oryginalna ikona ma jeszcze druga, otwarta sciezke "skorki", ktora po
+// wypelnieniu robi sie klaksa, wiec biore samo cialo.
+// ⚠️ Brazowy obrys nie jest ozdoba: przy 9 px w naglowkach plaska zolta plama na jasnym
+// tle nie ma zadnej krawedzi. Ta sama sztuczka, co bialy obrys chmurki nizej.
+const BANANA_BODY = "M5.15 17.89c5.52-1.52 8.65-6.89 7-12C11.55 4 11.5 2 13 2c3.22 0 5 5.5 5 8 0 6.5-4.2 12-10.49 12C5.11 22 2 22 2 20c0-1.5 1.14-1.55 3.15-2.11Z";
+// ⚠️ Obrot i powiekszenie nie sa kosmetyka. Banan to z natury polksiezyc, wiec w pionie ma
+// DOKLADNIE ten sam zarys, co nakladka "ksiezyc" - a obie stoja obok siebie na liscie i
+// rozniłby je wtedy sam kolor. Polozenie go poziomo (jak lezacy owoc) daje inna os i inna
+// sylwetke na pierwszy rzut oka; `1.12` wyrownuje mase optyczna, bo sciezka banana wypelnia
+// swoje pole slabiej niz ksiezyc.
+function BananaGlyph({ px }: { px: number }) {
+  const s = Math.round(px * 1.12);
+  return (
+    <svg viewBox="0 0 24 24" width={s} height={s} className="block drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
+      style={{ transform: "rotate(-115deg)" }} aria-hidden>
+      <path d={BANANA_BODY} fill="#FDF184" stroke="#5B2C06" strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MoonGlyph({ px }: { px: number }) {
+  return <Moon className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)]" fill="currentColor" strokeWidth={1.5} style={{ width: px, height: px }} />;
+}
+
+// `i` = ktory z czterech znaczkow na orbicie. Potrzebuje go tylko "moonstars", gdzie ksiezyc
+// i gwiazdka stoja NAPRZEMIAN (0 i 180 stopni ksiezyc, 90 i 270 gwiazdka) - cztery ksiezyce
+// plus cztery gwiazdki nie zmieszczilyby sie na orbicie, a para "ksiezyc, gwiazdka" czyta sie
+// jak nocne niebo dopiero wtedy, gdy elementy sie przeplataja.
+function Glyph({ kind, px, i }: { kind: Exclude<AvatarFrameId, "rainbow">; px: number; i: number }) {
   if (kind === "stars") return <StarGlyph px={px} />;
+  if (kind === "moon") return <MoonGlyph px={px} />;
+  if (kind === "moonstars") return i % 2 === 0 ? <MoonGlyph px={px} /> : <StarGlyph px={Math.round(px * 0.82)} />;
+  if (kind === "banana") return <BananaGlyph px={px} />;
   if (kind === "hearts") return <Heart className="h-full w-full drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)]" fill="currentColor" strokeWidth={1.5} style={{ width: px, height: px }} />;
   return <Cloud className="h-full w-full drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)]" fill="currentColor" stroke="rgba(255,255,255,0.85)" strokeWidth={1.5} style={{ width: px, height: px }} />;
 }
@@ -72,7 +106,7 @@ export default function AvatarFrame({ kind, color, size, className = "" }: { kin
       style={{ width: ring, height: ring, color: tint }}
     >
       <span className="absolute inset-0 motion-reduce:[animation:none]" style={{ animation: `spontaway-orbit ${SPIN_S}s linear infinite` }}>
-        {[0, 90, 180, 270].map((deg) => (
+        {[0, 90, 180, 270].map((deg, i) => (
           <span
             key={deg}
             className="absolute left-1/2 top-1/2"
@@ -82,7 +116,7 @@ export default function AvatarFrame({ kind, color, size, className = "" }: { kin
                 siedzi o poziom nizej - inaczej kazdy znaczek stalby przekrecony o swoj kat. */}
             <span className="block h-full w-full motion-reduce:[animation:none]" style={{ animation: `spontaway-orbit-counter ${SPIN_S}s linear infinite` }}>
               <span className="flex h-full w-full items-center justify-center" style={{ transform: `rotate(${-deg}deg)` }}>
-                <Glyph kind={kind as Exclude<AvatarFrameId, "rainbow">} px={glyph} />
+                <Glyph kind={kind as Exclude<AvatarFrameId, "rainbow">} px={glyph} i={i} />
               </span>
             </span>
           </span>
