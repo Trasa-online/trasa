@@ -55,12 +55,16 @@ export function photosByPlace(photos: CollectionPhoto[]): Map<string, Collection
   return m;
 }
 
-export async function addCollectionPhoto(collectionId: string, placeName: string, userId: string, url: string): Promise<boolean> {
+/** Oddaje POWOD niepowodzenia, nie samo `false`: to jedyny zapis zdjecia wspoltworcy, wiec
+ *  gdy RLS go odrzuci, wolajacy musi miec co pokazac userowi i co wpisac do logu.
+ *  ⛔ Nie wracaj do cichego `console.warn` - wlasnie przez to "nie moge dodac zdjecia"
+ *  wygladalo jak brak reakcji apki (zgloszenie Nat 2026-09-16). */
+export async function addCollectionPhoto(collectionId: string, placeName: string, userId: string, url: string): Promise<{ ok: boolean; error?: string }> {
   const { error } = await (supabase as any)
     .from("discovery_item_photos")
     .insert({ collection_id: collectionId, place_name: placeName, user_id: userId, url });
-  if (error) { console.warn("[collectionPhotos] add:", error.message); return false; }
-  return true;
+  if (error) { console.error("[collectionPhotos] add:", error.code, error.message); return { ok: false, error: error.message }; }
+  return { ok: true };
 }
 
 /** Kasuje autor zdjecia albo wlasciciel kolekcji - rozstrzyga RLS, nie klient. */

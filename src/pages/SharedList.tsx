@@ -232,11 +232,25 @@ export default function SharedList() {
         userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl,
       })));
       // Z AUTOREM - to z tego bierze sie awatar przy miniaturze i prawo do skasowania.
-      await Promise.all(fresh.map((photoUrl) => addCollectionPhoto(id!, item.place_name, user.id, photoUrl)));
+      // ⚠️ To JEDYNY zapis, ktory widzi wspoltworca: `images[]` wyzej jest dla niego zamkniete
+      // przez RLS (moze edytowac tylko WLASNE pozycje). Jesli ten zapis padnie, zdjecie znika
+      // bez sladu - i tak wygladal blad "jako uczestnik nie moge dodawac zdjec" (Nat 2026-09-16):
+      // upload sie udawal, oba zapisy po cichu odpadaly, a UI nie mial czego pokazac.
+      const saved = await Promise.all(fresh.map((photoUrl) => addCollectionPhoto(id!, item.place_name, user.id, photoUrl)));
+      const failed = saved.filter((r) => !r.ok);
+      if (failed.length) {
+        console.error("[SharedList] zdjecie nie zapisane:", failed[0]?.error);
+        toast.error(t("toast.photo_failed"));
+      }
       queryClient.invalidateQueries({ queryKey: collectionPhotosKey(id) });
       queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
       // Zdjecie z miejsca = bylem tam - odhaczamy automatycznie (patrz markVisitedAuto).
       if (fresh.length) void markVisitedAuto(item);
+    } catch (e: any) {
+      // Bez tego `catch` kazdy wyjatek w tym ciagu (upload, moderacja, zapis) konczyl sie
+      // niezlapana obietnica: spinner gasl i nie dzialo sie NIC - ani zdjecia, ani komunikatu.
+      console.error("[SharedList] addItemPhotos:", e?.message ?? e);
+      toast.error(t("toast.photo_failed"));
     } finally { setUploadingItem(null); }
   };
 
@@ -619,7 +633,10 @@ export default function SharedList() {
   const authorName = author?.first_name || author?.username || col.author_name || t("someone");
   const isOwner = !!user && col.user_id === user.id;
   const isMember = !!user && (memberIds as string[]).includes(user.id);
-  const canAddPlaces = isOwner || isMember;
+  // Wlasciciel i wspoltworca. Ten sam warunek rzadzi TRZEMA rzeczami naraz: dodawaniem miejsc,
+  // notek i zdjec. Nazywal sie `canAddPlaces` i przez to brzmial wezej, niz dzialal - a arkusze
+  // obslugujace te akcje wisialy pod `isOwner` (patrz komentarz przy ukrytym inpucie nizej).
+  const canContribute = isOwner || isMember;
   const canEditItem = (it: any) => isOwner || (isMember && it?.added_by === user?.id);
   const placesCountLabel = t("places_count", { count: items.length });
 
@@ -727,7 +744,7 @@ export default function SharedList() {
         const othersCount = placeNotes.filter((n: any) => n.user_id !== user?.id).length;
         // Wspoltworca moze pisac WLASNA notke przy KAZDYM miejscu - takze przy cudzym.
         // `mine` rzadzi usuwaniem pozycji i zdjec, notka ma szerszy krag autorow.
-        const canWriteNote = isOwner || isMember;
+        const canWriteNote = canContribute;
         const hasContent = !!myNote || othersCount > 0 || photos.length > 0 || canWriteNote;
         const note = hasContent ? (
           <div className="space-y-2.5 mt-0.5">
@@ -988,15 +1005,17 @@ export default function SharedList() {
             <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
             <ListScopeSheet open={scopeOpen} onOpenChange={setScopeOpen} listId={col.id} current={col} />
             {user && <CollectionPeopleSheet open={peopleOpen} onOpenChange={setPeopleOpen} collectionId={col.id} ownerId={col.user_id} currentUserId={user.id} />}
-            {/* "+N" w belce - pelna lista do odczytu, dostepna dla kazdego (zarzadzanie skladem
-                zostaje w menu "..." u wlasciciela). */}
-            <PeopleSheet
-              open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.title")}
-              author={author?.username ? { id: col.user_id, username: author.username, avatar_url: author.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color } : null}
-              others={coAuthors as any}
-            />
           </>
         )}
+        {/* "+N" w belce - pelna lista uczestnikow do ODCZYTU, dostepna dla kazdego, kto widzi
+            kolekcje (zarzadzanie skladem zostaje w menu "..." u wlasciciela). Do 2026-09-16
+            arkusz siedzial w bloku `isOwner` powyzej mimo tego komentarza, wiec "+N" w belce
+            bylo martwe dla wspoltworcow i gosci - czyli dla wszystkich, ktorym mialo sluzyc. */}
+        <PeopleSheet
+          open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.title")}
+          author={author?.username ? { id: col.user_id, username: author.username, avatar_url: author.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color } : null}
+          others={coAuthors as any}
+        />
         {shareCardOpen && (
         <ShareCardList
           title={col.title || t("fallback_title")}
@@ -1038,7 +1057,7 @@ export default function SharedList() {
         {/* Udostepnianie = zolte kolko z brazowa ikona, bezposrednio na prawo od glownego guzika
             (prosba Nat 2026-09-13) - u wlasciciela obok "Dodaj nowe miejsce", u goscia obok zapisu. */}
         <div className="flex items-center gap-2">
-          {canAddPlaces ? (
+          {canContribute ? (
             <button onClick={() => setAddPlaceOpen(true)} className="flex-1 min-w-0 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
               <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
           ) : (
@@ -1066,8 +1085,17 @@ export default function SharedList() {
       />
 
       {/* Wybor zdjecia dla KONKRETNEJ pozycji listy (akcja z menu przy wierszu). Cel w refie,
-          zeby nie mnozyc ukrytych inputow przy kazdym wierszu. */}
-      {isOwner && (
+          zeby nie mnozyc ukrytych inputow przy kazdym wierszu.
+          ⛔ `canContribute`, NIE `isOwner`. Do 2026-09-16 stalo tu `isOwner` - i wspoltworca
+          widzial pomaranczowe kolko aparatu (to chodzi po `canWriteNote`), ale `itemPhotoInputRef`
+          nie wskazywal NICZEGO, wiec `?.click()` byl cichym no-opem. Zadnego arkusza, zadnego
+          bledu, zero reakcji apki: dokladnie tak wygladalo "jako uczestnik nie moge dodawac
+          zdjec do miejsc" (zgloszenie Nat). Baza byla caly czas w porzadku - RLS wpuszcza
+          czlonka i do storage, i do `discovery_item_photos` (sprawdzone na prodzie).
+          ⚠️ REGULA: warunek renderowania ukrytego inputu / arkusza MUSI byc ten sam, co warunek
+          pokazania guzika, ktory go otwiera. Rozjazd tych dwoch nie wywala sie ani w tsc, ani
+          w buildzie - objawia sie martwym guzikiem u czesci userow. */}
+      {canContribute && (
         <input ref={itemPhotoInputRef} type="file" accept="image/*" multiple className="hidden"
           onChange={(e) => {
             const files = e.target.files;
@@ -1078,7 +1106,11 @@ export default function SharedList() {
           }} />
       )}
 
-      {isOwner && (
+      {/* Ten sam rozjazd, co przy zdjeciach: dolne CTA "Dodaj nowe miejsce" pokazuje sie pod
+          `canContribute`, wiec arkusz musi istniec pod tym samym warunkiem. Pod `isOwner`
+          wspoltworca tapal guzik i nic sie nie otwieralo. RLS pozwala mu dodac pozycje
+          (`discovery_items_member_insert`, sprawdzone na prodzie). */}
+      {canContribute && (
         <AddPlaceSheet
           open={addPlaceOpen}
           onClose={() => setAddPlaceOpen(false)}
