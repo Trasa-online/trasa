@@ -86,6 +86,9 @@ export function PullToRefresh({
       ref={ref}
       // min-h-0: scroller jest flex-childem (flex-1) - bez tego rosnie do wysokosci
       // contentu i overflow-y:auto sie NIE wlacza (na native iOS = brak scrolla).
+      // Glowny scroller ekranu - tapniecie w gorna belke przewija wlasnie ten element
+      // (patrz src/lib/scrollTop.ts).
+      data-scroll-main
       className={`min-h-0 ${className ?? ""}`}
       style={{ overflowY: "auto" }}
       onTouchStart={onTouchStart}

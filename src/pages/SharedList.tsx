@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal, Palette, ChevronLeft, Flag, Users } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import { scrollTopTapProps } from "@/lib/scrollTop";
 import { scopeCountries, scopeLabel } from "@/lib/tripScope";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
 import { useShare } from "@/hooks/useShare";
@@ -929,7 +930,9 @@ export default function SharedList() {
           kolekcja ma na kafelku w eksploracji, wiec wejscie z siatki nie zmienia tozsamosci.
           Guziki zostaja biale (czytelne na kazdym z 9 kolorow palety), a pigulka autora
           dostaje biale tlo zamiast peachy - na jasnych motywach peachy zlewalo sie z belka. */}
-      <div className="shrink-0 px-5 pb-2.5" style={{ backgroundColor: listTheme(col.theme, col.id).bg, paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      {/* Tapniecie w belke = powrot na gore listy miejsc (odruch z iOS); guziki w srodku
+          (wstecz, udostepnij, "...") dzialaja normalnie. */}
+      <div {...scrollTopTapProps()} className="shrink-0 px-5 pb-2.5" style={{ backgroundColor: listTheme(col.theme, col.id).bg, paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
@@ -1010,7 +1013,7 @@ export default function SharedList() {
       </div>
 
       {/* Obszar scrolla - #3: BEZ okladki tla listy (spojne z widokiem trasy). */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-44">
+      <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-44">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">

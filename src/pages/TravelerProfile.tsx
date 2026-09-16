@@ -856,7 +856,7 @@ const TravelerProfile = () => {
       {/* Wyniki zamiast tresci profilu - ten sam panel co w Eksploracji, Feedzie i Miejscach
           (lista kategorii jedna pod druga, potem wyniki z kategorii). */}
       {searchOpen && (
-        <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
           <SearchPane query={searchQuery} cat={searchCat} onCat={setSearchCat} />
         </div>
       )}

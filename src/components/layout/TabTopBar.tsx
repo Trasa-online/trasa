@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { scrollTopTapProps } from "@/lib/scrollTop";
 
 // Wspoldzielona gorna belka zakladek (Eksploruj, Wyjazdy, Zapisane). Stala wysokosc i
 // padding -> wszystkie zakladki maja IDENTYCZNY TopNav 1:1 (bez roznic w wysokosci
@@ -9,7 +10,9 @@ import type { ReactNode } from "react";
 export default function TabTopBar({ children, hidden }: { children: ReactNode; hidden?: boolean }) {
   if (hidden) return null;
   return (
-    <div className="flex items-center gap-2 px-4 border-b border-border/40 shrink-0 h-[3.25rem]">
+    // Tapniecie w belke = powrot na gore listy (odruch z iOS). Guziki w srodku belki
+    // dzialaja normalnie - `scrollTopTapProps` odpuszcza klikniecia w elementy interaktywne.
+    <div {...scrollTopTapProps()} className="flex items-center gap-2 px-4 border-b border-border/40 shrink-0 h-[3.25rem]">
       {children}
     </div>
   );

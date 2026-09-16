@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { scrollTopTapProps } from "@/lib/scrollTop";
 
 // Wspoldzielony naglowek zakladek (Wyjazdy, Zapisane, Moj profil): z lewej nazwa zakladki,
 // z prawej akcje zalezne od zakladki. Zaklada, ze rodzic jest w AppLayout hideTopBar (main
@@ -10,7 +11,9 @@ import type { ReactNode } from "react";
 //   gdzie w trybie wynikow toggle Trasy|Miejsca ustepuje miejsca polu.
 export default function TabHeader({ title, right, below, overlay }: { title: string; right?: ReactNode; below?: ReactNode; overlay?: ReactNode }) {
   return (
-    <div className="px-4 pt-1 pb-3 border-b border-border/40 shrink-0">
+    // Tapniecie w naglowek = powrot na gore (odruch z iOS). Guziki po prawej (lupka,
+    // dzwonek, ustawienia) dzialaja normalnie - patrz `scrollTopTapProps`.
+    <div {...scrollTopTapProps()} className="px-4 pt-1 pb-3 border-b border-border/40 shrink-0">
       {overlay ? (
         <div className="flex items-center gap-2 min-h-9">{overlay}</div>
       ) : (

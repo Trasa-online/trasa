@@ -47,6 +47,7 @@ import { fetchRouteCoversFor, setMyRouteCover, setMyRouteNote, fetchRouteMemberN
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import { scrollTopTapProps } from "@/lib/scrollTop";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import TripFabStack, { type TripFab } from "@/components/route/TripFabStack";
 import TripChatSheet from "@/components/route/TripChatSheet";
@@ -2176,7 +2177,9 @@ export default function SharedRoute() {
           ⚠️ Kolorowa belka wymusza biale kolka na guzikach: zolte kolko udostepniania
           zniknelo by w tle, a peachy pigulka autora zlewa sie z zoltym (ten sam problem
           rozwiazano w widoku kolekcji 2026-09-14). */}
-      <div className="shrink-0 bg-[#FDF184]" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      {/* Tapniecie w belke = powrot na gore listy miejsc (odruch z iOS); guziki w srodku
+          (wstecz, udostepnij, "...") dzialaja normalnie. */}
+      <div {...scrollTopTapProps()} className="shrink-0 bg-[#FDF184]" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm px-5 pb-2.5">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
@@ -2282,7 +2285,7 @@ export default function SharedRoute() {
       {/* Zapas na dole = ponad ZWINIETY stos akcji (84px + 56px wysokosci = 140px). Po
           schowaniu czatu i "+" pod jeden guzik (2026-09-10) nie trzeba juz rezerwowac miejsca
           na dwa kolka; rozwiniety stos to nakladka z tlem do zamkniecia, wiec moze zaslaniac. */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
+      <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">

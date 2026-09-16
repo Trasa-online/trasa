@@ -26,6 +26,7 @@ import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
 import { useStickyHeadVar } from "@/hooks/useStickyHeadVar";
+import { scrollTopTapProps } from "@/lib/scrollTop";
 import { listTheme } from "@/lib/listThemes";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
@@ -412,7 +413,8 @@ export default function PublicProfile() {
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
       {/* Header: powrot + @username */}
-      <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
+      {/* Tapniecie w belke = powrot na gore (odruch z iOS); guziki w srodku dzialaja normalnie. */}
+      <div {...scrollTopTapProps()} className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
         <button onClick={() => goBackOr(navigate, "/eksploruj")} className="h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -456,7 +458,7 @@ export default function PublicProfile() {
           wysokosci (lista / mozaika / siatka) i snap by je szarpal.
           `scroll-pt` = mierzona wysokosc przyklejonej belki zakladek, zeby kafelek stawal POD
           nia, a nie za nia. */}
-      <div className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden${listSnap ? " snap-y snap-mandatory scroll-pt-[var(--profile-sticky,44px)]" : ""}`}>
+      <div data-scroll-main className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden${listSnap ? " snap-y snap-mandatory scroll-pt-[var(--profile-sticky,44px)]" : ""}`}>
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}

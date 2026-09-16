@@ -537,6 +537,17 @@ Apka ma zachowywać się jak natywna, więc gesty dotykowe są **wspólnymi prym
 - **`data-no-drag`** wyłącza zamykanie przeciągnięciem w swoim poddrzewie, **`data-no-swipe`** wyłącza zmianę zakładki. Mapy ([RouteMap](src/components/RouteMap.tsx), mapa w `RouteMapSheet`) mają oba - pan po mapie nie może zamykać arkusza ani przeskakiwać zakładek. Dodawaj je do każdego nowego elementu z własnym gestem (mapa, slider, canvas).
 - Podczas gestu i domykania hook wyłącza animacje CSS (`animation: none`) - inaczej `animate-in/animate-out` nadpisuje transform i panel „nie klei się" do palca.
 
+**TAPNIĘCIE W GÓRNĄ BELKĘ = POWRÓT NA GÓRĘ** ([scrollTop.ts](src/lib/scrollTop.ts), prośba Nat 2026-09-16 - odruch z natywnego iOS). Działa w: `TabTopBar` (Eksploracja, Miejsca), `TabHeader` (własny profil), belce profilu publicznego oraz żółtej/kolorowej belce wyjazdu i kolekcji.
+
+⛔ **Bez kontekstu i bez rejestru scrollerów.** Ekran OZNACZA swój główny scroller atrybutem `data-scroll-main`, a belka pyta o niego DOM (`scrollTopTapProps()`). Nowy ekran włącza to JEDNYM atrybutem - bez podpinania się pod providera i bez ryzyka, że ref zostanie po odmontowaniu. `PullToRefresh` ma ten atrybut wbudowany, więc każdy ekran na nim zbudowany dostaje zachowanie za darmo.
+
+Trzy rzeczy, które ten helper załatwia i których nie wolno zgubić przy refaktorze:
+- **Guziki w belce działają normalnie** - `closest(INTERACTIVE)` odpuszcza kliknięcia w `button/a/input/label/[role=button]`, także gdy tapnięto ikonę WEWNĄTRZ guzika. Bez tego dzwonek i „wstecz" miałyby efekt uboczny.
+- **Widoczność sprawdza `getClientRects()`, NIE `offsetParent`** - ten drugi zwraca `null` również dla `position: fixed` i odrzuciłby scroller, który jest na ekranie. Jeden ekran miewa kilka scrollerów w DOM (profil: feed ORAZ wyniki szukania); nieaktywny jest `display:none` i odpada.
+- **Brak haptyki, gdy nie było czego przewijać** (`scrollMainToTop()` oddaje `false`) - inaczej tapnięcie w belkę na górze listy udawałoby akcję.
+
+Sprawdzone renderem w WebKit: wybiera widoczny scroller, klik w ikonę w guziku nie przewija, klik w puste miejsce belki przewija do zera, klik przy już przewiniętym na górę nic nie robi.
+
 **Cofanie gestem od krawędzi** ([useEdgeSwipeBack](src/hooks/useEdgeSwipeBack.ts), montowany raz w `App.tsx`): przeciągnięcie od **lewej krawędzi** (strefa 24px) w prawo = `navigate(-1)`, jak w natywnym iOS - WKWebView nie daje tego dla tras SPA. Gest jest ignorowany, gdy otwarty jest modal (tam zamyka się gestem w dół), gdy start jest dalej niż 24px od krawędzi (żeby nie gryzł się z gestami treści) oraz gdy nie ma historii w aplikacji (`history.state.idx === 0`) - wtedy NIC się nie dzieje, bez skoku na ekran zapasowy.
 
 **Gdzie gesty już są:** zakładki profilu (Listy ↔ Wyjazdy, własny i publiczny), zakładki wyjazdu (Miejsca/Galeria/Mapa w `SharedRoute` i `ReviewSummary`), zakładki listy (Miejsca/Galeria), galeria fullscreen wyjazdu, hero wizytówki i karuzela wydarzeń, wszystkie bottom sheety + ręczne drawery.
