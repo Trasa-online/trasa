@@ -2822,6 +2822,17 @@ export default function SharedRoute() {
                 else setAddPlaceOpen(true);
               },
             },
+            // "Dostosuj ilosc dni" W STOSIE, nie tylko w menu "..." (prosba Nat 2026-09-16,
+            // TRZECIE podejscie). Dwa wczesniejsze wyladowaly w menu "..." i w kreatorze -
+            // a Nat przez "chevron" cala czas rozumiala TEN rozwijany stos, nie wiersz z lista.
+            // Tu ta akcja ma zreszta wiecej sensu: stos to rzeczy, ktore robi sie Z wyjazdem
+            // w trakcie pracy nad nim, a menu "..." to jego ustawienia.
+            ...(isOwner ? [{
+              key: "days",
+              label: t("day.count_action"),
+              icon: <CalendarIcon className="h-6 w-6" strokeWidth={2.2} />,
+              onClick: () => { setDayDraft(dayCount); setDaysSheetOpen(true); },
+            } as TripFab] : []),
             // Zmiana kolejnosci zeszla tu z dolnego paska (prosba Nat 2026-09-10) i jest
             // w stosie akcja PRIMARY - to jedyna z trzech, ktora zmienia sam uklad wyjazdu.
             ...(pins.length > 1 ? [{
