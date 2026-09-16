@@ -597,7 +597,13 @@ export default function ComposeWyjazd() {
       try {
         const res = await inviteUsersToRoute({ id, city: city ?? null, title: name.trim() || null, group_session_id: groupSessionId }, nav.inviteeIds, user.id);
         if (res.ok && res.sessionId) setGroupSessionId(res.sessionId);
-      } catch (e: any) { console.warn("[ComposeWyjazd] invite failed:", e?.message ?? e); }
+        // ⚠️ Porazka wracala tu jako `{ ok: false }` i nie byla nigdzie pokazywana - user nie
+        // mial skad wiedziec, ze zaproszenia nie poszly (patrz `CreateFlowSheet`).
+        if (!res.ok) { console.warn("[ComposeWyjazd] invite failed:", res.error); toast.error(t("social:invite.failed")); }
+      } catch (e: any) {
+        console.warn("[ComposeWyjazd] invite threw:", e?.message ?? e);
+        toast.error(t("social:invite.failed"));
+      }
     }
     // "Miejsca nie przepadaja": odznaczeni kandydaci (poza trasa) NIE bedacy juz w zapisanych usera
     // -> popup zaproponuje zapis do Ogolne / nowej listy. Popup dopina navigate (finishNavigation).

@@ -259,8 +259,18 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       { ...tripDatesForSave(startArg, daysArg), countries: tripCountries, tripType: tripMode === "past" ? "completed" : "planning" });
     if (!id) { setCreating(false); haptics.error(); toast.error(t("toast.trip_failed")); return; }
     if (tripPeople.length) {
-      try { await inviteUsersToRoute({ id, city: null, title, group_session_id: null }, tripPeople.map((p) => p.id), user.id); }
-      catch (e: any) { console.warn("[CreateFlowSheet] invite failed:", e?.message ?? e); }
+      // ⚠️ `inviteUsersToRoute` NIE RZUCA przy porazce - oddaje `{ ok: false }`. Sam `try/catch`
+      // przepuszczal wiec kazda nieudana wysylke po cichu: wyjazd powstawal, zaproszenia nie
+      // szly, a user dostawal haptyke sukcesu i zamkniety arkusz (zgloszenie testerki
+      // 2026-09-16: "na poziomie tworzenia wyjazdu wtedy sie nie dodalo", bez zadnego bledu).
+      // Wyjazd zostaje utworzony tak czy siak - komunikat dotyczy wylacznie zaproszen.
+      try {
+        const res = await inviteUsersToRoute({ id, city: null, title, group_session_id: null }, tripPeople.map((p) => p.id), user.id);
+        if (!res.ok) { console.warn("[CreateFlowSheet] invite failed:", res.error); toast.error(t("social:invite.failed")); }
+      } catch (e: any) {
+        console.warn("[CreateFlowSheet] invite threw:", e?.message ?? e);
+        toast.error(t("social:invite.failed"));
+      }
     }
     setCreating(false);
     haptics.success();
