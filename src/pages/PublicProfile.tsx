@@ -201,9 +201,16 @@ export default function PublicProfile() {
     queryFn: async () => {
       const cols = "id, title, city, countries, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, tags, review_narrative, ai_summary, cover_url, list_cover_url";
       // WLASNE wyjazdy usera...
+      // ⛔ `status = 'published'` JEST OBOWIAZKOWY. `is_shared` NIE oznacza "opublikowany"
+      // od 2026-08-23 (model roboczy->przeszly): `inviteUsersToRoute` ustawia je KAZDEMU
+      // wyjazdowi grupowemu, takze roboczemu, zeby zaproszeni go odczytali. Bez tego warunku
+      // profil publiczny pokazywal ROBOCZE wyjazdy grupowe (zgloszenie Nat 2026-09-16).
+      // ⚠️ Samo zaostrzenie RLS (migracja 20260916c) tego NIE zalatwia: uczestnik wyjazdu
+      // czyta szkic przez polityke po czlonkostwie, wiec wchodzac na profil hosta nadal by go
+      // widzial. Widok musi o szkice po prostu nie pytac.
       const { data: routes } = await (supabase as any)
         .from("routes").select(cols)
-        .eq("user_id", profile!.id).eq("is_shared", true).eq("hidden_by_admin", false)
+        .eq("user_id", profile!.id).eq("is_shared", true).eq("status", "published").eq("hidden_by_admin", false)
         .order("created_at", { ascending: false });
       // ...ORAZ wyjazdy GRUPOWE, w ktorych bral udzial (nie jest hostem) - przez RPC.
       //

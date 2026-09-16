@@ -67,8 +67,12 @@ export async function inviteUsersToRoute(
       }
       sessionId = session.id;
       // Host do members (self-insert dozwolony) + podpiecie trasy (owner update).
-      // is_shared=true: trasa grupowa MUSI byc shared (brak RLS czlonkostwa na routes -> inaczej
-      // zaproszeni jej nie odczytaja). Dotyczy tez draftow tworzonych z arkusza "Nowy wyjazd".
+      // is_shared=true na KAZDYM wyjezdzie grupowym, takze roboczym z arkusza "Nowy wyjazd".
+      // ⚠️ To NIE jest publikacja i NIE jest juz przepustka do publicznego odczytu: od migracji
+      // 20260916c polityka publiczna wymaga `status = 'published'`, a zaproszeni czytaja wyjazd
+      // przez polityki po CZLONKOSTWIE (`Group members can ... group routes`, warunek na
+      // `group_session_id`). Dawny komentarz mowil tu, ze takich polityk nie ma - nieprawda,
+      // istnieja, a poleganie na `is_shared` wystawialo robocze wyjazdy calemu swiatu.
       await (supabase as any).from("group_session_members").insert({ session_id: sessionId, user_id: hostUserId });
       const { error: linkErr } = await (supabase as any).from("routes").update({ group_session_id: sessionId, is_shared: true }).eq("id", route.id);
       if (linkErr) return { ok: false, error: linkErr.message };
