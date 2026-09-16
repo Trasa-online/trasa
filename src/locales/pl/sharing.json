@@ -310,5 +310,6 @@
   "add_place_photo": "Dodaj zdjęcie do miejsca",
   "people": {
     "trip_title": "Uczestnicy wyjazdu"
-  }
+  },
+  "gallery_empty_day": "Ten dzień nie ma jeszcze zdjęć. Dodaj je przy miejscu z tego dnia - trafią tutaj same."
 }

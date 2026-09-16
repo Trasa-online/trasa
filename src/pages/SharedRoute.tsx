@@ -1550,8 +1550,7 @@ export default function SharedRoute() {
   ];
   // Handler swipe w galerii fullscreen jest zadeklarowany wyzej (przed early returnami),
   // wiec liczbe zdjec podajemy mu przez ref.
-  galleryPhotosCount.current = galleryPhotos.length;
-  galleryPhotosRef.current = galleryPhotos;
+  galleryPhotosRef.current = galleryPhotos;   // lajki liczymy dla WSZYSTKICH, nie tylko widocznych
   // ── DNI WEWNATRZ WYJAZDU ────────────────────────────────────────────────────
   // Data wybrana + zakres wielodniowy -> miejsca dzielimy na "Dzien 1..N" (pins.day_index,
   // przypisanie RECZNE przez drag). Brak daty albo jeden dzien -> plaska lista jak dotad.
@@ -1600,6 +1599,17 @@ export default function SharedRoute() {
   // Miejsca widoczne na ekranie = te z wybranego dnia. Filtrujemy RAZ, przed grupowaniem po
   // kategoriach - inaczej puste kategorie zostawialyby po sobie same naglowki.
   const visiblePins: any[] = activeDay === null ? (pins as any[]) : (pins as any[]).filter((p) => pinDay(p) === activeDay);
+  // GALERIA PO DNIACH (zgloszenie testerki 2026-09-16). Dzien zdjecia bierze sie z MIEJSCA,
+  // przy ktorym je wrzucono (`pin_photos` -> `pins.day_index`), wiec nie trzeba go nigdzie
+  // zapisywac osobno. ⚠️ Zdjecia wrzucone do SAMEGO wyjazdu (`routes.review_photos`) dnia nie
+  // maja - to plaska tablica adresow - wiec widac je wylacznie w "Wszystkie". Stad guzik
+  // dodawania tez stoi tylko tam: w wybranym dniu obiecywalby przypisanie, ktorego nie ma gdzie
+  // zapisac. Zeby zdjecie trafilo do konkretnego dnia, dodaje sie je przy miejscu z tego dnia.
+  const visiblePhotos: string[] = activeDay === null
+    ? galleryPhotos
+    : galleryPhotos.filter((u) => { const pn = pinPhotoByUrl.get(u); return !!pn && pinDay(pn) === activeDay; });
+  // Przewijanie w podgladzie pelnoekranowym zawija sie po tym, CO WIDAC, nie po calosci.
+  galleryPhotosCount.current = visiblePhotos.length;
   const pickDay = (day: number | null) => { haptics.selection(); setDayTouched(true); setSelectedDay(day); };
   const placeWord = (n: number) => {
     if (n === 1) return "miejsce";
@@ -1959,6 +1969,35 @@ export default function SharedRoute() {
     )
     );
   };
+
+  // Pasek dni jest JEDEN i obsluguje DWIE zakladki: Miejsca i Galerie (zgloszenie testerki
+  // 2026-09-16: "jakby mozna bylo fotki wg dnia dodawac byloby supcio"). Zdjecie przy miejscu
+  // nalezy do dnia tego miejsca, wiec ten sam przelacznik, ktory zaweza liste, zaweza i galerie -
+  // bez uczenia usera drugiego mechanizmu. Dlatego stoi w ZMIENNEJ, a nie skopiowany dwa razy.
+  const dayStrip = daysUsable && !choosing && !reorderMode ? (
+    <div className="sticky top-[65px] z-20 -mx-5 bg-background border-b border-border/50">
+      <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
+        {[null, ...Array.from({ length: dayCount }, (_, i) => i + 1)].map((d) => {
+          const on = activeDay === d;
+          const count = d === null ? pins.length : (pins as any[]).filter((p) => pinDay(p) === d).length;
+          return (
+            <button
+              key={d ?? "all"}
+              onClick={() => pickDay(d)}
+              /* Zaznaczony dzien = peachy z brazowym tekstem (prosba Nat 2026-09-13; zolty
+                 z pierwszej wersji odrzucony), nie pomarancz - ten zostaje dla akcji primary. */
+              className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-[#FCEDE3] text-[#5B2C06]" : "bg-secondary text-foreground"}`}
+            >
+              <span className="text-sm font-semibold">{d === null ? t("days.all") : t("days.nth", { n: d })}</span>
+              <span className={`text-[11px] ${on ? "text-[#5B2C06]/75" : "text-muted-foreground"}`}>
+                {d === null ? `${count} ${placeWord(count)}` : dayChipDate(d)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
 
   const renderList = () => {
     // Pusty DZIEN: miejsca w wyjezdzie sa, tylko nie w tym dniu. Jeden komunikat na cala liste
@@ -2379,30 +2418,7 @@ export default function SharedRoute() {
             {/* top-65px = dokladna wysokosc paska zakladek wyzej (pt-5 = 20 + guzik py-3 z ikona
                 h-5 = 44 + kreska 1). Bylo 45px, wiec chipy wjezdzaly POD zakladki i ucinaly sie
                 od gory przy przewijaniu (zgloszenie Nat 2026-09-09). */}
-            {daysUsable && !choosing && !reorderMode && (
-              <div className="sticky top-[65px] z-20 -mx-5 bg-background border-b border-border/50">
-                <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
-                  {[null, ...Array.from({ length: dayCount }, (_, i) => i + 1)].map((d) => {
-                    const on = activeDay === d;
-                    const count = d === null ? pins.length : (pins as any[]).filter((p) => pinDay(p) === d).length;
-                    return (
-                      <button
-                        key={d ?? "all"}
-                        onClick={() => pickDay(d)}
-                        /* Zaznaczony dzien = peachy z brazowym tekstem (prosba Nat 2026-09-13; zolty
-                           z pierwszej wersji odrzucony), nie pomarancz - ten zostaje dla akcji primary. */
-                        className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-[#FCEDE3] text-[#5B2C06]" : "bg-secondary text-foreground"}`}
-                      >
-                        <span className="text-sm font-semibold">{d === null ? t("days.all") : t("days.nth", { n: d })}</span>
-                        <span className={`text-[11px] ${on ? "text-[#5B2C06]/75" : "text-muted-foreground"}`}>
-                          {d === null ? `${count} ${placeWord(count)}` : dayChipDate(d)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {dayStrip}
             {choosing ? (
               /* Tryb t("choose_places"): zaznacz ktore miejsca wchodza do wyjazdu (reszta usunieta). */
               <div className="space-y-2">
@@ -2461,12 +2477,13 @@ export default function SharedRoute() {
           </div>
         ) : (
           <div className="px-5 pt-4">
-            {galleryPhotos.length > 0 ? (
+            {dayStrip}
+            {visiblePhotos.length > 0 ? (
               /* Uklad masonry (jak Pinterest, prosba Nat 2026-08-30): zdjecia w NATURALNYCH
                  proporcjach, dwie kolumny CSS, bez podpisow. Na kafelku tylko ikona wyboru
                  okladki; usuwanie przeniesione do podgladu pelnoekranowego. */
               <div className="columns-2 gap-2 [&>*]:mb-2">
-                {canAddPhotos && (
+                {canAddPhotos && activeDay === null && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="flex w-full break-inside-avoid aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
                     {uploadingPhotos ? (
@@ -2481,7 +2498,7 @@ export default function SharedRoute() {
                     ) : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">{t("add_photo")}</span></>}
                   </button>
                 )}
-                {galleryPhotos.map((url, i) => {
+                {visiblePhotos.map((url, i) => {
                   // Zaznaczone = MOJA okladka (to nia steruje ikona). U hosta pokrywa sie z okladka
                   // eksploracji, bo jeden gest ustawia obie.
                   const isCover = (resolveStored(myCover) ?? null) === url || (isOwner && !myCover && (route as any).list_cover_url === url);
@@ -2526,8 +2543,13 @@ export default function SharedRoute() {
             ) : (
               <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
                 <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">{t("gallery_empty")}</p>
-                {canAddPhotos && (
+                {/* W wybranym DNIU mowimy, skad sie biora zdjecia tego dnia - guzik "dodaj"
+                    wrzucilby zdjecie do calego wyjazdu, a nie do tego dnia (`review_photos`
+                    nie ma dnia), wiec obiecywalby cos, czego nie zrobi. */}
+                <p className="text-sm text-muted-foreground max-w-[260px] leading-relaxed">
+                  {activeDay === null ? t("gallery_empty") : t("gallery_empty_day")}
+                </p>
+                {canAddPhotos && activeDay === null && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="mt-1 px-4 py-2.5 rounded-full border border-border text-foreground font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
                     {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{" "}
@@ -2816,9 +2838,9 @@ export default function SharedRoute() {
       )}
 
       {/* Fullscreen podglad zdjecia galerii (object-contain, kropki paginacji + polubienie). */}
-      {viewerIndex !== null && galleryPhotos[viewerIndex] && (
+      {viewerIndex !== null && visiblePhotos[viewerIndex] && (
         <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
-          <img src={galleryPhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+          <img src={visiblePhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
           <button onClick={() => setViewerIndex(null)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
             <X className="h-5 w-5 text-white" />
           </button>
@@ -2826,8 +2848,8 @@ export default function SharedRoute() {
               i dodatkowych ikon), zostaje na niej tylko wybor okladki.
               Kosz widzi wlasciciel wyjazdu (odpowiada za cala galerie) ORAZ uczestnik przy
               WLASNYM zdjeciu - skoro moze je dodac, musi tez moc je zabrac. */}
-          {(isOwner || (isGroupMember && isMyGalleryPhoto(galleryPhotos[viewerIndex]))) && (
-            <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(galleryPhotos[viewerIndex]); setViewerIndex(null); }}
+          {(isOwner || (isGroupMember && isMyGalleryPhoto(visiblePhotos[viewerIndex]))) && (
+            <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(visiblePhotos[viewerIndex]); setViewerIndex(null); }}
               aria-label={t("aria.delete_photo")}
               className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
               style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
@@ -2836,7 +2858,7 @@ export default function SharedRoute() {
           )}
           {/* Polubienie zdjecia - lewy dolny rog, nad kropkami paginacji. */}
           {(() => {
-            const url = galleryPhotos[viewerIndex];
+            const url = visiblePhotos[viewerIndex];
             const st = likeStateOf(url);
             return (
               <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
@@ -2849,7 +2871,7 @@ export default function SharedRoute() {
             );
           })()}
           {/* Kropki zamiast strzalek - sugeruja przewijanie gestem (prosba Nat 2026-08-30). */}
-          <PhotoPagination count={galleryPhotos.length} index={viewerIndex} />
+          <PhotoPagination count={visiblePhotos.length} index={viewerIndex} />
         </div>
       )}
 

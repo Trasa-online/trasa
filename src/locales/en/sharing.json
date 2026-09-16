@@ -299,5 +299,6 @@
   "add_place_photo": "Add a photo to this place",
   "people": {
     "trip_title": "Trip participants"
-  }
+  },
+  "gallery_empty_day": "No photos for this day yet. Add them to a place from this day and they'll show up here."
 }
