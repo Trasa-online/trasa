@@ -109,7 +109,11 @@
     "hint_list": "Podpowiadamy nazwę z wybranego miejsca. Możesz ją zmienić."
   },
   "days_row_title": "Ile dni?",
-  "days_row_desc": "Rozpisz wyjazd na dni, nawet bez terminu.",
+  "days_row_desc": "Rozpisz wyjazd na dni, nawet bez terminu",
   "days_row_less": "Mniej dni",
-  "days_row_more": "Więcej dni"
+  "days_row_more": "Więcej dni",
+  "days_step_desc": "Dodaj albo usuń dni. Daty możesz dopisać później - wtedy to one wyznaczą długość wyjazdu.",
+  "days_row_value_one": "{{count}} dzień",
+  "days_row_value_few": "{{count}} dni",
+  "days_row_value_many": "{{count}} dni"
 }

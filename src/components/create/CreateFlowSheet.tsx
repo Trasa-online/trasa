@@ -3,7 +3,7 @@ import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Search, Loader2 } from "lucide-react";
+import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, CalendarDays, History, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,7 +29,7 @@ import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
-type Step = "entry" | "listCountry" | "listCity" | "listName" | "listPick" | "listPeople" | "tripMode" | "tripCountry" | "tripDates" | "tripPeople";
+type Step = "entry" | "listCountry" | "listCity" | "listName" | "listPick" | "listPeople" | "tripMode" | "tripCountry" | "tripDates" | "tripDaysStep" | "tripPeople";
 type TripMode = "future" | "past";
 
 // Nazwa wyjazdu/listy powstaje z WYBRANYCH KRAJOW, a nie z osobnego kroku (decyzja Nat
@@ -578,28 +578,29 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                 onConfirm={(d, numDays) => { setTripStart(d); setTripDays(numDays); afterDates(d, numDays); }}
                 onClear={tripStart ? () => { setTripStart(null); setTripDays(1); } : undefined}
               />
-              {/* ILE DNI bez wybranego terminu (zgloszenie testerki 2026-09-16: "od razu
-                  chcialabym miec mozliwosc dodania dni"). Wiersz pojawia sie TYLKO gdy nie ma
-                  daty - przy wybranym zakresie liczbe dni wyznacza kalendarz i dwa sterowania
-                  obok siebie kazalyby zgadywac, ktore wygrywa.
-                  Krokomierz INLINE, nie osobny ekran za chevronem: to jedna liczba, a dodatkowe
-                  przejscie tam i z powrotem kosztuje wiecej niz sama zmiana. */}
+              {/* ILE DNI bez wybranego terminu (zgloszenie testerki 2026-09-16). Wiersz widac
+                  TYLKO gdy nie ma daty - przy wybranym zakresie liczbe dni wyznacza kalendarz
+                  i dwa sterowania obok siebie kazalyby zgadywac, ktore wygrywa.
+                  ⚠️ Wiersz Z CHEVRONEM prowadzacy na wlasny krok, a NIE krokomierz wciety
+                  w kalendarz. Pierwsza wersja miala krokomierz inline ("to jedna liczba, po co
+                  osobny ekran") i Nat zglosila dwa razy, ze chodzilo jej o chevron - w tym
+                  arkuszu kazde dodatkowe ustawienie ma taki sam wiersz ("Dodaj osoby"), wiec
+                  wyjatek dla dni wygladal jak obcy element, a nie jak skrot. */}
               {!tripStart && (
-                <div className="mx-5 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border/60 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-semibold text-foreground">{t("days_row_title")}</p>
-                    <p className="text-[12px] text-muted-foreground leading-snug">{t("days_row_desc")}</p>
+                <button onClick={() => { haptics.light(); setStep("tripDaysStep"); }}
+                  className="w-full flex items-center gap-4 px-5 py-3 text-left active:bg-muted/50 transition-colors">
+                  <CalendarDays className="h-6 w-6 text-foreground shrink-0" strokeWidth={1.8} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-medium text-foreground">{t("days_row_title")}</p>
+                    <p className="text-[13px] text-muted-foreground">{t("days_row_desc")}</p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button onClick={() => { haptics.light(); setTripDays((n) => Math.max(1, n - 1)); }} disabled={tripDays <= 1}
-                      aria-label={t("days_row_less")}
-                      className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-xl font-bold active:scale-90 transition-transform disabled:opacity-30">-</button>
-                    <span className="min-w-[2ch] text-center text-lg font-black tabular-nums">{tripDays}</span>
-                    <button onClick={() => { haptics.light(); setTripDays((n) => Math.min(MAX_TRIP_DAYS, n + 1)); }} disabled={tripDays >= MAX_TRIP_DAYS}
-                      aria-label={t("days_row_more")}
-                      className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-xl font-bold active:scale-90 transition-transform disabled:opacity-30">+</button>
-                  </div>
-                </div>
+                  <span className="shrink-0 flex items-center gap-2">
+                    {tripDays > 1 && (
+                      <span className="text-[13px] font-bold text-foreground tabular-nums">{t("days_row_value", { count: tripDays })}</span>
+                    )}
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </span>
+                </button>
               )}
               <div className="px-5 pt-2">
                 <button
@@ -623,6 +624,30 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         )}
 
         {/* ── WYJAZD: wybor osob ── */}
+        {/* Krok "Ile dni?" - ten sam naglowek (wstecz + tytul + Gotowe), co krok osob. */}
+        {step === "tripDaysStep" && (
+          <>
+            <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
+              <button onClick={() => setStep("tripDates")} className="h-8 w-8 -ml-1 flex items-center justify-center rounded-full active:bg-muted transition-colors"><ArrowLeft className="h-5 w-5" /></button>
+              <h2 className="text-[20px] font-semibold text-foreground">{t("days_row_title")}</h2>
+              <button onClick={() => setStep("tripDates")} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">{t("common:buttons.done")}</button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-[max(16px,env(safe-area-inset-bottom))]">
+              <p className="text-[13px] text-muted-foreground leading-relaxed">{t("days_step_desc")}</p>
+              <div className="mt-8 flex items-center justify-center gap-7">
+                <button onClick={() => { haptics.light(); setTripDays((n) => Math.max(1, n - 1)); }} disabled={tripDays <= 1}
+                  aria-label={t("days_row_less")}
+                  className="h-14 w-14 rounded-full border border-border flex items-center justify-center text-3xl font-bold active:scale-90 transition-transform disabled:opacity-30">-</button>
+                <span className="min-w-[3ch] text-center text-5xl font-black tabular-nums">{tripDays}</span>
+                <button onClick={() => { haptics.light(); setTripDays((n) => Math.min(MAX_TRIP_DAYS, n + 1)); }} disabled={tripDays >= MAX_TRIP_DAYS}
+                  aria-label={t("days_row_more")}
+                  className="h-14 w-14 rounded-full border border-border flex items-center justify-center text-3xl font-bold active:scale-90 transition-transform disabled:opacity-30">+</button>
+              </div>
+              <p className="mt-3 text-center text-[13px] text-muted-foreground">{t("days_row_value", { count: tripDays })}</p>
+            </div>
+          </>
+        )}
+
         {step === "tripPeople" && (
           <>
             <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3">
