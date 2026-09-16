@@ -25,6 +25,7 @@ import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
 import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
+import { useStickyHeadVar } from "@/hooks/useStickyHeadVar";
 import { listTheme } from "@/lib/listThemes";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
@@ -389,6 +390,11 @@ export default function PublicProfile() {
     setSavedListIds(next);
   };
 
+  // ⛔ NAD early-returnami - inaczej przy pierwszym renderze (profil sie laduje) Reactowi
+  // ubywa hookow. Ta sama pulapka, ktora wywalila widok kolekcji 2026-09-15; lapie ja
+  // `npm run hooks:check`.
+  const stickyRef = useStickyHeadVar();
+
   if (isLoading) return <ScreenSkeleton variant="profile" />;
   if (!profile) return (
     <div className="flex flex-col items-center justify-center h-[100dvh] gap-3">
@@ -399,6 +405,9 @@ export default function PublicProfile() {
 
   // Imię (first_name) = nazwa wyświetlana; username = osobny @handle (nie username jako oba).
   const displayName = profile.first_name || profile.username || "";
+  // Snap wlaczamy tylko tam, gdzie scrolluje sie KOLEKCJE (kafelki jednakowej budowy) -
+  // ta sama regula, co na wlasnym profilu. Po zablokowaniu osoby tresci nie ma wcale.
+  const listSnap = tab === "listy" && !blocked && listCards.length > 0;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
@@ -442,11 +451,18 @@ export default function PublicProfile() {
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      {/* SNAP przy kolekcjach - dokladnie to samo zachowanie, co na wlasnym profilu (prosba
+          Nat 2026-09-16). Wlaczony TYLKO na zakladce Kolekcje: Wyjazdy maja karty roznej
+          wysokosci (lista / mozaika / siatka) i snap by je szarpal.
+          `scroll-pt` = mierzona wysokosc przyklejonej belki zakladek, zeby kafelek stawal POD
+          nia, a nie za nia. */}
+      <div className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden${listSnap ? " snap-y snap-mandatory scroll-pt-[var(--profile-sticky,44px)]" : ""}`}>
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
-        <div className="flex items-start gap-4">
+        {/* `snap-start` = gora profilu jest pelnoprawnym miejscem spoczynku przy wlaczonym
+            snapie; bez tego krotkie pociagniecie od gory od razu skakaloby na pierwszy kafelek. */}
+        <div className="flex items-start gap-4 snap-start">
           <span className="relative h-[76px] w-[76px] shrink-0">
           <AvatarFrame kind={isAvatarFrame(profile.avatar_frame) ? profile.avatar_frame : null} color={profile.avatar_frame_color} size={76} />
           <Avatar className="h-[76px] w-[76px] shrink-0">
@@ -493,7 +509,12 @@ export default function PublicProfile() {
           <FollowButton targetUserId={profile.id} iconOnly className="shrink-0" />
         </div>
 
-        {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej) */}
+        {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej).
+            PRZYKLEJONE u gory, tak jak na wlasnym profilu: przy wlaczonym snapie pierwszy
+            kafelek wypycha naglowek poza ekran, wiec bez tego nie bylo juz widac, czyj to
+            profil ani ktora zakladke sie oglada. Tlo musi byc kryjace - kafelki przejezdzaja
+            pod spodem. */}
+        <div ref={stickyRef} className="sticky top-0 z-30 bg-background -mx-4 px-4">
         <div className="flex border-b border-border/40 -mx-1">
           {/* Kolejnosc: Wyjazdy | Listy - ta sama co na wlasnym profilu. */}
           {(["wyjazdy", "listy"] as const).map((tk) => {
@@ -509,6 +530,7 @@ export default function PublicProfile() {
               </button>
             );
           })}
+        </div>
         </div>
 
         {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
@@ -556,7 +578,7 @@ export default function PublicProfile() {
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
                 };
-                return <GridTile key={l.id} it={item} size="feed" onOpen={() => navigate(`/lista/${l.id}`)} />;
+                return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}
               </div>
             )

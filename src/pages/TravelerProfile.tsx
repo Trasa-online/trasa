@@ -39,6 +39,7 @@ import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
 import { REORDER_ITEM_CLASS, useLongPressReorder } from "@/hooks/useLongPressReorder";
+import { useStickyHeadVar } from "@/hooks/useStickyHeadVar";
 import { applyTripOrder, fetchTripOrder, saveTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import AvatarFrame from "@/components/profile/AvatarFrame";
 import { isAvatarFrame } from "@/lib/avatarFrames";
@@ -630,18 +631,9 @@ const TravelerProfile = () => {
   // wywalila widok kolekcji 2026-09-15. Bramka `npm run hooks:check` lapie to od tamtej pory.
   //
   // Kafelek ma sie zatrzymywac POD przyklejonym naglowkiem (zakladki + chipy podzakladek),
-  // a nie za nim. Wysokosc MIERZYMY i podajemy jako `--profile-sticky` - wpisana na sztywno
-  // rozjechalaby sie przy kazdej zmianie tego paska.
-  const stickyRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = stickyRef.current;
-    if (!el) return;
-    const apply = () => document.documentElement.style.setProperty("--profile-sticky", `${Math.round(el.getBoundingClientRect().height)}px`);
-    apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
-    return () => { ro.disconnect(); document.documentElement.style.removeProperty("--profile-sticky"); };
-  }, [tab]);
+  // a nie za nim - wysokosc mierzy wspolny [useStickyHeadVar](src/hooks/useStickyHeadVar.ts),
+  // ten sam, ktorego uzywa profil PUBLICZNY (oba maja snap na kolekcjach).
+  const stickyRef = useStickyHeadVar();
 
   if (loading) return <ScreenSkeleton variant="profile" />;
   if (!user || user.is_anonymous) return <GuestProfile />;
