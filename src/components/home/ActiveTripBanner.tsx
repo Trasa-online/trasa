@@ -6,6 +6,7 @@ import { resolveStored } from "@/components/PlacePhoto";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
 import { useTripShortcut } from "@/hooks/useTripShortcut";
+import { BrandTripMark } from "@/components/BrandTripMark";
 
 // Baner-skrot mozna schowac przeciagnieciem W GORE (prosba Nat 2026-09-06) - nakladka lezy
 // pod sama belka, wiec ruch "odsun to z drogi" jest naturalnie do gory. Schowanie pamietamy
@@ -130,24 +131,21 @@ export default function ActiveTripBanner({ floating = false }: {
           {cover ? (
             <img src={cover} alt="" className="w-full h-full object-cover" />
           ) : (
-            <span
-              aria-hidden
-              className="h-5 w-5 block"
-              style={{
-                backgroundColor: "#ef9d78",
-                WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)",
-                WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-                WebkitMaskSize: "contain", maskSize: "contain",
-                WebkitMaskPosition: "center", maskPosition: "center",
-              }}
-            />
+            /* ⛔ INLINE svg, NIE `BrandIcon` z maska CSS. Ten baner chowa sie gestem, czyli
+               zyje w warstwie z animowanym `transform`, a WebKit na iOS gubi tam
+               `-webkit-mask-image` - znak potrafil zniknac albo wyrenderowac sie jako plama.
+               Ta sama pulapka, co przy gwiazdkach w nakladkach awatara (CLAUDE.md). */
+            <BrandTripMark className="h-5 w-5 block text-[#ef9d78]" />
           )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            {/* Etap wyjazdu: "W trakcie" ma kolor akcentu, "Robocze" jest wyciszone. */}
+            {/* Etap wyjazdu: "w trakcie" ma kolor akcentu, "roboczy" jest wyciszony.
+                ⛔ Przez `t()`. Do 2026-09-16 oba napisy byly wpisane po POLSKU wprost w JSX,
+                wiec angielski user widzial polski - a bramka `i18n:check` tego nie zlapala,
+                bo pilnuje parzystosci kluczy, nie tekstu w atrybutach warunkowych. */}
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${ongoing ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
-              {ongoing ? "W trakcie" : "Robocze"}
+              {ongoing ? t("shortcut.stage_ongoing") : t("shortcut.stage_draft")}
             </span>
             {trip.city && <span className="text-[11.5px] text-muted-foreground truncate">{trip.city}</span>}
           </span>

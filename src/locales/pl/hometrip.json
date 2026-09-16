@@ -141,6 +141,8 @@
   "points_few": "punkty",
   "shortcut": {
     "hide": "Schowaj skrót do wyjazdu",
-    "fallback": "Twój wyjazd"
+    "fallback": "Twój wyjazd",
+    "stage_ongoing": "W trakcie",
+    "stage_draft": "Robocze"
   }
 }

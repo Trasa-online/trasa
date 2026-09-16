@@ -138,6 +138,8 @@
   "points_other": "points",
   "shortcut": {
     "hide": "Hide the trip shortcut",
-    "fallback": "Your trip"
+    "fallback": "Your trip",
+    "stage_ongoing": "Ongoing",
+    "stage_draft": "Draft"
   }
 }
