@@ -53,6 +53,19 @@ Accent 1 (tekst):  #5B2C06  text-spontaway-brown  (tekst na żółtym + guzik se
 na żółtym ma kontrast 3.08:1, więc tej pary używaj **tylko do dużych nagłówków**, nigdy do
 zwykłego tekstu; treść na żółtym pisz brązowym (10:1).
 
+### Stan FOCUS = żółty marki (2026-09-16)
+
+`--ring` to od teraz **żółty marki `#FDF184`** (`54 96.8% 75.5%`), a nie pomarańcz primary. Poza tokenem trzeba było dołożyć trzy rzeczy, których **żaden token Tailwinda nie dotyka**, a iOS maluje je systemowym niebieskim: kursor w polu (`caret-color`), podświetlenie zaznaczonego tekstu (`::selection`) i natywne kontrolki - checkbox, radio, suwak (`accent-color`). To właśnie ten niebieski widać na telefonie po wejściu w pole; wszystkie trzy siedzą teraz w [index.css](src/index.css).
+
+⚠️ **Nie wszystko mogło być żółte** - `#FDF184` na bieli ma ~1,1:1:
+- **zaznaczenie tekstu** - żółty JEST właściwy: to tło, a tekst zostaje prawie czarny, więc czyta się jak zakreślacz;
+- **kursor i ptaszek w checkboksie** - żółte byłyby niewidoczne (2 px kreska na bieli), więc idą pomarańczem marki. To nadal koniec z niebieskim, tylko czytelny;
+- **pierścień focusu** sam na bieli też by znikał, dlatego jego OFFSET (wewnętrzna obwódka Tailwinda) jest **brązowy i ma 1 px** - przy 2 px brąz przeważał i całość czytała się jako brązowy z żółtym halo, a ma być odwrotnie. Sprawdzone renderem w WebKit na zbudowanym CSS.
+
+⚠️ Reguła `*:focus-visible` stoi **POZA `@layer`** - tylko dzięki temu wygrywa z `ring-offset-background` z warstwy utilities (style niewarstwowane biją warstwowane). Przenosząc ją do `@layer`, przestanie działać.
+
+⛔ W kodzie nie ma już ANI JEDNEGO `ring-blue-*`. Zostało natomiast ~30 pól z własnym, miękkim pomarańczowym focusem (`focus:ring-orange-500/30` i podobne) - to nie jest niebieski, więc świadomie ich nie ruszano.
+
 ### ⛔ Zakaz ciemnych teł na stronach publicznych
 
 **NIGDY nie używaj czarnego ani ciemnoszarego tła (`#0E0E0E`, `bg-slate-900`, `bg-black`, dark mode)** na stronach widocznych dla użytkowników (landing, waitlist, one-pager, itp.). Zawsze tło = `#FEFEFE` (złamana biel) lub bardzo jasny odcień (np. `bg-slate-50`). Ciemne tła są zarezerwowane wyłącznie dla nakładek wideo/overlay wewnątrz komponentów (np. phone mockup).

@@ -40,7 +40,9 @@ All colors MUST be HSL.
 
     --border: 0 0% 85%;
     --input: 0 0% 91%;
-    --ring: 19.7 94.3% 48%;
+    /* FOCUS = ZOLTY MARKI #FDF184 (prosba Nat 2026-09-16; wczesniej pomarancz primary).
+       HSL policzone ze zrodlowego heksa: 54 96.8% 75.5%. */
+    --ring: 54 96.8% 75.5%;
 
     /* ── Tertiary — amber/gold ── */
     --star: 45 100% 51%;
@@ -175,6 +177,28 @@ All colors MUST be HSL.
   color: #475569 !important;
   background: #f8fafc !important;
 }
+
+/* ── FOCUS I ZAZNACZENIE = KOLORY MARKI, nie systemowy niebieski ──────────────
+   iOS maluje domyslnie na niebiesko TRZY rzeczy, ktorych zaden token Tailwinda nie
+   dotyka: kursor w polu tekstowym (`caret-color`), podswietlenie zaznaczonego tekstu
+   (`::selection`) i natywne kontrolki - checkbox, radio, suwak (`accent-color`).
+   To wlasnie ten niebieski widac na telefonie po wejsciu w pole.
+
+   ⚠️ Nie wszystko moze byc ZOLTE. Zolty marki #FDF184 na bieli ma ~1,1:1:
+     * zaznaczenie tekstu - zolty JEST wlasciwy: to tlo, a tekst zostaje prawie czarny,
+       wiec czyta sie jak zakreslacz (kontrast liczy sie miedzy tekstem a tlem),
+     * kursor i ptaszek w checkboxie - zolte byłyby NIEWIDOCZNE (2 px kreska na bieli),
+       wiec ida pomaranczem marki. To nadal koniec z niebieskim, tylko czytelny.
+
+   Pierscien focusu jest zolty (token `--ring`), ale sam na bieli tez by znikal - dlatego
+   jego OFFSET (wewnetrzna obwodka Tailwinda) jest brazowy. Razem czytaja sie jak zolty
+   focus z definicja, widoczny na kazdym tle. Obwodka ma 1 px, nie 2 - przy dwoch brazowy
+   przewazal i pierscien czytal sie jako brazowy z zoltym halo, a ma byc odwrotnie.
+   ⚠️ Regula stoi POZA `@layer`, wiec wygrywa z `ring-offset-background` z utilities -
+   warstwowane style zawsze przegrywaja z niewarstwowanymi. */
+*:focus-visible { --tw-ring-offset-width: 1px; --tw-ring-offset-color: #5B2C06; }
+::selection { background: #FDF184; color: #0E0E0E; }
+html, body { caret-color: #EE5307; accent-color: #EE5307; }
 
 /* Native-app feel: disable text selection + iOS tap highlight globally.
    Inputs/textareas/contenteditable opt back in. */

@@ -465,7 +465,7 @@ const Auth = () => {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="twoj@email.pl"
-                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -476,7 +476,7 @@ const Auth = () => {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <button

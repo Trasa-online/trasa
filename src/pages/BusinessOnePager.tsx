@@ -126,26 +126,26 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.name_label")}</label>
         <input required value={placeName} onChange={e => setPlaceName(e.target.value)}
           placeholder={t("onepager.form.name_placeholder")}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.email_label")}</label>
         <input required type="email" value={email} onChange={e => setEmail(e.target.value)}
           placeholder={t("onepager.form.email_placeholder")}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.phone_label")} <span className="font-normal text-slate-400">{t("onepager.form.optional")}</span></label>
         <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
           placeholder={t("onepager.form.phone_placeholder")}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.message_label")} <span className="font-normal text-slate-400">{t("onepager.form.optional")}</span></label>
         <textarea value={message} onChange={e => setMessage(e.target.value)}
           placeholder={t("onepager.form.message_placeholder")}
           rows={3}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
       </div>
       <button type="submit" disabled={loading}
         className="w-full rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200 disabled:opacity-60">
