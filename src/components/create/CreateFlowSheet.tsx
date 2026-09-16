@@ -135,12 +135,23 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   const keyOfPlace = (p: { place_name?: string | null }) => (p.place_name || "").trim().toLowerCase();
   // Klik wyniku Google -> dodaj do manualPlaces (dedup po nazwie) i wroc do listy (wyczysc fraze).
+  // Wybor miejsca Z WYNIKOW WYSZUKIWANIA w kreatorze kolekcji. ⛔ NIE czysc tu `listQuery`.
+  // Do 2026-09-16 bylo tu `setListQuery("")`, wiec po wybraniu jednego wyniku lista znikala
+  // i kreator wracal do siatki zapisanych - zeby dodac drugie miejsce z tej samej frazy,
+  // trzeba bylo wpisac ja od nowa. Zgloszenie testerki: "chcialabym kilka od razu wybrac,
+  // a nie moge, bo po wybraniu jednej od razu mnie resetuje i wracam na poczatek".
+  // Ponowne tapniecie ODZNACZA (wiersz i tak pokazywal ptaszka, ale klik nic nie robil).
   const pickResult = (r: PlaceForList) => {
     haptics.light();
-    setManualPlaces((prev) => prev.some((m) => keyOfPlace(m) === keyOfPlace(r)) ? prev : [r, ...prev]);
-    setListQuery("");
+    setManualPlaces((prev) => prev.some((m) => keyOfPlace(m) === keyOfPlace(r))
+      ? prev.filter((m) => keyOfPlace(m) !== keyOfPlace(r))
+      : [r, ...prev]);
   };
   const removeManual = (p: PlaceForList) => setManualPlaces((prev) => prev.filter((m) => keyOfPlace(m) !== keyOfPlace(p)));
+  // Licznik na guziku kroku "miejsca": przy wybieraniu kilku naraz zaznaczone wiersze
+  // wyjezdzaja poza ekran i bez liczby nie widac, ile ich juz jest. Zero = "Pomiń".
+  const listPickCount = selected.size + manualPlaces.length;
+  const listPickLabel = listPickCount > 0 ? `${t("common:buttons.next")} (${listPickCount})` : t("skip");
 
   // Wizytowka miejsca (PlaceSwiperDetail) - mapowanie zapisanego/googlowego miejsca na MockPlace.
   const openDetail = (p: any, ctx?: { onToggle: () => void; selected: boolean }) => { haptics.light(); setDetailCtx(ctx ? { onToggle: ctx.onToggle, added: ctx.selected } : null); setDetailPlace({
@@ -455,7 +466,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {step === "listPick" && (
           <>
             <Header title={effectiveTitle} onBack={() => setStep("listName")}
-              onNext={createList} nextLabel={creating ? "..." : ((selected.size > 0 || manualPlaces.length > 0) ? t("common:buttons.next") : t("skip"))} nextEnabled={!creating} />
+              onNext={createList} nextLabel={creating ? "..." : listPickLabel} nextEnabled={!creating} />
             {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}
             <div className="px-5 pt-1 pb-2 shrink-0">
               <div className="relative">

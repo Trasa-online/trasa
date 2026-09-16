@@ -194,11 +194,21 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
 
   const isSel = (p: PlaceForList) => selected.some((s) => keyOf(s) === keyOf(p));
   const toggle = (p: PlaceForList) => setSelected((prev) => prev.some((s) => keyOf(s) === keyOf(p)) ? prev.filter((s) => keyOf(s) !== keyOf(p)) : [...prev, p]);
-  const pickGoogle = (p: PlaceForList) => {
+  // Wybor miejsca Z WYNIKOW WYSZUKIWANIA. Dziala jak zaznaczanie, nie jak "dodaj i wyjdz":
+  // ⛔ NIE czysc tu `query`. Do 2026-09-16 bylo tu `setQuery("")` ("powrot do siatki - nowy
+  // kafelek zaznaczony") i przez to po wybraniu JEDNEGO wyniku cala lista znikala, a user
+  // wracal na poczatek arkusza. Zeby dodac drugie miejsce z tej samej frazy, musial wpisac ja
+  // od nowa. Zgloszenie testerki (2026-09-16): "chcialabym kilka od razu wybrac, a nie moge,
+  // bo po wybraniu jednej od razu mnie resetuje i wracam na poczatek".
+  // Ponowne tapniecie ODZNACZA - inaczej pomylkowego wyboru nie dalo sie cofnac bez
+  // zamykania arkusza (wiersz pokazywal ptaszka, ale klik nic nie robil).
+  const pickGoogle = (p: PlaceForList, addOnly = false) => {
     haptics.light();
-    setManual((prev) => prev.some((m) => keyOf(m) === keyOf(p)) ? prev : [p, ...prev]);
-    setSelected((prev) => prev.some((s) => keyOf(s) === keyOf(p)) ? prev : [...prev, p]);
-    setQuery("");   // powrot do siatki - nowy kafelek zaznaczony
+    const drop = !addOnly && selected.some((s) => keyOf(s) === keyOf(p));
+    setManual((prev) => drop ? prev.filter((m) => keyOf(m) !== keyOf(p))
+      : prev.some((m) => keyOf(m) === keyOf(p)) ? prev : [p, ...prev]);
+    setSelected((prev) => drop ? prev.filter((s) => keyOf(s) !== keyOf(p))
+      : prev.some((s) => keyOf(s) === keyOf(p)) ? prev : [...prev, p]);
   };
 
   // Siatka: dodane z Google (manual) + zapisane, dedup po nazwie, bez tych juz w trasie.
@@ -218,6 +228,10 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
     }
     return out;
   }, [manual, savedPlaces, existingNameSet]);
+
+  // Ile poleci po tapnieciu "Dodaj". Liczba stoi na guziku, bo przy wybieraniu kilku miejsc
+  // z dlugiej listy zaznaczone wiersze wyjezdzaja poza ekran i nie wiadomo, ile ich jest.
+  const addLabel = selected.length ? `${t("common:buttons.add")} (${selected.length})` : t("common:buttons.add");
 
   const doAdd = async () => {
     if (!selected.length || adding) return;
@@ -304,7 +318,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
           <h2 className="text-[18px] font-semibold text-foreground truncate">{t("add_place.title")}</h2>
           <button onClick={doAdd} disabled={!selected.length || adding}
             className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 ${selected.length && !adding ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
-            {adding ? "..." : t("common:buttons.add")}
+            {adding ? "..." : addLabel}
           </button>
         </div>
 
@@ -432,7 +446,9 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
 
     {/* Miejsce wybrane z mapy wpada w te sama sciezke, co wynik wyszukiwarki (pickGoogle),
         wiec od razu jest zaznaczone i odblokowuje "Dodaj". */}
-    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => pickGoogle(p)} />
+    {/* Z mapy zawsze DODAJEMY (`addOnly`) - tapniecie pinezki to intencja "chce to miejsce",
+        a nie przelacznik; odznacza sie na liscie w arkuszu. */}
+    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => pickGoogle(p, true)} />
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
     <PlaceSwiperDetail
       open={!!detailPlace} onOpenChange={(o) => { if (!o) { setDetailPlace(null); setDetailCtx(null); } }} place={detailPlace}
