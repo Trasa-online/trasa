@@ -786,10 +786,6 @@ const Explore = () => {
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
 
-  // Czy feed jest odscrollowany od gory - od tego zalezy widocznosc banera wyjazdu.
-  // Prog 8 px, zeby baner nie migal przy mikroruchach palca.
-  const [feedScrolled, setFeedScrolled] = useState(false);
-
   // Powrot z wyjazdu/kolekcji ma wracac NA TEN KAFELEK, a nie na gore feedu (prosba Nat
   // 2026-09-15). Scroller siedzi w `PullToRefresh`, wiec bierzemy go stamtad przez `scrollRef`.
   // W trybie szukania ten sam kontener pokazuje wyniki - wtedy hook spi, zeby nie wrzucil
@@ -856,30 +852,22 @@ const Explore = () => {
               (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
               dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
           <div className="relative flex-1 min-h-0 flex flex-col">
-            {/* Skrot do wyjazdu "w trakcie" / roboczego - NAKLADKA przyklejona pod gorna belka.
-                Chowa sie po scrollu w dol, wraca na samej gorze (prosba Nat 2026-09-01).
-                Dlaczego nakladka, a nie element ukladu - dwa poprzednie podejscia sie wylozyly:
-                  1) nad scrollerem, chowany zwijaniem wysokosci -> gorna krawedz listy jechala w
-                     gore W TRAKCIE gestu i snap przeliczal sie od nowa: karty skakaly;
-                  2) w srodku scrollera -> nie skakal, ale spychal pierwsza karte o swoja wysokosc,
-                     wiec jej dol wchodzil pod plywajacy BottomNav.
-                Nakladka nie zajmuje miejsca w ukladzie, wiec karta ma pelna wysokosc i wlasciwa
-                pozycje, a pojawianie sie i znikanie banera nie rusza NICZEGO pod spodem - nie ma
-                czym skoczyc. Wezszy o mapke w prawym gornym rogu karty, zeby jej nie zaslaniac.
-                W trybie kart miejsc (swiper) banera nie ma: wysokosc karty 9:16 liczy sie ze
-                stalego chrome (CLAUDE.md - zamrozony layout PlaceSwiper). */}
-            {/* Przy otwartej wyszukiwarce baner znika razem z feedem - ekran wynikow ma byc
-                czysty (prosba Nat 2026-09-06). */}
-            <div className={cn("absolute inset-x-0 top-0 z-30 transition-all duration-200 ease-out",
-              feedScrolled || searchOpen ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
-              <ActiveTripBanner floating />
-            </div>
+            {/* Skrot do wyjazdu "w trakcie" / roboczego = PIGULKA NAD DOLNA NAWIGACJA
+                (kierunek A, wybor Nat 2026-09-16). Element pozycjonuje sie SAM (`fixed`, odstep
+                liczony od wysokosci BottomNav), wiec nie owijamy go juz nakladka `absolute`
+                i nie chowamy po przewinieciu: skrot ma byc widoczny niezaleznie od tego, jak
+                daleko user zjedzie feedem - w tym cala jego wartosc.
+                ⚠️ Nie wkladaj go w kontener z `transform` (np. animowana nakladke) - `fixed`
+                liczy sie wtedy wzgledem tego kontenera, nie ekranu, i pigulka ucieka z miejsca.
+                Przy otwartej wyszukiwarce znika razem z feedem - ekran wynikow ma byc czysty
+                (prosba Nat 2026-09-06). */}
+            {!searchOpen && <ActiveTripBanner />}
             {/* EKSPLORACJA (IA 2026-09-13): jedna kolumna kafelkow wyjazdow i list od WSZYSTKICH
                 (DiscoveryFeed bez followingOnly), karta po karcie ze snapem. Zakladka "Glowna"
                 (siatka 2 kolumny) i osobny feed obserwowanych (/feed) zdjete z paska tego dnia -
                 zostal jeden widok odkrywania. Snap tylko poza szukaniem: wyniki nie maja punktow
                 przyciagania. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast feedu. */}
-            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)} scrollRef={feedScrollRef}
+            <PullToRefresh onRefresh={handleRefresh} scrollRef={feedScrollRef}
               className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
               {/* Wyszukiwarka: lista kategorii jedna pod druga / wyniki (wspolny SearchPane -
                   ten sam co w Miejscach i na profilu). Poza szukaniem - feed. */}
