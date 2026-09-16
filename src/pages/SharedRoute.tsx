@@ -235,7 +235,10 @@ export default function SharedRoute() {
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);                   // gosc: zapis CALEGO wyjazdu
   const [showDateSheet, setShowDateSheet] = useState(false);
-  const [datesSheetOpen, setDatesSheetOpen] = useState(false);   // wlasciciel: zakres dat wyjazdu
+  const [datesSheetOpen, setDatesSheetOpen] = useState(false);
+  const [daysSheetOpen, setDaysSheetOpen] = useState(false);
+  const [askRemoveDay, setAskRemoveDay] = useState<number | null>(null);
+  const [dayDraft, setDayDraft] = useState(1);   // wlasciciel: zakres dat wyjazdu
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
   // Podglad zdjec DODANYCH DO MIEJSCA (klik w miniaturke w wierszu) - osobny od galerii wyjazdu.
@@ -1167,6 +1170,54 @@ export default function SharedRoute() {
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
     toast.success(numDays > 1 ? t("toast.dates_saved_multi", { count: numDays }) : t("toast.date_saved"));
   };
+  // LICZBA DNI BEZ DAT (zgloszenie testerki 2026-09-16). Zrodlem jest `routes.day_number`,
+  // uzywane tylko wtedy, gdy wyjazd nie ma zakresu dat - przy datach liczbe dni wyznacza
+  // zakres i dwa zrodla prawdy rozjechalyby sie przy pierwszej zmianie terminu.
+  const saveDayCount = async (n: number) => {
+    if (!id) return;
+    const next = Math.min(MAX_TRIP_DAYS, Math.max(1, n));
+    // ⚠️ Skracasz wyjazd - miejsca z dni, ktorych juz nie ma, wracaja na ostatni istniejacy
+    // dzien. Bez tego zostalyby w bazie z `day_index` poza zakresem: filtr dnia by ich nie
+    // zlapal, chip "Wszystkie" owszem, i miejsce znikaloby zaleznie od tego, co user tapnal.
+    const orphans = (pins as any[]).filter((pn) => (Number(pn.day_index) || 1) > next);
+    if (orphans.length) {
+      await (supabase as any).from("pins").update({ day_index: next }).in("id", orphans.map((pn) => pn.id));
+    }
+    const { error } = await (supabase as any).from("routes").update({ day_number: next }).eq("id", id);
+    if (error) { toast.error(t("toast.dates_failed")); return; }
+    setDaysSheetOpen(false);
+    haptics.success();
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    toast.success(t("toast.days_saved", { count: next }));
+  };
+
+  // USUNIECIE PUSTEGO DNIA (zgloszenie testerki: "chcialabym miec mozliwosc usuniecia dnia,
+  // jesli np. nigdzie nie bylam, bo zachorowalam"). Dostepne TYLKO dla dnia bez miejsc -
+  // usuwanie dnia z trescia kasowaloby miejsca po cichu.
+  // ⚠️ Wyjazd skraca sie o jeden dzien, a kolejne dni przesuwaja sie w gore. Przy wyjezdzie
+  // z DATAMI znaczy to takze, ze konczy sie dzien wczesniej (`end_date` - 1) - copy w arkuszu
+  // mowi to wprost, bo inaczej byla by to niespodzianka.
+  const removeDay = async (day: number) => {
+    if (!id) return;
+    const above = (pins as any[]).filter((pn) => pinDay(pn) > day);
+    for (const pn of above) {
+      await (supabase as any).from("pins").update({ day_index: pinDay(pn) - 1 }).eq("id", pn.id);
+    }
+    if (tripStart && tripEnd) {
+      const end = new Date(tripEnd.getTime() - 86400000);
+      const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      await (supabase as any).from("routes").update({ end_date: iso(end) }).eq("id", id);
+    } else {
+      await (supabase as any).from("routes").update({ day_number: Math.max(1, dayCount - 1) }).eq("id", id);
+    }
+    pickDay(null);
+    haptics.success();
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    toast.success(t("toast.day_removed"));
+  };
+
   const clearTripDates = async () => {
     if (!id) return;
     await (supabase as any).from("routes").update({ start_date: null, end_date: null }).eq("id", id);
@@ -1506,10 +1557,15 @@ export default function SharedRoute() {
   // przypisanie RECZNE przez drag). Brak daty albo jeden dzien -> plaska lista jak dotad.
   const tripStart = route.start_date ? new Date(route.start_date) : null;
   const tripEnd = (route as any).end_date ? new Date((route as any).end_date) : null;
+  // Liczba dni: z ZAKRESU DAT, a gdy dat nie ma - z `routes.day_number`, ktore wlasciciel
+  // ustawia recznie ("Liczba dni" w menu "..."). Zgloszenie testerki 2026-09-16: "od razu
+  // chcialabym miec mozliwosc dodania dni... po wybraniu daty CZY TEZ BEZ DAT". Wyjazd bez
+  // dat tez bywa wielodniowy - plan weekendowy powstaje, zanim ktos wybierze termin.
   const dayCount = tripStart && tripEnd
     ? Math.max(1, Math.round((tripEnd.getTime() - tripStart.getTime()) / 86400000) + 1)
-    : 1;
-  const hasDays = !!tripStart && dayCount > 1;
+    : Math.min(MAX_TRIP_DAYS, Math.max(1, Number((route as any).day_number) || 1));
+  // ⛔ Bez `!!tripStart`: podzial na dni niesie teraz takze sama liczba dni, bez terminu.
+  const hasDays = dayCount > 1;
   const dayDate = (day: number) => (tripStart ? new Date(tripStart.getTime() + (day - 1) * 86400000) : null);
   const dayLabel = (day: number) => {
     const d = dayDate(day);
@@ -1530,7 +1586,13 @@ export default function SharedRoute() {
   // ze wyjazd ma podzialke na dni - takze wtedy, gdy dni sa jeszcze puste. Nowe miejsca trafiaja
   // domyslnie do dnia 1, a przypisac je do wlasciwego dnia mozna w kazdej chwili - w wersji
   // roboczej, w trakcie wyjazdu i po nim (gdyby cos poszlo nie tak).
-  const daysUsable = hasDays && (pins as any[]).length > 0;
+  // ⛔ BEZ warunku "sa juz miejsca". Do 2026-09-16 stalo tu `hasDays && pins.length > 0`,
+  // wiec w swiezo utworzonym wyjezdzie pasek dni pojawial sie DOPIERO po dodaniu pierwszego
+  // miejsca - a wtedy wszystkie dni wskakiwaly naraz i wygladalo to jak skok interfejsu
+  // (zgloszenie testerki: "to sie otwiera dopiero po dodaniu miejsca jednego"). Pusty wyjazd
+  // z zakresem dat ma od razu pokazywac, na ile dni jest rozpisany; kazdy dzien ma wlasny
+  // stan zero, wiec nie ma czego chowac.
+  const daysUsable = hasDays;
   // Domyslnie "Wszystkie" (null), nie dzien dzisiejszy (prosba Nat 2026-09-08): wchodzac
   // w wyjazd chce sie najpierw zobaczyc CALOSC, a dopiero potem zawezic do dnia. Dzien
   // dzisiejszy zostaje jednym tapnieciem w chip.
@@ -1903,11 +1965,20 @@ export default function SharedRoute() {
     // (nie pod kazda kategoria) - i od razu mowi, jak to naprawic.
     if (activeDay !== null && !visiblePins.length) {
       return (
-        <p className="text-[13px] text-muted-foreground py-6 text-center px-4 leading-relaxed">
-          {canEdit
-            ? t("day.empty")
-            : t("day.no_places")}
-        </p>
+        <div className="py-6 px-4 text-center">
+          <p className="text-[13px] text-muted-foreground leading-relaxed">
+            {canEdit ? t("day.empty") : t("day.no_places")}
+          </p>
+          {/* Usuniecie dnia stoi DOKLADNIE tam, gdzie problem widac - w pustym dniu. Osobna
+              pozycja w menu "..." wymagalaby najpierw zgadniecia, ktorego dnia dotyczy.
+              Tylko wlasciciel i tylko gdy zostanie co najmniej jeden dzien. */}
+          {isOwner && dayCount > 1 && (
+            <button onClick={() => setAskRemoveDay(activeDay)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-2 text-[13px] font-semibold text-foreground active:scale-95 transition-transform">
+              <Trash2 className="h-3.5 w-3.5" />{t("day.remove")}
+            </button>
+          )}
+        </div>
       );
     }
     // Kategorie grupuja miejsca TYLKO na etapie propozycji (tam sluza do przegladania sugestii).
@@ -2129,6 +2200,14 @@ export default function SharedRoute() {
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDatesSheetOpen(true); }} className="gap-2.5 py-2.5">
                         <CalendarIcon className="h-4 w-4" />{route.start_date ? t("aria.change_dates") : t("aria.add_dates")}
+                      </DropdownMenuItem>
+                    )}
+                    {/* Liczba dni BEZ dat (zgloszenie testerki 2026-09-16). Przy wybranym zakresie
+                        tej pozycji nie ma - tam liczbe dni wyznaczaja daty i dwa zrodla prawdy
+                        rozjechalyby sie przy pierwszej zmianie terminu. */}
+                    {isOwner && !route.start_date && (
+                      <DropdownMenuItem onSelect={() => { haptics.light(); setDayDraft(dayCount); setDaysSheetOpen(true); }} className="gap-2.5 py-2.5">
+                        <CalendarIcon className="h-4 w-4" />{t("day.count_action")}
                       </DropdownMenuItem>
                     )}
                     {/* Zapraszanie tylko HOST: inviteUsersToRoute idzie przez host-only RPC add_member_to_session. */}
@@ -2894,6 +2973,48 @@ export default function SharedRoute() {
           )}
         </div>
       )}
+
+      {/* LICZBA DNI bez wybranego terminu (zgloszenie testerki 2026-09-16). Krokomierz, nie
+          pole tekstowe: liczba dni to zawsze kilka-kilkanascie, a klawiatura numeryczna nad
+          arkuszem zabralaby pol ekranu. */}
+      <Sheet open={daysSheetOpen} onOpenChange={setDaysSheetOpen}>
+        <SheetContent side="bottom" className="px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))]">
+          <SheetTitle className="text-center text-lg font-black">{t("day.count_title")}</SheetTitle>
+          <p className="mt-1 text-center text-[13px] text-muted-foreground leading-relaxed">{t("day.count_desc")}</p>
+          <div className="mt-6 flex items-center justify-center gap-6">
+            <button onClick={() => { haptics.light(); setDayDraft((n) => Math.max(1, n - 1)); }} disabled={dayDraft <= 1}
+              aria-label={t("day.count_less")}
+              className="h-12 w-12 rounded-full border border-border flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform disabled:opacity-30">-</button>
+            <span className="min-w-[4ch] text-center text-4xl font-black tabular-nums">{dayDraft}</span>
+            <button onClick={() => { haptics.light(); setDayDraft((n) => Math.min(MAX_TRIP_DAYS, n + 1)); }} disabled={dayDraft >= MAX_TRIP_DAYS}
+              aria-label={t("day.count_more")}
+              className="h-12 w-12 rounded-full border border-border flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform disabled:opacity-30">+</button>
+          </div>
+          <button onClick={() => void saveDayCount(dayDraft)}
+            className="mt-7 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-white active:scale-[0.98] transition-transform">
+            {t("common:buttons.save")}
+          </button>
+        </SheetContent>
+      </Sheet>
+
+      {/* Usuniecie pustego dnia. Copy MUSI powiedziec o skroceniu wyjazdu - przy wyjezdzie
+          z datami zmienia sie takze data konca, a to jest niespodzianka, jesli o niej nie
+          uprzedzimy. */}
+      <AlertDialog open={askRemoveDay !== null} onOpenChange={(o) => { if (!o) setAskRemoveDay(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("day.remove_title", { day: askRemoveDay ?? 0 })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {tripStart ? t("day.remove_desc_dated") : t("day.remove_desc")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); const d = askRemoveDay; setAskRemoveDay(null); if (d) void removeDay(d); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("day.remove")}</AlertDialogAction>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Gosc: kiedy planuje ten wyjazd. Data nalezy do ZAPISUJACEGO, nie do trasy, i jest
           opcjonalna ("Zapisz bez daty"). Arkusz na `Sheet`, wiec gest "w dol" ma z pudelka. */}

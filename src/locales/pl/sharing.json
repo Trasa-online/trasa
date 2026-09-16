@@ -89,7 +89,16 @@
     "no_places": "Brak miejsc tego dnia",
     "label": "Dzień {{day}}",
     "label_with_date": "Dzień {{day}} · {{date}}",
-    "moved": "Przeniesiono do: {{day}}"
+    "moved": "Przeniesiono do: {{day}}",
+    "count_action": "Liczba dni",
+    "count_title": "Na ile dni?",
+    "count_desc": "Rozpisz wyjazd na dni, zanim wybierzesz termin. Daty możesz dodać później.",
+    "count_less": "Mniej dni",
+    "count_more": "Więcej dni",
+    "remove": "Usuń ten dzień",
+    "remove_title": "Usunąć dzień {{day}}?",
+    "remove_desc": "Wyjazd skróci się o jeden dzień, a kolejne dni przesuną się w górę.",
+    "remove_desc_dated": "Wyjazd skróci się o jeden dzień: skończy się dzień wcześniej, a kolejne dni przesuną się w górę."
   },
   "toast": {
     "pick_cover_desc": "W zakładce Galeria zaznacz zdjęcie, które ma reprezentować wyjazd w eksploracji.",
@@ -143,7 +152,9 @@
     "pick_added_one": "Dodano {{count}} miejsce do „{{trip}}”",
     "pick_added_few": "Dodano {{count}} miejsca do „{{trip}}”",
     "pick_added_many": "Dodano {{count}} miejsc do „{{trip}}”",
-    "cover_portrait_only": "Okładka musi być pionowa (3:4 albo 9:16). Wybierz inne zdjęcie."
+    "cover_portrait_only": "Okładka musi być pionowa (3:4 albo 9:16). Wybierz inne zdjęcie.",
+    "days_saved": "Wyjazd na {{count}} dni",
+    "day_removed": "Dzień usunięty"
   },
   "pick_date_desc": "Wybierz jeden dzień albo zakres - przy kilku dniach rozłożysz miejsca na dni",
   "confirm": {

@@ -42,7 +42,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop, visitedAvatar, selection, menuExtras, deleteLabel }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, visitedByMe, onToggleVisited, isTop, onToggleTop, visitedAvatar, visitedAvatars, selection, menuExtras, deleteLabel }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -57,7 +57,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   cornerAvatar?: string | null;
   // "Bylem tu" (2026-09-08). Stan nalezy do OGLADAJACEGO, nie do listy - patrz src/lib/placeVisits.ts.
   // Oba propy sa opcjonalne, wiec ekrany, ktore ich nie podaja (wyjazdy), wygladaja jak dotad.
+  /** Czy pigulka "odwiedzone" ma sie w ogole pokazac (w kolekcji: byl tu KTOKOLWIEK). */
   visited?: boolean;
+  /** Czy odhaczyl to OGLADAJACY - od tego zalezy tylko etykieta w menu ("byłem" / "nie byłem").
+   *  Brak = przyjmij `visited` (wyjazdy, gdzie pigulka i przelacznik znacza to samo). */
+  visitedByMe?: boolean;
   onToggleVisited?: () => void;
   // "Topka" wyjazdu (2026-09-08): autor wyroznia 1-3 miejsca warte polecenia.
   // onToggleTop podaje tylko autor - dla ogladajacych gwiazdka jest sama informacja.
@@ -66,6 +70,10 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   /** Awatar osoby, ktorej dotyczy `visited`, gdy NIE jest to ogladajacy (cudza lista).
    *  Obecny = wiersz pokazuje stan PASYWNY: informacje, nie przelacznik. */
   visitedAvatar?: string | null;
+  /** Kolekcja wspoltworzona: odwiedzic moze KILKA osob, wiec zamiast jednego awatara idzie
+   *  lista. Widac dwa pierwsze, reszta jako "+N" (zgloszenie testerki 2026-09-16). Podany
+   *  przykrywa `visitedAvatar`. */
+  visitedAvatars?: (string | null)[];
   /** Zaznaczanie miejsc w CUDZYM wyjezdzie (2026-09-10). Przytrzymanie wchodzi w tryb,
    *  a w trybie cale tapniecie w wiersz przelacza zaznaczenie - bez celowania w checkbox.
    *  Nieobecne = wiersz zachowuje sie jak dotad. */
@@ -243,6 +251,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // miniature zostala wycofana: dla akcji "bylem tu" liczy sie sila przybicia, a nie droga.
   // Lot zostaje wylacznie przy topce, gdzie ma sens - tam gwiazdka MUSI dolecec do nazwy,
   // bo tam zostaje.
+  // ⚠️ Liczymy TU, nie w JSX: bramka `i18n:check` czyta `>` w znaczniku jako poczatek tekstu,
+  // a szablon `+${n}` bierze za polski napis na sztywno.
+  const extraVisitors = Math.max(0, (visitedAvatars?.length ?? 0) - 2);
+  const plusExtra = "+" + extraVisitors;
+  const iVisited = visitedByMe ?? visited;
   const wasVisited = useRef(!!visited);
   useEffect(() => {
     if (visited && !wasVisited.current && tappedVisit.current) {
@@ -297,7 +310,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               transition={stamped
                 ? { duration: 0.44, times: [0, 0.16, 0.4, 0.7, 1], ease: "easeOut" }
                 : { duration: 0.2 }}
-              className="relative h-8 w-16 rounded-full flex items-center justify-center gap-1 bg-[#FDF184] text-[#0E0E0E]"
+              className="relative h-8 min-w-16 px-2 rounded-full flex items-center justify-center gap-1 bg-[#FDF184] text-[#0E0E0E]"
             >
               <AnimatePresence>
                 {stamped && (
@@ -324,9 +337,22 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                   </>
                 )}
               </AnimatePresence>
-              {visitedAvatar !== undefined && (
+              {/* Kilku odwiedzajacych: dwa awatary nachodzace na siebie + "+N". Pigulka jest
+                  waska, wiec trzeci awatar juz by ja rozpychal ponad szerokosc miniatury. */}
+              {visitedAvatars?.length ? (
+                <span className="flex items-center -space-x-1.5 shrink-0">
+                  {visitedAvatars.slice(0, 2).map((u, i) => (
+                    <img key={i} src={avatarSrc(u)} alt="" className="h-6 w-6 rounded-full object-cover bg-white/60 ring-[1.5px] ring-[#FDF184]" />
+                  ))}
+                  {extraVisitors > 0 && (
+                    <span className="h-6 min-w-[24px] px-1 rounded-full bg-white/75 ring-[1.5px] ring-[#FDF184] text-[10px] font-black flex items-center justify-center">
+                      {plusExtra}
+                    </span>
+                  )}
+                </span>
+              ) : visitedAvatar !== undefined ? (
                 <img src={avatarSrc(visitedAvatar)} alt="" className="h-6 w-6 rounded-full object-cover bg-white/60 shrink-0" />
-              )}
+              ) : null}
               <CheckCheck className="h-4 w-4 shrink-0" strokeWidth={3} />
             </motion.span>
           )}
@@ -497,8 +523,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 <DropdownMenuContent align="end" className="rounded-2xl w-60">
                   {onToggleVisited && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedVisit.current = true; onToggleVisited(); }} className="gap-2.5 py-2.5">
-                      <Check className={`h-4 w-4 ${visited ? "text-primary" : "text-muted-foreground"}`} strokeWidth={3} />
-                      {visited ? t("row.mark_not_visited") : t("row.mark_visited")}
+                      <Check className={`h-4 w-4 ${iVisited ? "text-primary" : "text-muted-foreground"}`} strokeWidth={3} />
+                      {iVisited ? t("row.mark_not_visited") : t("row.mark_visited")}
                     </DropdownMenuItem>
                   )}
                   {menuRest.map((x) => (

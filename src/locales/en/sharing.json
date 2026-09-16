@@ -89,7 +89,16 @@
     "no_places": "No places this day",
     "label": "Day {{day}}",
     "label_with_date": "Day {{day}} · {{date}}",
-    "moved": "Moved to {{day}}"
+    "moved": "Moved to {{day}}",
+    "count_action": "Number of days",
+    "count_title": "How many days?",
+    "count_desc": "Split the trip into days before you pick a date. You can add dates later.",
+    "count_less": "Fewer days",
+    "count_more": "More days",
+    "remove": "Remove this day",
+    "remove_title": "Remove day {{day}}?",
+    "remove_desc": "The trip gets one day shorter and the following days move up.",
+    "remove_desc_dated": "The trip gets one day shorter: it will end a day earlier and the following days move up."
   },
   "toast": {
     "pick_cover_desc": "In the Gallery tab, pick the photo that should represent this trip in Explore.",
@@ -139,7 +148,9 @@
     "pick_all_present": "Those places are already there",
     "pick_added_one": "Added {{count}} place to “{{trip}}”",
     "pick_added_other": "Added {{count}} places to “{{trip}}”",
-    "cover_portrait_only": "Covers must be portrait (3:4 or 9:16). Pick another photo."
+    "cover_portrait_only": "Covers must be portrait (3:4 or 9:16). Pick another photo.",
+    "days_saved": "Trip set to {{count}} days",
+    "day_removed": "Day removed"
   },
   "pick_date_desc": "Pick a single day or a range - with several days you can spread places across them",
   "confirm": {

@@ -40,16 +40,16 @@ const SPIN_S = 14;
 // ⚠️ Brazowy obrys nie jest ozdoba: przy 9 px w naglowkach plaska zolta plama na jasnym
 // tle nie ma zadnej krawedzi. Ta sama sztuczka, co bialy obrys chmurki nizej.
 const BANANA_BODY = "M5.15 17.89c5.52-1.52 8.65-6.89 7-12C11.55 4 11.5 2 13 2c3.22 0 5 5.5 5 8 0 6.5-4.2 12-10.49 12C5.11 22 2 22 2 20c0-1.5 1.14-1.55 3.15-2.11Z";
-// ⚠️ Obrot i powiekszenie nie sa kosmetyka. Banan to z natury polksiezyc, wiec w pionie ma
-// DOKLADNIE ten sam zarys, co nakladka "ksiezyc" - a obie stoja obok siebie na liscie i
-// rozniłby je wtedy sam kolor. Polozenie go poziomo (jak lezacy owoc) daje inna os i inna
-// sylwetke na pierwszy rzut oka; `1.12` wyrownuje mase optyczna, bo sciezka banana wypelnia
-// swoje pole slabiej niz ksiezyc.
+// PIONOWO (wybor Nat 2026-09-16 po obejrzeniu obu wariantow). Probowalam polozyc banana
+// poziomo (-115 stopni), bo w pionie ma zblizony zarys do nakladki "ksiezyc" - Nat obejrzala
+// render obu i wybrala pion. Kolory zostaja rozroznieniem: banan jest zolty z brazowym
+// obrysem, ksiezyc bierze kolor z pipety.
+// `1.12` zostaje - wyrownuje mase optyczna, bo sciezka banana wypelnia swoje pole slabiej
+// niz ksiezyc.
 function BananaGlyph({ px }: { px: number }) {
   const s = Math.round(px * 1.12);
   return (
-    <svg viewBox="0 0 24 24" width={s} height={s} className="block drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
-      style={{ transform: "rotate(-115deg)" }} aria-hidden>
+    <svg viewBox="0 0 24 24" width={s} height={s} className="block drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)]" aria-hidden>
       <path d={BANANA_BODY} fill="#FDF184" stroke="#5B2C06" strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );

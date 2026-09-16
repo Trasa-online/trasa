@@ -375,6 +375,30 @@ export default function SharedList() {
     },
   });
 
+  // ODWIEDZINY WSZYSTKICH UCZESTNIKOW (zgloszenie testerki 2026-09-16). `place_visits` jest
+  // prywatne (RLS: tylko swoje wiersze), wiec slad wspoltworcow idzie waskim SECDEF RPC
+  // `list_collection_visits` - wylacznie miejsca z TEJ kolekcji i wylacznie jej uczestnicy
+  // (migracja 20260916f). Moje wlasne odwiedziny czytam dalej wprost (`visitedKeys`), bo to
+  // one sterują przelacznikiem i musza sie odswiezac natychmiast, bez czekania na RPC.
+  const { data: allVisits = EMPTY_ARRAY } = useQuery({
+    queryKey: ["collection-visits", id],
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("list_collection_visits", { p_collection_id: id });
+      if (error) { console.warn("[SharedList] collection visits:", error.message); return []; }
+      return (data ?? []) as { user_id: string; place_key: string }[];
+    },
+  });
+  const visitorsByPlace = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const v of allVisits as { user_id: string; place_key: string }[]) {
+      const arr = m.get(v.place_key);
+      if (arr) { if (!arr.includes(v.user_id)) arr.push(v.user_id); } else m.set(v.place_key, [v.user_id]);
+    }
+    return m;
+  }, [allVisits]);
+
   const handleToggleVisited = async (it: any) => {
     if (!user) return;
     const key = visitKeyOf(it);
@@ -388,6 +412,9 @@ export default function SharedList() {
     haptics.light();
     const now = await toggleVisited(user.id, was, { placeKey: key, placeName: it.place_name, city: it.city ?? (col as any)?.city ?? null });
     if (now === was) queryClient.invalidateQueries({ queryKey: ["place-visits", user.id, id] });
+    // Slad grupowy idzie z serwera, wiec po kazdym przelaczeniu musi sie przeliczyc -
+    // inaczej moj awatar nie pojawilby sie w pigulce az do wejscia w kolekcje od nowa.
+    queryClient.invalidateQueries({ queryKey: ["collection-visits", id] });
   };
 
   // #2/#3: zdjecia userow dodane do miejsc tej listy w wizytowkach (place_photos). Sluza jako
@@ -461,6 +488,16 @@ export default function SharedList() {
     () => (members as any[]).filter((m) => m.user_id !== col?.user_id && m.username),
     [members, col?.user_id],
   );
+  // Awatary do pigulki "odwiedzone": autor + wspoltworcy. Innych osob w tej mapie nie ma
+  // i byc nie moze - RPC oddaje slad wylacznie uczestnikow kolekcji.
+  // ⛔ TEN HOOK MUSI STAC NAD early-returnami (bramka `npm run hooks:check` zlapala go po
+  //    nich przy pierwszym podejsciu - ta sama pulapka, co przy widoku kolekcji 2026-09-15).
+  const avatarByUser = useMemo(() => {
+    const m = new Map<string, string | null>();
+    if ((col as any)?.user_id) m.set((col as any).user_id, (author as any)?.avatar_url ?? (col as any)?.author_avatar ?? null);
+    for (const mem of members as any[]) if (mem?.user_id) m.set(mem.user_id, mem.avatar_url ?? null);
+    return m;
+  }, [members, (col as any)?.user_id, (author as any)?.avatar_url, (col as any)?.author_avatar]);
   const [allPeopleOpen, setAllPeopleOpen] = useState(false);
   // Notki WSZYSTKICH uczestnikow: RLS wpuszcza kazdego, kto widzi kolekcje, wiec czytelnik
   // publicznej kolekcji tez widzi caly watek - tak samo, jak przy opublikowanym wyjezdzie.
@@ -638,6 +675,14 @@ export default function SharedList() {
   // obslugujace te akcje wisialy pod `isOwner` (patrz komentarz przy ukrytym inpucie nizej).
   const canContribute = isOwner || isMember;
   const canEditItem = (it: any) => isOwner || (isMember && it?.added_by === user?.id);
+  // MOJ awatar idzie pierwszy - swoj slad czlowiek szuka najpierw.
+  const visitorAvatars = (key: string): string[] | undefined => {
+    const ids = visitorsByPlace.get(key);
+    if (!ids?.length) return undefined;
+    const mine = user?.id;
+    const ordered = mine && ids.includes(mine) ? [mine, ...ids.filter((x) => x !== mine)] : ids;
+    return ordered.map((uid) => avatarByUser.get(uid) ?? null).filter((v): v is string => v !== undefined) as string[];
+  };
   const placesCountLabel = t("places_count", { count: items.length });
 
 
@@ -832,8 +877,16 @@ export default function SharedList() {
                 onClick: () => { itemPhotoTarget.current = pin; itemPhotoInputRef.current?.click(); },
               },
             ] : undefined}
-            onToggleVisited={isOwner && user ? () => handleToggleVisited(pin) : undefined}
-            visited={isOwner ? visitedKeys.has(visitKeyOf(pin)) : authorVisitedKeys.has(visitKeyOf(pin))}
+            /* ⛔ NIE `isOwner`: odhaczyc "byłem tu" moze KAZDY uczestnik kolekcji (zgloszenie
+               testerki 2026-09-16). Odwiedziny sa prywatne i naleza do osoby, nie do kolekcji,
+               wiec kazdy przelacza WYLACZNIE swoj slad. */
+            onToggleVisited={canContribute && user ? () => handleToggleVisited(pin) : undefined}
+            /* Pigulka pojawia sie, gdy byl tu KTOKOLWIEK z uczestnikow; etykieta w menu
+               ("byłem" / "nie byłem") chodzi po MOIM sladzie. Na cudzej kolekcji bez
+               wspoltworcow zostaje slad autora - dokladnie jak dotad. */
+            visited={(visitorAvatars(visitKeyOf(pin))?.length ?? 0) > 0 || (isOwner ? visitedKeys.has(visitKeyOf(pin)) : authorVisitedKeys.has(visitKeyOf(pin)))}
+            visitedByMe={visitedKeys.has(visitKeyOf(pin))}
+            visitedAvatars={visitorAvatars(visitKeyOf(pin))}
             // Awatar w pigulce "odwiedzone" ZAWSZE: na cudzej liscie autora, na wlasnej moj
             // (autor listy = ja) - makieta Nat 2026-09-13.
             visitedAvatar={author?.avatar_url ?? col.author_avatar ?? null}

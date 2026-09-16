@@ -136,9 +136,11 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const options: { id: AvatarFrameId | null; label: string; reward?: boolean }[] = [
+  const options: { id: AvatarFrameId | null; label: string; reward?: boolean; gift?: boolean }[] = [
     { id: null, label: t("frames.none") },
-    ...AVATAR_FRAMES.map((f) => ({ id: f.id as AvatarFrameId | null, label: t(f.labelKey), reward: f.reward })),
+    // Prezenty widzi TYLKO obdarowany - patrz `gift` w AVATAR_FRAMES.
+    ...AVATAR_FRAMES.filter((f) => !f.gift || !isLocked(f.id))
+      .map((f) => ({ id: f.id as AvatarFrameId | null, label: t(f.labelKey), reward: f.reward, gift: f.gift })),
   ];
 
   return (
@@ -164,8 +166,9 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
                     {o.label}
-                    {o.reward && <span className="rounded-full bg-[#FDF184] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#5B2C06]">{t("frames.reward")}</span>}
+                    {(o.reward || o.gift) && <span className="rounded-full bg-[#FDF184] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#5B2C06]">{t(o.gift ? "frames.gift" : "frames.reward")}</span>}
                   </span>
+                  {o.gift && <span className="block text-[12px] text-muted-foreground">{t("frames.gift_hint")}</span>}
                   {o.reward && u && (
                     <span className="block text-[12px] text-muted-foreground">
                       {locked ? t("frames.locked_hint", { invited: u.invited, goal: u.goal }) : t("frames.unlocked_hint")}

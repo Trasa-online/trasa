@@ -18,6 +18,7 @@ import i18n from "@/i18n";
 import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import PermissionPrimerSheet from "@/components/permissions/PermissionPrimerSheet";
+import FrameGiftSheet from "@/components/profile/FrameGiftSheet";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { fetchMyVenues, pickVenue } from "@/lib/businessVenues";
 import { TrasaLogo } from "@/components/TrasaLogo";
@@ -821,6 +822,8 @@ const App = () => (
         <AuthDrawer />
         {/* Arkusz "miekkiego pytania" o zgody systemowe (push/lokalizacja) - lib/permissionPrompts. */}
         <PermissionPrimerSheet />
+        {/* Prezent-nakladka wita sie z obdarowanym RAZ, przy pierwszym uruchomieniu po nadaniu. */}
+        <FrameGiftSheet />
         {/* Zdalna brama minimalnej wersji (native) - patrz UpdateGate. Renderuje sie NAD
             wszystkim (z-200), tylko gdy build jest ponizej progu z app_config. */}
         {isNative && <UpdateGate />}
