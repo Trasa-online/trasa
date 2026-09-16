@@ -16,6 +16,8 @@
 
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { BrandStar } from "@/components/BrandStar";
+import { fetchPlaceStarCount, placeStarsKey } from "@/lib/placeStars";
 import posthog from "posthog-js";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -36,6 +38,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
+import { useQuery } from "@tanstack/react-query";
 import { instagramUrl, facebookUrl } from "@/lib/social";
 import type {
   PremiumBusinessData,
@@ -706,6 +709,32 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
   );
 }
 
+// "WYROZNIONE" - ile osob dalo temu lokalowi gwiazdke "topki" (prosba Nat 2026-09-16).
+// ⛔ TYLKO wizytowka premium. Na wizytowce w stanie zero tej sekcji NIE MA (decyzja Nat):
+//    tam nie ma jeszcze o czym mowic, a pusty spoleczny dowod dziala przeciwko lokalowi.
+// Zero tez sie nie renderuje - licznik pojawia sie dopiero, gdy ktos faktycznie wyroznil.
+// Gwiazdka to INLINE svg (`BrandStar`), nie maska CSS - regula z CLAUDE.md.
+function StarredSection({ data }: SectionProps) {
+  const { t } = useTranslation("wizytowka");
+  const { data: count = 0 } = useQuery({
+    queryKey: placeStarsKey(data.name),
+    enabled: !!data.name,
+    staleTime: 5 * 60_000,
+    queryFn: () => fetchPlaceStarCount(data.name),
+  });
+  if (!count) return null;
+  return (
+    <div className="flex items-center gap-2.5 pt-1">
+      <span className="h-8 w-8 rounded-full bg-[#FDF184] flex items-center justify-center shrink-0">
+        <BrandStar filled className="h-[18px] w-[18px] text-primary" />
+      </span>
+      <span className="text-sm font-semibold text-foreground leading-snug">
+        {t("starred_by", { count })}
+      </span>
+    </div>
+  );
+}
+
 function TagsSection({ data, max }: SectionProps & { max?: number }) {
   if (!data.tags?.length) return null;
   const visible = max ? data.tags.slice(0, max) : data.tags;
@@ -1062,6 +1091,10 @@ export interface PremiumBusinessCardProps {
   hideReviews?: boolean;
   hideHours?: boolean;
   hidePosts?: boolean;
+  /** Wizytowka PREMIUM (`business_profiles.is_premium`). Odblokowuje sekcje "Wyróżnione".
+   *  ⛔ Wizytowka w STANIE ZERO jej nie dostaje (decyzja Nat 2026-09-16) - ten sam komponent
+   *  obsluguje oba przypadki, wiec bez tej flagi sekcja wyciekalaby na kazde miejsce. */
+  premium?: boolean;
   hideContact?: boolean;
   // Slots - call site dodaje custom rendery (header z close button, footer z CTA Like/Skip)
   footer?: ReactNode;
@@ -1103,6 +1136,7 @@ const PremiumBusinessCard = ({
   hideMenu,
   hideHours,
   hidePosts,
+  premium,
   hideContact,
   footer,
   header,
@@ -1213,6 +1247,10 @@ const PremiumBusinessCard = ({
             {/* Sekcje z naglowkami - osobne 'common regions' oddzielone duzym spacingiem */}
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
+
+            {/* Wyroznienia od userow - stoi NAD "Od użytkowników", bo to ten sam rodzaj
+                sygnalu (co spolecznosc zrobila z tym miejscem), tylko jednym zdaniem. */}
+            {premium && <StarredSection data={data} />}
 
             {/* "Od użytkowników" - tresci od spolecznosci, POD cennikiem/menu (prosba Nat 2026-08-31):
                 miniatury zdjec wgranych do miejsca (tylko wizytowka z kontem biznesowym - w wizytowce

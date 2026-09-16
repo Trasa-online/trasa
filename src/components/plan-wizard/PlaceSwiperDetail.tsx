@@ -492,6 +492,9 @@ const PlaceSwiperDetail = ({
           <PremiumBusinessCard
             data={businessData}
             mode="detail"
+            /* "Wyróżnione" tylko na wizytowce premium - na wizytowce w stanie zero tej sekcji
+               nie ma (decyzja Nat 2026-09-16). */
+            premium={isPremiumBusiness}
             referenceDate={referenceDate}
             detailPhotos={displayPhotos}
             detailLoading={loading}

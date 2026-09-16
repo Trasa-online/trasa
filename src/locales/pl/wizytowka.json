@@ -80,5 +80,8 @@
   "share_place": "Udostępnij to miejsce",
   "save_short": "Zapisz",
   "add_short": "Dodaj",
-  "saved_place": "Miejsce zapisane"
+  "saved_place": "Miejsce zapisane",
+  "starred_by_one": "Wyróżnione przez {{count}} osobę",
+  "starred_by_few": "Wyróżnione przez {{count}} osoby",
+  "starred_by_many": "Wyróżnione przez {{count}} osób"
 }
