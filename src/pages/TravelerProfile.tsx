@@ -32,6 +32,7 @@ import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
 import { useFriendList, excludeFriend, unexcludeFriend, friendIdsKey } from "@/lib/friends";
+import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
 import { UserMinus } from "lucide-react";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
@@ -174,7 +175,7 @@ const TravelerProfile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [followSheet, setFollowSheet] = useState<"followers" | "following" | "friends" | null>(null);
+  const [followSheet, setFollowSheet] = useState<PeopleTab | null>(null);
   const [starredOpen, setStarredOpen] = useState(false);
   // Wyszukiwarka przypieta w naglowku - dziala W MIEJSCU, dokladnie jak w Eksploracji
   // (prosba Nat 2026-09-06): foldery kategorii chowaja sie po wpisaniu frazy, a wyniki
@@ -262,38 +263,11 @@ const TravelerProfile = () => {
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const { data: starred = [] } = useStarredPlaces(user?.id);
-  const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
   // ZNAJOMI = wzajemna obserwacja (patrz src/lib/friends.ts). Liczba jedzie z BAZY, nie
   // z przeciecia dwoch list w kliencie - to ta sama funkcja, ktora bramkuje zdjecia.
+  // Sama LISTA (i wypisywanie ze znajomych) mieszka w `PeopleSheet`; tutaj potrzebny jest
+  // wylacznie licznik w rzedzie statystyk.
   const friendList = useFriendList(user?.id);
-
-  // Arkusz ludzi ma trzy tryby, ale JEDEN wiersz osoby - inaczej trzy kopie tego samego
-  // kawalka JSX rozjechalyby sie przy pierwszej zmianie.
-  const peopleQuery = followSheet === "friends" ? friendList : followList;
-  const peopleRows = (peopleQuery.data ?? []) as any[];
-
-  // Wypisanie ze znajomych: CICHE i odwracalne. Nie odobserwowujemy - to byloby widoczne
-  // dla drugiej strony. Zapisujemy wykluczenie, ktore czyta `are_friends` w politykach RLS.
-  const removeFriend = async (person: any) => {
-    if (!user) return;
-    haptics.light();
-    try {
-      await excludeFriend(person.id);
-      queryClient.invalidateQueries({ queryKey: friendIdsKey(user.id) });
-      toast(t("profile.friend_removed"), {
-        action: {
-          label: t("common:buttons.undo"),
-          onClick: () => {
-            void unexcludeFriend(person.id)
-              .then(() => queryClient.invalidateQueries({ queryKey: friendIdsKey(user.id) }))
-              .catch(() => toast.error(t("profile.friend_remove_failed")));
-          },
-        },
-      });
-    } catch {
-      toast.error(t("profile.friend_remove_failed"));
-    }
-  };
 
   // Usuwanie z oknem "Cofnij" (deferDelete): element znika od razu z listy (optymistycznie),
   // faktyczny DB delete odroczony o 5s; klik "Cofnij" przywraca (snapshot cache). Zastepuje confirm()
@@ -1187,72 +1161,31 @@ const TravelerProfile = () => {
       </div>
       </PullToRefresh>
 
-      {/* Obserwujacy / Znajomi / Obserwowani - jedna lista z przelacznikiem */}
-      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
-        <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
-          {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
-          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 -mt-2 mb-1 shrink-0" />
-          <SheetHeader className="pb-2">
-            <SheetTitle className="sr-only">{t("profile.people_title")}</SheetTitle>
-          </SheetHeader>
-          {/* PRZELACZNIK trzech list. "Obserwowani" stracili wlasny licznik w rzedzie statystyk
-              (nie miesci sie tam czwarty), wiec ich jedyne wejscie jest tutaj - bez tego znikneli
-              by z produktu. Zaznaczona pigulka jest ZOLTA z brazowym tekstem, jak podzakladki
-              profilu. ⚠️ To tymczasowy ksztalt: arkusz ludzi ma wlasny brief (szukanie, stan
-              relacji, akcja w wierszu), wiec nie rozbudowuj go tutaj. */}
-          <div className="flex gap-1.5 pb-3 border-b border-border/20 shrink-0">
-            {(["followers", "friends", "following"] as const).map((k) => {
-              const on = followSheet === k;
-              return (
-                <button key={k} onClick={() => { haptics.selection(); setFollowSheet(k); }}
-                  className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors active:scale-95 ${on ? "bg-[#FDF184] text-[#5B2C06]" : "bg-secondary text-muted-foreground"}`}>
-                  {t(`profile.${k === "followers" ? "followers" : k === "friends" ? "friends" : "following"}`)}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex-1 overflow-y-auto py-3">
-            {peopleQuery.isLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-8">…</p>
-            ) : peopleRows.length === 0 ? (
-              <div className="px-1 space-y-4 pt-2">
-                <p className="text-sm text-muted-foreground text-center">
-                  {followSheet === "following" ? t("profile.no_following") : followSheet === "friends" ? t("profile.no_friends") : t("profile.no_followers")}
-                </p>
-                <InviteFriendsBanner />
-                <button onClick={() => { setFollowSheet(null); setSearchCat("people"); openSearch(); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
-                  {t("profile.find_friends")}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {peopleRows.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2">
-                    <button onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="flex-1 min-w-0 flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
-                      <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
-                        {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
-                      </div>
-                    </button>
-                    {/* WYPISANIE ZE ZNAJOMYCH. To jedyna droga odciecia komus dostepu do zdjec
-                        "tylko dla znajomych" BEZ odobserwowania - a odobserwowanie jest sygnalem
-                        publicznym i spolecznie kosztownym, wiec nie moze byc jedyna opcja.
-                        Dziala od razu, z "Cofnij" w toascie: skoro jest odwracalne, nie zatrzymujemy
-                        usera dialogiem "czy na pewno". */}
-                    {followSheet === "friends" && (
-                      <button onClick={() => void removeFriend(p)} aria-label={t("profile.friend_remove")}
-                        className="h-9 w-9 shrink-0 rounded-full border border-border flex items-center justify-center text-muted-foreground active:scale-90 transition-transform">
-                        <UserMinus className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Arkusz ludzi: jeden arkusz, trzy zakladki, szukanie i akcja w wierszu (kierunek A
+          z eksploracji - patrz PeopleSheet). Ten sam komponent obsluguje profil publiczny,
+          wiec wiersz osoby jest JEDEN, a nie dwa prawie takie same. */}
+      {user && followSheet && (
+        <PeopleSheet
+          open
+          onClose={() => setFollowSheet(null)}
+          tab={followSheet}
+          onTab={setFollowSheet}
+          ownerId={user.id}
+          myId={user.id}
+          own
+          emptyExtra={(
+            <div className="space-y-4">
+              <InviteFriendsBanner />
+              <button
+                onClick={() => { setFollowSheet(null); setSearchCat("people"); openSearch(); }}
+                className="w-full rounded-full bg-secondary py-3 text-sm font-bold text-secondary-foreground transition-transform active:scale-[0.97]"
+              >
+                {t("profile.find_friends")}
+              </button>
+            </div>
+          )}
+        />
+      )}
 
       {user && <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} userId={user.id} />}
 

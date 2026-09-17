@@ -241,5 +241,24 @@
     "trip_meta_other": "Trip · {{count}} places",
     "list_meta_one": "Collection · {{count}} place",
     "list_meta_other": "Collection · {{count}} places"
-  }
+  },
+  "people": {
+    "search_placeholder": "Search people",
+    "clear_search": "Clear search",
+    "loading": "Loading...",
+    "count_followers": "{{count}} people follow",
+    "count_friends": "{{count}} friends (you follow each other)",
+    "count_following": "Follows {{count}} people",
+    "count_filtered": "{{shown}} of {{total}} people match your search",
+    "no_results": "Nobody like that here.",
+    "other_no_friends": "{{name}} has no friends yet.",
+    "badge_friend": "Friends",
+    "you": "that is you",
+    "follow": "Follow",
+    "following_state": "Following",
+    "follow_failed": "Could not save that change",
+    "title_mine": "People",
+    "title_of": "{{name}}'s people"
+  },
+  "undo": "Undo"
 }

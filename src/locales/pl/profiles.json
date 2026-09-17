@@ -247,5 +247,24 @@
     "list_meta_one": "Kolekcja · {{count}} miejsce",
     "list_meta_few": "Kolekcja · {{count}} miejsca",
     "list_meta_many": "Kolekcja · {{count}} miejsc"
-  }
+  },
+  "people": {
+    "search_placeholder": "Szukaj osoby",
+    "clear_search": "Wyczyść szukanie",
+    "loading": "Wczytuję...",
+    "count_followers": "Obserwuje {{count}} osób",
+    "count_friends": "{{count}} znajomych (wzajemna obserwacja)",
+    "count_following": "Obserwuje {{count}} osób",
+    "count_filtered": "{{shown}} z {{total}} osób pasuje do szukanej frazy",
+    "no_results": "Nikogo takiego tu nie ma.",
+    "other_no_friends": "{{name}} nie ma jeszcze znajomych.",
+    "badge_friend": "Znajomi",
+    "you": "to Ty",
+    "follow": "Obserwuj",
+    "following_state": "Obserwujesz",
+    "follow_failed": "Nie udało się zapisać zmiany",
+    "title_mine": "Ludzie",
+    "title_of": "Ludzie: {{name}}"
+  },
+  "undo": "Cofnij"
 }

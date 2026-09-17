@@ -22,7 +22,9 @@ import FollowButton from "@/components/social/FollowButton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
 import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
-import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
+import { useFollowCounts } from "@/hooks/useFollow";
+import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
+import { useFriendIds } from "@/lib/friends";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
 import { useStickyHeadVar } from "@/hooks/useStickyHeadVar";
@@ -103,7 +105,7 @@ export default function PublicProfile() {
     onLeft: () => goTab("listy"),
     onRight: () => goTab("wyjazdy"),
   });
-  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
+  const [followSheet, setFollowSheet] = useState<PeopleTab | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", username],
@@ -126,8 +128,10 @@ export default function PublicProfile() {
   // Liczniki follow (asymetryczny model, publiczny SELECT).
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
   const { data: starred = [] } = useStarredPlaces(profile?.id);
+  // Znajomi tej osoby - baza liczy wzajemne obserwacje. ⛔ Dla CUDZEJ listy nie odejmuje
+  // wykluczen: z roznicy dalo by sie odczytac, kogo ta osoba wypisala ze znajomych.
+  const friendIds = useFriendIds(profile?.id);
   const [starredOpen, setStarredOpen] = useState(false);
-  const followList = useFollowList(profile?.id, followSheet === "following" ? "following" : "followers");
 
   // Feed LIST (zakladka Listy): publiczne + zatwierdzone listy usera + kafelki miejsc + liczniki.
   const { data: listCards = [] } = useQuery({
@@ -494,9 +498,12 @@ export default function PublicProfile() {
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
           </button>
-          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
+          {/* ZNAJOMI zamiast obserwowanych - ta sama definicja co na wlasnym profilu
+              (wzajemna obserwacja, liczona przez baze). Obserwowani nie znikaja: maja
+              zakladke w arkuszu. Rzad miesci TRZY pozycje, czwarta sie nie miesci. */}
+          <button onClick={() => setFollowSheet("friends")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{(friendIds.data ?? []).length}</p>
           </button>
           {/* Wyroznione miejsca tej osoby (prosba Nat 2026-09-13) - jak na wlasnym profilu. */}
           <button onClick={() => { haptics.light(); setStarredOpen(true); }} aria-label={t("profile.starred_aria")} className="text-left active:opacity-70 transition-opacity">
@@ -644,38 +651,22 @@ export default function PublicProfile() {
 
       {/* Obserwujacy / Obserwowani - lista (klik -> profil danej osoby) */}
       <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={profile.id} own={false} />
-      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
-        <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
-          {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
-          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 -mt-2 mb-1 shrink-0" />
-          <SheetHeader className="pb-3 border-b border-border/20">
-            <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-3">
-            {followList.isLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-8">…</p>
-            ) : (followList.data ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center pt-6">
-                {followSheet === "following"
-                  ? t("public.no_following", { name: displayName })
-                  : t("public.no_followers", { name: displayName })}
-              </p>
-            ) : (
-              <div className="space-y-1">
-                {(followList.data ?? []).map((p) => (
-                  <button key={p.id} onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
-                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
-                      {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Ten sam arkusz, co na wlasnym profilu (kierunek A). Rozne sa tylko REGULY:
+          relacje w wierszach licza sie wzgledem MNIE, a nie wlasciciela listy, i nie ma
+          akcji wlasciciela (wypisania ze znajomych). */}
+      {followSheet && (
+        <PeopleSheet
+          open
+          onClose={() => setFollowSheet(null)}
+          tab={followSheet}
+          onTab={setFollowSheet}
+          ownerId={profile.id}
+          myId={user?.id}
+          own={false}
+          ownerName={displayName}
+          ownerUsername={profile.username}
+        />
+      )}
     </div>
   );
 }
