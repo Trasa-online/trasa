@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriendList } from "@/lib/friends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
@@ -15,7 +15,12 @@ export default function AddPeoplePicker({
   userId, selected, onToggle,
 }: { userId: string; selected: Set<string>; onToggle: (person: PersonLite) => void }) {
   const { t } = useTranslation("social");
-  const { data: friends = EMPTY_ARRAY, isLoading: lf } = useFriends(userId);
+  // ⚠️ ZNAJOMI to od 2026-09-17 WZAJEMNA OBSERWACJA (`src/lib/friends.ts`), nie stara tabela
+  // `friendships`. Tamta ma na prodzie 4 wiersze i nikt jej juz nie zasila poza linkiem
+  // `/dodaj/:code`, wiec podpowiedzi opieraly sie faktycznie na niczym. Znajomi sa tu
+  // PIERWSI, bo to ich zaprasza sie najczesciej; reszta obserwowanych leci pod nimi.
+  // ⛔ Jedno pojecie "znajomy" w calej apce - inaczej profil pokazywalby 22, a ten ekran 4.
+  const { data: friends = EMPTY_ARRAY, isLoading: lf } = useFriendList(userId);
   const { data: following = EMPTY_ARRAY, isLoading: lg } = useFollowList(userId, "following");
 
   const people = useMemo<PersonLite[]>(() => {

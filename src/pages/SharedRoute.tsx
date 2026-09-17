@@ -14,7 +14,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users, Globe2 } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -33,6 +33,7 @@ import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/pl
 import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
 import StoredImage from "@/components/StoredImage";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import { fetchFriendPhotos, setTripPhotoAudience, photoStorageKey, type FriendPhoto } from "@/lib/tripPhotoAudience";
 import { fetchPinPhotos, addPinPhoto, deletePinPhotoReturning, deletePinPhotosForPlace, restorePinPhotos, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
@@ -700,6 +701,14 @@ export default function SharedRoute() {
     enabled: !!id,
   });
   const photosMap = photosByPlace(pinPhotoRows as PinPhoto[]);
+
+  // Zdjecia galerii widoczne TYLKO DLA ZNAJOMYCH (osobna tabela - patrz src/lib/tripPhotoAudience.ts).
+  // Kto nie ma prawa, dostaje pusta liste z RLS, nie blad - wiec nie ma tu zadnej bramki w kliencie.
+  const { data: friendPhotoRows = [] } = useQuery({
+    queryKey: ["shared-route-friend-photos", id],
+    queryFn: () => fetchFriendPhotos(id!),
+    enabled: !!id,
+  });
 
   // Glosowanie na miejsca (etap propozycji) - liczba glosow + czy JA glosowalem.
   const { data: votesMap = new Map() } = useQuery({
@@ -1594,10 +1603,45 @@ export default function SharedRoute() {
       seenGallery.add(k);
       return true;
     });
+  // Zdjecia "tylko dla znajomych" wracaja NA SWOJE MIEJSCE w galerii: `sort_order` to pozycja,
+  // ktora zajmowaly w `review_photos`, zanim je stamtad wyjelismy. Bez tego kazde przelaczenie
+  // przerzucaloby zdjecie na koniec i kolejnosc galerii zmienialaby sie sama.
+  const publicThenFriends: string[] = [...reviewPhotos];
+  for (const fp of ([...(friendPhotoRows as FriendPhoto[])].sort((a, b) => a.sort_order - b.sort_order))) {
+    const u = resolveStored(fp.url);
+    if (!u) continue;
+    const k = storageKey(u);
+    if (seenGallery.has(k)) continue;
+    seenGallery.add(k);
+    publicThenFriends.splice(Math.min(Math.max(fp.sort_order - 1, 0), publicThenFriends.length), 0, u);
+  }
   const galleryPhotos: string[] = [
-    ...reviewPhotos,
+    ...publicThenFriends,
     ...[...pinPhotoByUrl.keys()].filter((u) => !seenGallery.has(storageKey(u))),
   ];
+
+  // Ktore zdjecia sa prywatne - po KLUCZU PLIKU, nie po adresie (dwie domeny tego samego Storage).
+  // Sluzy wylacznie plakietce i stanowi przelacznika; dostepu pilnuje RLS.
+  const friendOnlyKeys = new Set<string>([
+    ...(friendPhotoRows as FriendPhoto[]).map((r) => photoStorageKey(r.url)),
+    ...(pinPhotoRows as PinPhoto[]).filter((r) => r.visibility === "friends").map((r) => photoStorageKey(r.url)),
+  ]);
+  const isFriendsOnly = (url: string) => friendOnlyKeys.has(storageKey(url));
+
+  // Przelacznik widocznosci. Ta sama reguła uprawnien co przy koszu w podgladzie: wlasciciel
+  // wyjazdu odpowiada za cala galerie, uczestnik - za swoje wlasne zdjecie.
+  const canSetAudience = (url: string) => isOwner || (isGroupMember && isMyGalleryPhoto(url));
+  const toggleAudience = async (url: string) => {
+    if (!id) return;
+    const next = !isFriendsOnly(url);
+    haptics.light();
+    const res = await setTripPhotoAudience(id, url, next);
+    if (!res) { haptics.error(); toast.error(t("photo_audience.failed")); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-friend-photos", id] });
+    toast.success(res === "friends" ? t("photo_audience.now_friends") : t("photo_audience.now_public"));
+  };
   // Handler swipe w galerii fullscreen jest zadeklarowany wyzej (przed early returnami),
   // wiec liczbe zdjec podajemy mu przez ref.
   galleryPhotosRef.current = galleryPhotos;   // lajki liczymy dla WSZYSTKICH, nie tylko widocznych
@@ -2596,6 +2640,15 @@ export default function SharedRoute() {
                       {/* Siatka masonry ma ~180 px na kolumne - pobieramy miniature, nie oryginal.
                           Podglad pelnoekranowy nizej zostaje przy pelnej rozdzielczosci. */}
                       <StoredImage url={url} size={200} className="w-full h-auto block" />
+                      {/* PLAKIETKA "tylko dla znajomych". Widzi ja KAZDY, kto to zdjecie dostal -
+                          nie tylko wlasciciel. Znajomy ma wiedziec, ze oglada tresc prywatna,
+                          zanim zrobi z niej zrzut ekranu. Lewy gorny rog, bo prawy zajmuje wybor
+                          okladki, a lewy dolny licznik polubien. */}
+                      {isFriendsOnly(url) && (
+                        <span className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-sm px-2 py-1 text-[10px] font-bold text-white">
+                          <Users className="h-3 w-3" />{t("photo_audience.badge")}
+                        </span>
+                      )}
                       {/* Licznik polubien (gdy sa) - siatka zostaje czysta, lajkuje sie w podgladzie. */}
                       {likeStateOf(url).count > 0 && (
                         <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -2966,6 +3019,25 @@ export default function SharedRoute() {
                 style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
                 <Heart className={`h-5 w-5 ${st.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
                 {st.count > 0 && <span className="text-white text-sm font-semibold">{st.count}</span>}
+              </button>
+            );
+          })()}
+          {/* KTO WIDZI TO ZDJECIE - prawy dolny rog, naprzeciw polubienia. Pigulka pokazuje stan
+              AKTUALNY (nie akcje), bo to jest informacja, ktorej wlasciciel szuka najczesciej;
+              tapniecie go przelacza. Tylko dla tych, ktorzy moga zmieniac: wlasciciel wyjazdu
+              i uczestnik przy WLASNYM zdjeciu - ta sama regula co przy koszu obok. */}
+          {canSetAudience(visiblePhotos[viewerIndex]) && (() => {
+            const url = visiblePhotos[viewerIndex];
+            const priv = isFriendsOnly(url);
+            return (
+              <button onClick={(e) => { e.stopPropagation(); void toggleAudience(url); }}
+                aria-label={priv ? t("photo_audience.make_public") : t("photo_audience.make_friends")}
+                className="absolute right-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
+                style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
+                {priv ? <Users className="h-4 w-4 text-white" /> : <Globe2 className="h-4 w-4 text-white" />}
+                <span className="text-white text-[13px] font-semibold">
+                  {priv ? t("photo_audience.friends") : t("photo_audience.public")}
+                </span>
               </button>
             );
           })()}

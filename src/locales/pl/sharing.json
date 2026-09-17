@@ -321,5 +321,15 @@
     "trip_title": "Uczestnicy wyjazdu"
   },
   "gallery_empty_day": "Ten dzień nie ma jeszcze zdjęć. Dodaj je przy miejscu z tego dnia - trafią tutaj same.",
-  "share_trip_cta": "Udostępnij ten wyjazd"
+  "share_trip_cta": "Udostępnij ten wyjazd",
+  "photo_audience": {
+    "badge": "Znajomi",
+    "friends": "Znajomi",
+    "public": "Wszyscy",
+    "make_friends": "Pokaż tylko znajomym",
+    "make_public": "Pokaż wszystkim",
+    "now_friends": "To zdjęcie widzą teraz tylko Twoi znajomi",
+    "now_public": "To zdjęcie widzą teraz wszyscy",
+    "failed": "Nie udało się zmienić widoczności zdjęcia"
+  }
 }

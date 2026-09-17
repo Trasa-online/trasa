@@ -91,7 +91,12 @@
     "list_fallback_title": "Collection of places",
     "traveler_fallback": "Traveler",
     "starred": "Starred",
-    "starred_aria": "Starred places"
+    "starred_aria": "Starred places",
+    "no_friends": "No friends yet. Someone becomes a friend when you follow each other.",
+    "people_title": "People",
+    "friend_remove": "Remove from friends",
+    "friend_removed": "Removed from friends. You still follow each other.",
+    "friend_remove_failed": "Could not save the change"
   },
   "guest": {
     "title": "Your traveler profile",

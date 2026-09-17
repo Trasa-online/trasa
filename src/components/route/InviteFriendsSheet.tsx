@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriendList } from "@/lib/friends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
 import { Search, Check, X, Loader2, UserPlus, Clock } from "lucide-react";
@@ -59,7 +59,12 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
 
   // Domyslna lista (puste pole): znajomi + obserwowani (dedup, bez siebie i biznesow) - zeby nie bylo
   // pusto (prosba Nat 2026-08-26).
-  const { data: friends = EMPTY_ARRAY } = useFriends(user?.id);
+  // ⚠️ ZNAJOMI to od 2026-09-17 WZAJEMNA OBSERWACJA (`src/lib/friends.ts`), nie stara tabela
+  // `friendships`. Tamta ma na prodzie 4 wiersze i nikt jej juz nie zasila poza linkiem
+  // `/dodaj/:code`, wiec podpowiedzi opieraly sie faktycznie na niczym. Znajomi sa tu
+  // PIERWSI, bo to ich zaprasza sie najczesciej; reszta obserwowanych leci pod nimi.
+  // ⛔ Jedno pojecie "znajomy" w calej apce - inaczej profil pokazywalby 22, a ten ekran 4.
+  const { data: friends = EMPTY_ARRAY } = useFriendList(user?.id);
   const { data: following = EMPTY_ARRAY } = useFollowList(user?.id, "following");
   const myPeople = useMemo<Profile[]>(() => {
     const map = new Map<string, Profile>();

@@ -307,5 +307,15 @@
     "trip_title": "Trip participants"
   },
   "gallery_empty_day": "No photos for this day yet. Add them to a place from this day and they'll show up here.",
-  "share_trip_cta": "Share this trip"
+  "share_trip_cta": "Share this trip",
+  "photo_audience": {
+    "badge": "Friends",
+    "friends": "Friends",
+    "public": "Everyone",
+    "make_friends": "Show to friends only",
+    "make_public": "Show to everyone",
+    "now_friends": "Only your friends can see this photo now",
+    "now_public": "Everyone can see this photo now",
+    "failed": "Could not change the photo audience"
+  }
 }

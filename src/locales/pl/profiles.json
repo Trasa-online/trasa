@@ -92,7 +92,12 @@
     "list_fallback_title": "Kolekcja miejsc",
     "traveler_fallback": "Podróżnik",
     "starred": "Wyróżnione",
-    "starred_aria": "Wyróżnione miejsca"
+    "starred_aria": "Wyróżnione miejsca",
+    "no_friends": "Nie masz jeszcze znajomych. Znajomym zostaje osoba, którą obserwujesz i która obserwuje Ciebie.",
+    "people_title": "Ludzie",
+    "friend_remove": "Usuń ze znajomych",
+    "friend_removed": "Usunięto ze znajomych. Nadal się obserwujecie.",
+    "friend_remove_failed": "Nie udało się zapisać zmiany"
   },
   "guest": {
     "title": "Twój profil podróżnika",
