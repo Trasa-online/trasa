@@ -153,6 +153,8 @@
   "stats": {
     "saves_aria_one": "{{count}} zapis",
     "saves_aria_few": "{{count}} zapisy",
-    "saves_aria_many": "{{count}} zapisów"
+    "saves_aria_many": "{{count}} zapisów",
+    "privacy_public": "Kolekcja publiczna",
+    "privacy_private": "Kolekcja prywatna"
   }
 }

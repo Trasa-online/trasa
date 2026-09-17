@@ -148,6 +148,8 @@
   "new_place": "New place!",
   "stats": {
     "saves_aria_one": "{{count}} save",
-    "saves_aria_other": "{{count}} saves"
+    "saves_aria_other": "{{count}} saves",
+    "privacy_public": "Public collection",
+    "privacy_private": "Private collection"
   }
 }

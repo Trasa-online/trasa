@@ -318,7 +318,7 @@ const TravelerProfile = () => {
     queryKey: ["profile-list-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const COLS = "id, user_id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at";
+      const COLS = "id, user_id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at, is_public";
       // Zakładka Listy = moje CURATED listy (grupy). Publiczne polecajki (visited). Luźno
       // zapisane miejsca (auto-lista "Do zobaczenia", to_visit) to NIE lista - pokazują się
       // jako kafelki w Zapisane→Miejsca, nie tutaj.
@@ -798,6 +798,11 @@ const TravelerProfile = () => {
                   // autora ("ile osob to zapisalo"), nie element kafelka w eksploracji.
                   // Licznik zapisow tylko na WLASNYCH - to informacja zwrotna dla autora.
                   savesCount: l._shared ? undefined : Number(l.saves_count ?? 0),
+                  // Prywatnosc pokazujemy TAKZE na kolekcjach wspoltworzonych: wspoltworca
+                  // dodaje do nich miejsca i zdjecia, wiec musi wiedziec, czy to, co pisze,
+                  // zobaczy swiat. ⛔ Nie podajemy tego w "Zapisanych" ani w eksploracji -
+                  // tam wszystko widoczne jest z definicji publiczne.
+                  isPublic: l.is_public !== false,
                 };
                 return <GridTile key={l.id} it={item} size="feed" people="avatars" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}

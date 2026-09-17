@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { Globe2, Lock, MapPin } from "lucide-react";
 import { BrandStar } from "@/components/BrandStar";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useTranslation } from "react-i18next";
@@ -80,6 +80,12 @@ export type GridItem = {
    *  TYLKO tam, gdzie jest to statystyka wlasnej tresci ("Moje kolekcje" na profilu) -
    *  w eksploracji kafelek cudzej kolekcji jej nie pokazuje. 0 = nie renderujemy nic. */
   savesCount?: number;
+  /** Lista: prywatnosc kolekcji - klodka albo globus obok licznika zapisow (prosba Nat
+   *  2026-09-17). ⛔ `undefined` = NIE renderujemy nic, i tak ma byc w eksploracji oraz
+   *  w "Zapisanych": tam wszystko, co widac, jest z definicji publiczne, wiec globus na
+   *  kazdym kafelku bylby czystym szumem. Pole podaje wylacznie wlasny profil, gdzie stan
+   *  jest zmienny i nalezy do ogladajacego. */
+  isPublic?: boolean;
 };
 
 /** Mini-siatka listy: 3 kolumny, dwa rzedy. Przy wiecej niz 6 miejscach ostatni kafelek to "+N". */
@@ -402,13 +408,26 @@ export function ListTile({ it, size = "feed", people = "pill" }: { it: GridItem;
         {/* PRAWA STRONA rzedu: "Nowe miejsce!" i licznik zapisow. Jedna wspolna grupa z `ml-auto`,
             zeby przy obu naraz dociagnela sie CALOSC - dwa osobne `ml-auto` w jednym rzedzie
             rozjechalyby je na dwie krawedzie. */}
-        {(!!it.newCount || !!it.savesCount) && (
+        {(!!it.newCount || !!it.savesCount || it.isPublic != null) && (
           <span className={`ml-auto flex items-center ${feed ? "gap-1.5" : "gap-1"}`}>
             {!!it.newCount && (
               <span className={`inline-flex items-center gap-1.5 rounded-full bg-white font-bold leading-none text-[#5B2C06] shadow-sm ${size === "feed" ? "h-[30px] px-3 text-[14px]" : "h-[22px] px-2 text-[11px]"}`}>
                 <BrandStar className={`text-primary ${size === "feed" ? "h-[15px] w-[15px]" : "h-3 w-3"}`} />
                 {t("new_place")}
               </span>
+            )}
+            {/* Prywatnosc OBOK licznika zapisow (prosba Nat 2026-09-17): klodka = tylko dla
+                autora i wspoltworcow, globus = widoczna dla swiata. Stoi PRZED zakladka, wiec
+                para czyta sie jako "prywatna, 3 zapisy" - i od razu tlumaczy, czemu licznik
+                prywatnej kolekcji nie rosnie. Sam chip bez liczby, bo to stan, nie statystyka. */}
+            {it.isPublic != null && (
+              <Chip ink={theme.ink} size={size}>
+                <span aria-label={it.isPublic ? t("stats.privacy_public") : t("stats.privacy_private")}>
+                  {it.isPublic
+                    ? <Globe2 className={feed ? "h-[15px] w-[15px]" : "h-3 w-3"} strokeWidth={2.4} />
+                    : <Lock className={feed ? "h-[15px] w-[15px]" : "h-3 w-3"} strokeWidth={2.4} />}
+                </span>
+              </Chip>
             )}
             {/* Ile osob zapisalo kolekcje - ten sam tint co chipy, bo to informacja zwrotna dla
                 autora, nie sygnal: nie krzyczy biela jak "Nowe miejsce!". Zero sie NIE renderuje

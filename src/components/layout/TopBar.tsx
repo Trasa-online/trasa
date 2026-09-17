@@ -20,7 +20,10 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
   // prowadzil na wlasny profil, czyli tam, skad user wlasnie przyszedl - a przy domyslnym
   // zdjeciu (`Avatar_Trasa.png` = ikona aplikacji) wygladal jak przypadkowy placeholder
   // z logo spontaway w rogu ekranu ustawien.
-  const settingsBack = location.pathname.startsWith("/ustawienia");
+  // ⛔ Trasa to `/settings`, NIE `/ustawienia`. Pierwsza wersja tego warunku (17.09 rano)
+  // celowala w `/ustawienia`, a hub ustawien wjechal tego samego dnia pod `/settings` -
+  // warunek nigdy nie byl prawdziwy i awatar wrocil na belke (drugie zgloszenie Nat).
+  const settingsBack = location.pathname.startsWith("/settings");
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
 
