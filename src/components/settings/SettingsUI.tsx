@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronRight, ArrowLeft } from "lucide-react";
-import { goBackOr } from "@/hooks/useGoBack";
+import { ChevronRight } from "lucide-react";
 
 // PRYMITYWY USTAWIEN (kierunek B z eksploracji, wybor Nat 2026-09-17; makiety w Figmie:
 // `[NEW] Ekrany` -> "Ustawienia konta - eksploracja kierunkow").
@@ -20,17 +18,18 @@ export function SettingsScreen({ title, back, children }: {
   back?: string;
   children: ReactNode;
 }) {
-  const navigate = useNavigate();
   return (
-    <div className="pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
-      <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-        <button
-          onClick={() => goBackOr(navigate, back ?? "/moj-profil")}
-          aria-label={title}
-          className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+    // ⚠️ Cel powrotu publikujemy ATRYBUTEM, a nie przez kontekst - chevron zyje w gornej
+    // belce (`TopBar`), ktora stoi NAD ekranem i nie zna jego propsow. Ten sam wzorzec,
+    // co `data-scroll-main`: ekran sie OZNACZA, a belka pyta o niego DOM. Dzieki temu
+    // podstrona bez historii (wejscie z linku) wraca o jeden poziom wyzej, a nie na profil.
+    <div data-settings-back={back ?? "/moj-profil"} className="pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
+      {/* ⚠️ TYLKO TYTUL - strzalka wstecz zyje w GORNEJ BELCE (`TopBar`), gdzie od 2026-09-17
+          zastapila awatar. Dwie strzalki jedna nad druga to byly dwa wejscia do tej samej
+          czynnosci w odleglosci 40 px. Podstrony ustawien wracaja przez ta sama belke, wiec
+          prop `back` zostaje w sygnaturze (uzywa go `goBackOr` jako zapasowy cel), tylko nie
+          rysuje juz wlasnego guzika. */}
+      <div className="flex items-center gap-2 px-4 pt-2 pb-1">
         <h1 className="text-lg font-bold">{title}</h1>
       </div>
       <div className="px-4 pt-2 pb-4 space-y-5 max-w-lg mx-auto">{children}</div>

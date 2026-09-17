@@ -197,6 +197,23 @@ All colors MUST be HSL.
    ⚠️ Regula stoi POZA `@layer`, wiec wygrywa z `ring-offset-background` z utilities -
    warstwowane style zawsze przegrywaja z niewarstwowanymi. */
 *:focus-visible { --tw-ring-offset-width: 1px; --tw-ring-offset-color: #5B2C06; }
+
+/* ⛔ NIEBIESKI PIERSCIEN WEBKITA (zgloszenie Nat 2026-09-17 - trzecie zgloszenie tej samej
+   rzeczy). Token `--ring` i offset wyzej dotycza WYLACZNIE elementow, ktore maja klasy
+   `focus-visible:ring-*` - czyli komponentow shadcn. Zwykly `<button>` (pigulki zakladek,
+   wiersze ustawien, guziki w arkuszach) nie ma ich wcale, wiec WebKit malowal mu swoj
+   systemowy `outline: auto -webkit-focus-ring-color` - i to jest ten niebieski.
+   ⚠️ `:focus` gasimy, bo iOS ustawia go po ZWYKLYM TAPNIECIU; `:focus-visible` zostaje
+   z brazowym obrysem marki - brazowy dziala na bieli, na zoltym (10:1) i na peachy, czyli
+   na wszystkich tlach, na ktorych stoja nasze akcje (prosba Nat: "na zoltych akcjach po
+   prostu stroke w kolorze brazowym").
+   ⚠️ Regula siedzi w `@layer base`, a NIE poza warstwami jak linia wyzej - dzieki temu
+   `focus-visible:outline-none` z komponentow shadcn (warstwa utilities) nadal wygrywa
+   i te komponenty zostaja przy swoim zoltym pierscieniu, bez drugiego obrysu na wierzchu. */
+@layer base {
+  *:focus { outline: none; }
+  *:focus-visible { outline: 2px solid #5B2C06; outline-offset: 2px; }
+}
 ::selection { background: #FDF184; color: #0E0E0E; }
 html, body { caret-color: #EE5307; accent-color: #EE5307; }
 

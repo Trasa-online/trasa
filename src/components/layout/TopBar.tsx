@@ -1,19 +1,26 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { goBackOr } from "@/hooks/useGoBack";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isHardcodedAdmin } from "@/lib/admins";
-import { Bell, UserCircle2, Settings, BarChart3 } from "lucide-react";
+import { Bell, UserCircle2, Settings, BarChart3, ChevronLeft } from "lucide-react";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const TopBar = (_props: { onOrbClick?: () => void }) => {
   const { t } = useTranslation("nav");
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  // W USTAWIENIACH zamiast awatara stoi chevron wstecz (prosba Nat 2026-09-17). Awatar
+  // prowadzil na wlasny profil, czyli tam, skad user wlasnie przyszedl - a przy domyslnym
+  // zdjeciu (`Avatar_Trasa.png` = ikona aplikacji) wygladal jak przypadkowy placeholder
+  // z logo spontaway w rogu ekranu ustawien.
+  const settingsBack = location.pathname.startsWith("/ustawienia");
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -98,19 +105,34 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
   return (
     <>
       <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe-4 pb-2 flex items-center justify-between">
-        {/* Left: Avatar */}
-        <button
-          onClick={() => navigate("/moj-profil")}
-          className="flex items-center justify-center"
-          aria-label={t("my_profile")}
-        >
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-            <AvatarFallback className="bg-orange-100 text-primary text-sm font-bold">
-              {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
-            </AvatarFallback>
-          </Avatar>
-        </button>
+        {/* Left: chevron wstecz w ustawieniach, awatar wszedzie indziej. */}
+        {settingsBack ? (
+          <button
+            onClick={() => {
+              // Cel zapasowy bierzemy z ekranu (`data-settings-back`), zeby podstrona bez
+              // historii wracala o jeden poziom wyzej, a nie od razu na profil.
+              const up = document.querySelector("[data-settings-back]")?.getAttribute("data-settings-back");
+              goBackOr(navigate, up || "/moj-profil");
+            }}
+            className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-foreground active:bg-muted transition-colors"
+            aria-label={t("common:buttons.back")}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate("/moj-profil")}
+            className="flex items-center justify-center"
+            aria-label={t("my_profile")}
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
+              <AvatarFallback className="bg-orange-100 text-primary text-sm font-bold">
+                {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        )}
 
         {/* Right: Bell */}
         <div className="flex items-center gap-1">

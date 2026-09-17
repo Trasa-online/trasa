@@ -38,7 +38,15 @@ const AlertDialogContent = React.forwardRef<
       // SheetContent side="bottom" (CLAUDE.md, arkusze plywajace). Wczesniej: karta na srodku
       // ekranu na cala szerokosc, z ciasnym p-6.
       className={cn(
-        "fixed left-1/2 bottom-2 z-50 grid w-[calc(100%-16px)] max-w-lg -translate-x-1/2 gap-3 rounded-[40px] bg-background px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] shadow-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-6 data-[state=open]:slide-in-from-bottom-6",
+        // ⛔ CENTRUJEMY PRZEZ `inset-x-2 mx-auto`, NIE przez `left-1/2 -translate-x-1/2`
+        // (zgloszenie Nat 2026-09-17: "arkusz wyjezdza z prawej strony zamiast z dolu").
+        // `tailwindcss-animate` ustawia na czas animacji `transform: translate3d(var(
+        // --tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)` - czyli NADPISUJE
+        // wlasny `-translate-x-1/2` elementu. Panel przez cale wejscie siedzial wiec o polowe
+        // swojej szerokosci za daleko w prawo i dopiero na koniec wskakiwal na srodek, co
+        // czyta sie jako wjazd z boku. Bez transformu na elemencie animacja rusza wylacznie
+        // os Y. Tak samo rozwiazany jest `SheetContent side="bottom"`.
+        "fixed inset-x-2 bottom-2 z-50 mx-auto grid max-w-lg gap-3 rounded-[40px] bg-background px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] shadow-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-6 data-[state=open]:slide-in-from-bottom-6",
         className,
       )}
       {...props}
