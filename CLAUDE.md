@@ -56,11 +56,12 @@ zwykłego tekstu; treść na żółtym pisz brązowym (10:1).
 **Hero landingu B2C = `public/grafika_hero.png` + TRZY gwiazdki jako OSOBNE elementy** (2026-09-17).
 Gwiazdki (`public/star.svg`) nie są częścią PNG, bo tylko wtedy mogą się ruszać; pozycja i rozmiar
 w PROCENTACH kontenera (`left/top` + `w-[8%]`), więc trzymają się grafiki na każdej szerokości.
-Układ: **górna** `left-[45%] top-[6%]` wciśnięta w „V" między telefonami (nachodzi na krawędź lewego -
-na prośbę Nat zeszła z `top-[2%]`, gdzie tylko musnęła róg), **prawa** `left-[77%] top-[4%]`
-w pustym żółtym polu nad prawym telefonem, **dolna lewa** `left-[3%] top-[82%]`.
-⛔ Prawej nie schodź niżej niż `top-[6%]` - przy `top-[11%]` siada na czarnej ramce obok wyspy
-i miesza się z godziną oraz ikonami zasięgu (sprawdzone renderem A/B w WebKit).
+Układ to TRÓJKĄT: **górna** `left-[45%] top-[6%]` wciśnięta w „V" między telefonami (nachodzi
+na krawędź lewego - na prośbę Nat zeszła z `top-[2%]`, gdzie tylko musnęła róg), **prawa**
+`left-[80%] top-[67%]` przy prawej krawędzi prawego telefonu, **dolna lewa** `left-[3%] top-[82%]`.
+⛔ Prawej nie przenoś pod górę ekranu: przy `top-[4%]` stała tuż obok górnej i obie zlewały się
+w parę, a przy `top-[11%]` siadała na czarnej ramce obok wyspy, między godziną a ikonami zasięgu
+(oba sprawdzone renderem A/B w WebKit).
 ⚠️ Każda ma INNĄ animację (`animate-star-twinkle` / `-alt` / `-slow`, czasy 5,5 / 7,5 / 6,4 s
 z różnymi przesunięciami fazy) - przy wspólnej dwie sąsiadujące pulsują równocześnie i całe hero
 zaczyna mrugać jak jeden element. Dokładasz gwiazdkę → dołóż też wariant animacji.

@@ -518,11 +518,14 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
               rog i wygladala, jakby unosila sie obok grafiki, a nie na niej. */}
           <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
             className="animate-star-twinkle pointer-events-none absolute left-[45%] top-[6%] w-[8%]" />
-          {/* PRAWA (nowa 2026-09-17): w pustym zoltym polu NAD prawym telefonem. ⛔ Nie schodz
-              z nia nizej niz `top-[6%]` - przy `top-[11%]` siada na czarnej ramce obok wyspy
-              i miesza sie z godzina i ikonami zasiegu (sprawdzone renderem A/B w WebKit). */}
+          {/* PRAWA (nowa 2026-09-17): przy PRAWEJ KRAWEDZI prawego telefonu, ~2/3 wysokosci.
+              Razem z gorna i dolna lewa tworzy trojkat - trzy gwiazdki przy jednej krawedzi
+              czytalyby sie jak rzad, a nie jak rozsypane akcenty.
+              ⛔ Nie wracaj z nia pod gore ekranu: przy `top-[4%]` stala tuz obok gornej
+              i obie zlewaly sie w jedna pare, a przy `top-[11%]` siadala na czarnej ramce
+              obok wyspy, miedzy godzina a ikonami zasiegu (oba sprawdzone renderem w WebKit). */}
           <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
-            className="animate-star-twinkle-slow pointer-events-none absolute left-[77%] top-[4%] w-[8%]" />
+            className="animate-star-twinkle-slow pointer-events-none absolute left-[80%] top-[67%] w-[8%]" />
           {/* DOLNA LEWA. */}
           <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
             className="animate-star-twinkle-alt pointer-events-none absolute left-[3%] top-[82%] w-[8%]" />
