@@ -80,7 +80,7 @@ const COPY = {
       venuePlaceholder: "np. Kawiarnia Poranek",
       city: "Miasto",
       cityPlaceholder: "np. Łódź",
-      person: "Osoba do kontaktu",
+      person: "Osoba do\u00a0kontaktu",
       personPlaceholder: "Imię i\u00a0Nazwisko",
       email: "E-mail",
       emailPlaceholder: "kontakt@twojlokal.pl",
@@ -673,11 +673,21 @@ const DIAL_CODES = ["+48", "+49", "+420", "+421", "+380", "+370", "+44", "+353",
 const INQ_FIELD =
   "h-[46px] w-full rounded-2xl border border-black/10 bg-white px-4 text-[14px] text-spontaway-brown outline-none placeholder:text-black/30 focus:border-spontaway-orange";
 
+// ⚠️ `h-full justify-end` NIE jest ozdoba: w rzedzie dwukolumnowym (miasto + osoba do
+// kontaktu) etykiety maja rozna liczbe linii, a bez tego kazde pole startowalo od GORY
+// swojej kolumny i input z dluzsza etykieta zjezdzal nizej niz sasiad (zgloszenie Nat
+// 2026-09-17). Zmierzone: "Osoba do kontaktu (opcjonalnie)" potrzebuje 196,1 px, a kolumna
+// ma 200 px - wiec zawija sie u kazdego, kto ma choc odrobine szersza zastepcza czcionke
+// (Inter jest wczytywany BEZ wagi 600, wiec `font-semibold` bywa syntezowane roznie).
+// ⛔ Nie prostuj tego skracaniem copy ani mniejszym "(opcjonalnie)" - zapas wychodzi
+// najwyzej 10 px i pierwszy dluzszy przeklad znowu to zlamie. `justify-end` dosuwa
+// etykiete DO SWOJEGO pola, wiec wolne miejsce zostaje NAD krotsza etykieta, gdzie nie
+// rzuca sie w oczy, a oba inputy stoja w jednej linii niezaleznie od liczby linii tekstu.
 function InquiryField({
   label, hint, children,
 }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5">
+    <label className="flex h-full flex-col justify-end gap-1.5">
       <span className="px-1 text-[12px] font-semibold text-spontaway-brown">
         {label}
         {hint ? <span className="ml-1 font-normal text-spontaway-brown/50">({hint})</span> : null}
@@ -784,13 +794,17 @@ function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClo
               <InquiryField label={c.inquiry.venue}>
                 <input required value={form.venue} onChange={set("venue")} placeholder={c.inquiry.venuePlaceholder} className={INQ_FIELD} />
               </InquiryField>
+              {/* ⛔ `sm:flex-1`, a NIE `flex-1`: na telefonie ten kontener jest KOLUMNA, a w
+                  kolumnie `flex: 1 1 0%` steruje WYSOKOSCIA - pola dostawalyby rowne wysokosci
+                  liczone od bazy 0 zamiast wlasnej tresci (ta sama pulapka, co przy polu email
+                  w hero B2B, CLAUDE.md). Podzial na kolumny ma dzialac dopiero od `sm`. */}
               <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="flex-1">
+                <div className="sm:flex-1">
                   <InquiryField label={c.inquiry.city} hint={c.inquiry.optional}>
                     <input value={form.city} onChange={set("city")} placeholder={c.inquiry.cityPlaceholder} className={INQ_FIELD} />
                   </InquiryField>
                 </div>
-                <div className="flex-1">
+                <div className="sm:flex-1">
                   <InquiryField label={c.inquiry.person} hint={c.inquiry.optional}>
                     <input value={form.person} onChange={set("person")} placeholder={c.inquiry.personPlaceholder} className={INQ_FIELD} />
                   </InquiryField>

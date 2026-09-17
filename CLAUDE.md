@@ -546,6 +546,18 @@ pisać z klienta. To co innego niż `lead_contacts` (tam lokale, które MY zacze
 Routy `/dla-firm` i `/biznes/start` żyją dalej - są tylko odlinkowane. Nie przywracaj wejść
 B2B na landing, dopóki nie powstanie landing dla firm.
 
+⚠️ **Pole formularza zapytania (`InquiryField`) ma `h-full justify-end`** (2026-09-17). W rzędzie
+dwukolumnowym (miasto + osoba do kontaktu) etykiety mają różną liczbę linii i bez tego input
+z dłuższą etykietą zjeżdżał niżej niż sąsiad (zgłoszenie Nat). Zmierzone w WebKit na zbudowanym
+CSS: „Osoba do kontaktu (opcjonalnie)" potrzebuje **196,1 px, a kolumna ma 200 px**, więc zawija
+się u każdego, kto ma choć odrobinę szerszą zastępczą czcionkę (Inter jest wczytywany BEZ wagi
+600, więc `font-semibold` bywa syntezowane różnie). ⛔ Nie prostuj tego skracaniem copy ani
+mniejszym „(opcjonalnie)" - zapas wychodzi najwyżej 10 px i pierwsze dłuższe tłumaczenie znowu
+to złamie. `justify-end` dosuwa etykietę DO SWOJEGO pola, więc wolne miejsce zostaje NAD krótszą
+etykietą. ⛔ Kolumny tego rzędu mają **`sm:flex-1`, a NIE `flex-1`**: na telefonie kontener jest
+KOLUMNĄ, a w kolumnie `flex: 1 1 0%` steruje wysokością (ta sama pułapka, co przy polu email
+w hero B2B).
+
 ---
 
 ### ⛔ BusinessDashboard — główny dashboard firm ZAMROŻONY (src/pages/BusinessDashboard.tsx)
