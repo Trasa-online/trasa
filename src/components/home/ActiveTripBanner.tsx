@@ -134,7 +134,10 @@ export default function ActiveTripBanner() {
     <div
       data-no-swipe
       data-no-drag
-      className="fixed inset-x-2 z-40"
+      // Pigulka HUGUJE tresc i stoi na srodku, zamiast rozciagac sie na cala szerokosc
+      // (zgloszenie Nat 2026-09-17: "za dlugi, nachodzi brzydko na okladki"). Kontener
+      // zostaje pelnej szerokosci, bo niesie gest chowania - to guzik w srodku jest waski.
+      className="fixed inset-x-0 z-40 flex justify-center px-3"
       style={{
         bottom: BOTTOM_OFFSET,
         transform: `translateY(${closing ? 140 : offset}px)`,
@@ -153,7 +156,7 @@ export default function ActiveTripBanner() {
           haptics.light();
           navigate(`/route/${trip.id}`);
         }}
-        className="w-full h-14 flex items-center gap-3 rounded-full border-2 border-white bg-[#FDF184] pl-2 pr-4 text-left active:scale-[0.99] transition-transform"
+        className="h-14 max-w-[min(320px,100%)] flex items-center gap-2.5 rounded-full border-2 border-white bg-[#FDF184] pl-2 pr-3.5 text-left active:scale-[0.99] transition-transform"
       >
         <span className="h-10 w-10 rounded-xl overflow-hidden bg-[#fcede3] flex items-center justify-center shrink-0">
           {cover ? (
@@ -166,7 +169,7 @@ export default function ActiveTripBanner() {
             <BrandTripMark className="h-5 w-5 block text-[#ef9d78]" />
           )}
         </span>
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 max-w-[214px]">
           <span className="flex items-center gap-1.5">
             {/* Etap wyjazdu. Pomarancz WYLACZNIE dla "w trakcie" - na zoltym tle czyta sie
                 slabo (3,08:1), wiec niesie go kropka i wersaliki, nigdy dluzszy tekst.
