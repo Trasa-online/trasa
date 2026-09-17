@@ -324,8 +324,12 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 }
 .animate-star-twinkle { animation: star-twinkle 5.5s ease-in-out infinite; will-change: transform; }
 .animate-star-twinkle-alt { animation: star-twinkle 7.5s ease-in-out infinite -2.6s; will-change: transform; }
+/* Trzeci wariant doszedl razem z trzecia gwiazdka na hero (2026-09-17). ⚠️ Czasy sa
+   niepodzielne wzgledem siebie (5,5 / 7,5 / 6,4 s) i kazdy ma inne przesuniecie fazy -
+   dwie gwiazdki chodzace rowno czytaja sie jak jeden mrugajacy element, a nie jak tlo. */
+.animate-star-twinkle-slow { animation: star-twinkle 6.4s ease-in-out infinite -4.1s; will-change: transform; }
 @media (prefers-reduced-motion: reduce) {
-  .animate-star-twinkle, .animate-star-twinkle-alt { animation: none; }
+  .animate-star-twinkle, .animate-star-twinkle-alt, .animate-star-twinkle-slow { animation: none; }
 }
 
 @keyframes biz-float {

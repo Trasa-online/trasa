@@ -53,6 +53,18 @@ Accent 1 (tekst):  #5B2C06  text-spontaway-brown  (tekst na żółtym + guzik se
 na żółtym ma kontrast 3.08:1, więc tej pary używaj **tylko do dużych nagłówków**, nigdy do
 zwykłego tekstu; treść na żółtym pisz brązowym (10:1).
 
+**Hero landingu B2C = `public/grafika_hero.png` + TRZY gwiazdki jako OSOBNE elementy** (2026-09-17).
+Gwiazdki (`public/star.svg`) nie są częścią PNG, bo tylko wtedy mogą się ruszać; pozycja i rozmiar
+w PROCENTACH kontenera (`left/top` + `w-[8%]`), więc trzymają się grafiki na każdej szerokości.
+Układ: **górna** `left-[45%] top-[6%]` wciśnięta w „V" między telefonami (nachodzi na krawędź lewego -
+na prośbę Nat zeszła z `top-[2%]`, gdzie tylko musnęła róg), **prawa** `left-[77%] top-[4%]`
+w pustym żółtym polu nad prawym telefonem, **dolna lewa** `left-[3%] top-[82%]`.
+⛔ Prawej nie schodź niżej niż `top-[6%]` - przy `top-[11%]` siada na czarnej ramce obok wyspy
+i miesza się z godziną oraz ikonami zasięgu (sprawdzone renderem A/B w WebKit).
+⚠️ Każda ma INNĄ animację (`animate-star-twinkle` / `-alt` / `-slow`, czasy 5,5 / 7,5 / 6,4 s
+z różnymi przesunięciami fazy) - przy wspólnej dwie sąsiadujące pulsują równocześnie i całe hero
+zaczyna mrugać jak jeden element. Dokładasz gwiazdkę → dołóż też wariant animacji.
+
 ### Stan FOCUS = żółty marki (2026-09-16)
 
 `--ring` to od teraz **żółty marki `#FDF184`** (`54 96.8% 75.5%`), a nie pomarańcz primary. Poza tokenem trzeba było dołożyć trzy rzeczy, których **żaden token Tailwinda nie dotyka**, a iOS maluje je systemowym niebieskim: kursor w polu (`caret-color`), podświetlenie zaznaczonego tekstu (`::selection`) i natywne kontrolki - checkbox, radio, suwak (`accent-color`). To właśnie ten niebieski widać na telefonie po wejściu w pole; wszystkie trzy siedzą teraz w [index.css](src/index.css).

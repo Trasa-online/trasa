@@ -499,10 +499,12 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           </div>
         </div>
 
-        {/* Telefony z aplikacja + dwie gwiazdki marki (nowa grafika od Nat 2026-09-17).
+        {/* Telefony z aplikacja + TRZY gwiazdki marki (grafika od Nat 2026-09-17).
             Gwiazdki sa OSOBNYMI elementami, nie czescia PNG - tylko wtedy moga sie ruszac.
             Pozycje i rozmiar w PROCENTACH kontenera, wiec trzymaja sie grafiki na kazdej
-            szerokosci ekranu; `aria-hidden`, bo nie niosa tresci. */}
+            szerokosci ekranu; `aria-hidden`, bo nie niosa tresci.
+            ⚠️ Kazda ma INNA animacje (`-alt`, `-slow`): przy wspolnej dwie sasiadujace
+            gwiazdki pulsuja rownoczesnie i caly hero zaczyna mrugac jak jeden element. */}
         <div className="relative order-2 -mx-5 mt-6 w-[calc(100%+40px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]">
           <img
             src="/grafika_hero.png"
@@ -511,10 +513,19 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
             height={1032}
             className="w-full"
           />
+          {/* GORNA: wcisnieta w "V" miedzy telefonami. Zeszla z `top-[2%]` na `top-[8%]`,
+              zeby NACHODZILA na mockup (prosba Nat 2026-09-17) - wczesniej tylko musnela
+              rog i wygladala, jakby unosila sie obok grafiki, a nie na niej. */}
           <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
-            className="animate-star-twinkle pointer-events-none absolute left-[45%] top-[2%] w-[6.5%]" />
+            className="animate-star-twinkle pointer-events-none absolute left-[45%] top-[6%] w-[8%]" />
+          {/* PRAWA (nowa 2026-09-17): w pustym zoltym polu NAD prawym telefonem. ⛔ Nie schodz
+              z nia nizej niz `top-[6%]` - przy `top-[11%]` siada na czarnej ramce obok wyspy
+              i miesza sie z godzina i ikonami zasiegu (sprawdzone renderem A/B w WebKit). */}
           <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
-            className="animate-star-twinkle-alt pointer-events-none absolute left-[4%] top-[83%] w-[6.5%]" />
+            className="animate-star-twinkle-slow pointer-events-none absolute left-[77%] top-[4%] w-[8%]" />
+          {/* DOLNA LEWA. */}
+          <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
+            className="animate-star-twinkle-alt pointer-events-none absolute left-[3%] top-[82%] w-[8%]" />
         </div>
 
       </div>
