@@ -9,7 +9,7 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal, Palette, ChevronLeft, Flag, Users } from "lucide-react";
+import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Flag, Globe2, Loader2, Lock, MapPin, MoreHorizontal, Palette, Pencil, Plus, Share2, Trash2, Users, X } from "lucide-react";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scrollTopTapProps } from "@/lib/scrollTop";
@@ -51,6 +51,7 @@ import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModera
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 import ListThemeSheet from "@/components/lists/ListThemeSheet";
 import ListScopeSheet from "@/components/lists/ListScopeSheet";
+import ListPrivacySheet from "@/components/lists/ListPrivacySheet";
 import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
 import { ParticipantsRow } from "@/components/route/ParticipantsRow";
 import PeopleSheet from "@/components/route/PeopleSheet";
@@ -112,6 +113,7 @@ export default function SharedList() {
   const [scopeOpen, setScopeOpen] = useState(false);
   // Wspoltworcy kolekcji - dodawanie osob JUZ PO utworzeniu (prosba Nat 2026-09-15).
   const [peopleOpen, setPeopleOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   // Zmiana nazwy listy (prosba Nat 2026-09-08). Edycja NA MIEJSCU, tak jak nazwa wyjazdu -
   // osobny arkusz do jednego pola tylko mnozylby kroki.
   const [editingName, setEditingName] = useState(false);
@@ -328,7 +330,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, countries, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status, theme")
+        .select("id, title, city, countries, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status, theme, saves_count")
         .eq("id", id as string)
         .maybeSingle();
       return data as any;
@@ -994,6 +996,17 @@ export default function SharedList() {
                   >
                     <Pencil className="h-4 w-4" />{t("aria.rename_list")}
                   </DropdownMenuItem>
+                  {/* Prywatnosc stoi OBOK "Osoby w kolekcji", bo obie pozycje odpowiadaja na to
+                      samo pytanie: kto ma do tego dostep. Ikona niesie stan AKTUALNY, zeby nie
+                      trzeba bylo otwierac arkusza, zeby sprawdzic, czy kolekcja jest publiczna.
+                      ⛔ Prywatna "Ogolne" (`to_visit`) nie dostaje tej pozycji - jest prywatna
+                      z definicji i nie ma czego przelaczac. */}
+                  {col.list_status !== "to_visit" && (
+                    <DropdownMenuItem onSelect={() => setPrivacyOpen(true)} className="gap-2.5 py-2.5">
+                      {col.is_public ? <Globe2 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                      {t("aria.list_privacy")}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onSelect={() => setPeopleOpen(true)} className="gap-2.5 py-2.5">
                     <Users className="h-4 w-4" />{t("aria.list_people")}
                   </DropdownMenuItem>
@@ -1061,9 +1074,15 @@ export default function SharedList() {
           {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
               TripHeaderChips) - wczesniej szara linia z ikonami. */}
           {/* "7 / 15 miejsc": odwiedzone przez OGLADAJACEGO na wlasnej liscie, przez AUTORA na cudzej. */}
+          {/* ⚠️ Chip "Prywatna" nie jest ozdoba: przelacznik, ktorego stanu nie widac na ekranie,
+              zmusza do otwierania menu za kazdym razem, zeby sprawdzic, czy kolekcja jest jeszcze
+              schowana. Widza go wylacznie ci, ktorzy prywatna kolekcje w ogole otworza, czyli
+              autor i wspoltworcy. Prywatnej "Ogolne" nie oznaczamy - tam prywatnosc to nie stan
+              do sprawdzenia, tylko definicja. */}
           <HighlightChips className="mt-3" city={cityLabel} placesCount={items.length}
             visitedCount={(items as any[]).filter((it) => (isOwner ? visitedKeys : authorVisitedKeys).has(visitKeyOf(it))).length}
-            starredCount={(items as any[]).filter((it) => it.is_top).length} />
+            starredCount={(items as any[]).filter((it) => it.is_top).length}
+            privateLabel={!col.is_public && col.list_status !== "to_visit" ? t("privacy.chip") : null} />
           {col.description && <p className="text-[15px] text-foreground/80 leading-relaxed mt-3">{col.description}</p>}
         </div>
 
@@ -1084,6 +1103,10 @@ export default function SharedList() {
           <>
             <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
             <ListScopeSheet open={scopeOpen} onOpenChange={setScopeOpen} listId={col.id} current={col} />
+            {col.list_status !== "to_visit" && (
+              <ListPrivacySheet open={privacyOpen} onOpenChange={setPrivacyOpen} listId={col.id}
+                isPublic={!!col.is_public} savesCount={(col as any).saves_count ?? 0} />
+            )}
             {user && <CollectionPeopleSheet open={peopleOpen} onOpenChange={setPeopleOpen} collectionId={col.id} ownerId={col.user_id} currentUserId={user.id} />}
           </>
         )}

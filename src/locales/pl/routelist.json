@@ -70,7 +70,8 @@
     "list_actions": "Akcje kolekcji",
     "list_theme": "Tło kolekcji",
     "list_scope": "Kraj i miasto",
-    "list_people": "Osoby w kolekcji"
+    "list_people": "Osoby w kolekcji",
+    "list_privacy": "Prywatność"
   },
   "fallback_title": "Kolekcja miejsc",
   "photo": "Zdjęcie",
@@ -140,5 +141,21 @@
     "added_count_one": "Dodano {{count}} osobę do kolekcji",
     "added_count_few": "Dodano {{count}} osoby do kolekcji",
     "added_count_many": "Dodano {{count}} osób do kolekcji"
+  },
+  "privacy": {
+    "title": "Prywatność kolekcji",
+    "desc": "Decydujesz, kto może ją oglądać. Współtwórcy widzą ją zawsze.",
+    "public_label": "Publiczna",
+    "public_desc": "Widoczna w eksploracji i pod linkiem. Każdy może ją zapisać u siebie.",
+    "private_label": "Tylko dla mnie",
+    "private_desc": "Znika z eksploracji, a link przestaje działać. Zostaje u Ciebie i u współtwórców.",
+    "private_warn_one": "{{count}} osoba ma ją zapisaną i straci do niej dostęp.",
+    "private_warn_few": "{{count}} osoby mają ją zapisaną i stracą do niej dostęp.",
+    "private_warn_many": "{{count}} osób ma ją zapisaną i straci do niej dostęp.",
+    "chip": "Prywatna",
+    "now_public": "Kolekcja jest publiczna",
+    "now_private": "Kolekcja jest prywatna",
+    "undo": "Cofnij",
+    "save_failed": "Nie udało się zmienić prywatności. Spróbuj ponownie."
   }
 }

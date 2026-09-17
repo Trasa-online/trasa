@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Lock } from "lucide-react";
 import { BrandIcon, STAR_ICON } from "@/components/BrandIcon";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 
@@ -43,10 +44,13 @@ function Chip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
 /** Miasto · liczba miejsc (brandowa pinezka w brazie; "15 Miejsc" z polska odmiana, a w kolekcji
  *  "7 / 15 Miejsc" = odwiedzone / wszystkie) · wyroznione (brandowa gwiazdka w pomaranczu; chip
  *  tylko gdy > 0). Wszystkie chipy z tym samym szarym obrysem, ikony w srodku pigulki. */
-export function HighlightChips({ city, placesCount, visitedCount, starredCount = 0, className = "" }: {
+export function HighlightChips({ city, placesCount, visitedCount, starredCount = 0, privateLabel = null, className = "" }: {
   city?: string | null; placesCount: number;
   /** Lista: ile z miejsc odwiedzono (moje na wlasnej liscie, autora na cudzej). Brak = sam licznik. */
-  visitedCount?: number; starredCount?: number; className?: string;
+  visitedCount?: number; starredCount?: number;
+  /** Kolekcja prywatna: napis chipa z klodka. `null` = kolekcja publiczna albo wyjazd. */
+  privateLabel?: string | null;
+  className?: string;
 }) {
   const { t } = useTranslation("routelist");
   // "15 Miejsc" - wielka litera jak w makiecie; odmiana z klucza (miejsce / miejsca / miejsc).
@@ -62,6 +66,14 @@ export function HighlightChips({ city, placesCount, visitedCount, starredCount =
       {starredCount > 0 && (
         <Chip icon={<BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />}>
           {starredCount}
+        </Chip>
+      )}
+      {/* Prywatna kolekcja - ten sam chip co reszta, zeby stan czytal sie jak kolejna
+          informacja o kolekcji, a nie jak ostrzezenie. Klodka jest z lucide (nie brandowa),
+          bo w zestawie `Ikona_*` nie ma jej odpowiednika. */}
+      {privateLabel && (
+        <Chip icon={<Lock className="h-[15px] w-[15px] text-[#5B2C06]" strokeWidth={2.4} />}>
+          {privateLabel}
         </Chip>
       )}
     </div>

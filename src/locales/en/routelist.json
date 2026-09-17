@@ -68,7 +68,8 @@
     "list_actions": "Collection actions",
     "list_theme": "Collection background",
     "list_scope": "Country and city",
-    "list_people": "People in the collection"
+    "list_people": "People in the collection",
+    "list_privacy": "Privacy"
   },
   "fallback_title": "Collection of places",
   "photo": "Photo",
@@ -135,5 +136,20 @@
     "add_confirm_other": "Add {{count}} people",
     "added_count_one": "Added {{count}} person to the collection",
     "added_count_other": "Added {{count}} people to the collection"
+  },
+  "privacy": {
+    "title": "Collection privacy",
+    "desc": "You decide who can see it. Co-creators always can.",
+    "public_label": "Public",
+    "public_desc": "Visible in Explore and via the link. Anyone can save it.",
+    "private_label": "Only me",
+    "private_desc": "Disappears from Explore and the link stops working. Stays with you and your co-creators.",
+    "private_warn_one": "{{count}} person has it saved and will lose access.",
+    "private_warn_other": "{{count}} people have it saved and will lose access.",
+    "chip": "Private",
+    "now_public": "Collection is public",
+    "now_private": "Collection is private",
+    "undo": "Undo",
+    "save_failed": "Could not change privacy. Please try again."
   }
 }
