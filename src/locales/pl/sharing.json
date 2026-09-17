@@ -346,5 +346,18 @@
   "likes": {
     "title": "Kto polubił",
     "empty": "Nikt jeszcze nie polubił tego wyjazdu."
+  },
+  "stars": {
+    "add": "Wyróżnij to zdjęcie",
+    "remove": "Cofnij wyróżnienie",
+    "added_left_one": "Wyróżnione. Zostało Ci jeszcze {{count}} wyróżnienie w tym wyjeździe.",
+    "added_left_few": "Wyróżnione. Zostały Ci jeszcze {{count}} wyróżnienia w tym wyjeździe.",
+    "added_left_many": "Wyróżnione. Zostało Ci jeszcze {{count}} wyróżnień w tym wyjeździe.",
+    "added_last": "Wyróżnione. To było Twoje ostatnie wyróżnienie w tym wyjeździe.",
+    "budget_spent_one": "Masz {{count}} wyróżnienie na wyjazd. Zdejmij je z innego zdjęcia, żeby przyznać tutaj.",
+    "budget_spent_few": "Masz {{count}} wyróżnienia na wyjazd. Zdejmij jedno z innego zdjęcia, żeby przyznać tutaj.",
+    "budget_spent_many": "Masz {{count}} wyróżnień na wyjazd. Zdejmij jedno z innego zdjęcia, żeby przyznać tutaj.",
+    "not_allowed": "Nie możesz wyróżniać zdjęć z własnego wyjazdu.",
+    "failed": "Nie udało się zapisać wyróżnienia"
   }
 }

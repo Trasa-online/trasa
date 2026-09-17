@@ -76,6 +76,8 @@ import { ParticipantsRow } from "@/components/route/ParticipantsRow";
 import PeopleSheet from "@/components/route/PeopleSheet";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { BrandHeart } from "@/components/BrandHeart";
+import { BrandStar } from "@/components/BrandStar";
+import { fetchPhotoStars, togglePhotoStar, photoStarsKey, emptyPhotoStars, STAR_BUDGET } from "@/lib/photoStars";
 import TripLikeButton from "@/components/route/TripLikeButton";
 import TripLikesSheet from "@/components/route/TripLikesSheet";
 import TripCoverSheet from "@/components/route/TripCoverSheet";
@@ -776,6 +778,17 @@ export default function SharedRoute() {
     if (liked !== next.liked) setLikeOverrides((o) => ({ ...o, [url]: cur }));
   };
 
+  // WYROZNIENIA ZDJEC - gwiazdka binarna z BUDZETEM 3 na wyjazd (patrz src/lib/photoStars.ts).
+  // ⚠️ `photo_ref` to KLUCZ PLIKU (`photoStorageKey`), a nie caly adres jak przy sercu.
+  // Przy polubieniu duplikat nic nie kosztuje, a tu wyczerpuje budzet - ten sam plik
+  // zapisany raz przez api.spontaway.com, a raz przez <ref>.supabase.co zjadlby dwie z trzech
+  // gwiazdek. Rozbieznosc z `photo_likes` jest wiec swiadoma, nie przeoczona.
+  const { data: photoStars = emptyPhotoStars() } = useQuery({
+    queryKey: photoStarsKey(id, user?.id),
+    enabled: !!id,
+    queryFn: () => fetchPhotoStars(id!, user?.id ?? null),
+    staleTime: 60_000,
+  });
   // ⚠️ Podwojne tapniecie ZAWSZE POLUBIA, nigdy nie cofa (wzor z Instagrama): cofniecie
   // polubienia przez przypadkowy podwojny tap byloby strata, ktorej user nie zauwazy.
   // Serce wyskakuje tez wtedy, gdy zdjecie bylo juz polubione - gest ma dawac odpowiedz.
@@ -1070,6 +1083,38 @@ export default function SharedRoute() {
   // Edycja miejsc (dodaj/usun/kolejnosc): wlasciciel LUB uczestnik wspolnego wyjazdu (RLS: polityki
   // "Group members can ... pins of shared route"). Nazwa/publikacja/usuniecie trasy zostaja owner-only.
   const canEdit = isOwner || isGroupMember;
+
+  // Wyroznia TYLKO GOSC - autor i uczestnik nie przyznaja wyroznien wlasnemu wyjazdowi
+  // (ta sama zasada, co przy sercu; egzekwuje ja trigger `guard_photo_star`).
+  const canStar = !!user && !canEdit;
+  const starsUsed = photoStars.mine.size;
+  const starRefOf = (url: string) => photoStorageKey(url);
+  const isStarred = (url: string) => photoStars.mine.has(starRefOf(url));
+  const starCountOf = (url: string) => photoStars.counts.get(starRefOf(url)) ?? 0;
+
+  const toggleStarUi = async (url: string) => {
+    if (!user?.id || !id) { toast.error(t("toast.login_to_like")); return; }
+    const starred = isStarred(url);
+    // Budzet sprawdzamy TEZ tutaj, zeby nie wysylac zapytania skazanego na blad i zeby
+    // komunikat mowil, ile zostalo, zanim user tapnie czwarty raz.
+    if (!starred && starsUsed >= STAR_BUDGET) {
+      haptics.warning();
+      toast.error(t("stars.budget_spent", { count: STAR_BUDGET }));
+      return;
+    }
+    haptics.light();
+    const res = await togglePhotoStar(id, starRefOf(url), user.id, starred);
+    if (res === "budget") { haptics.warning(); toast.error(t("stars.budget_spent", { count: STAR_BUDGET })); return; }
+    if (res === "not_allowed") { haptics.error(); toast.error(t("stars.not_allowed")); return; }
+    if (res === "error") { haptics.error(); toast.error(t("stars.failed")); return; }
+    queryClient.invalidateQueries({ queryKey: photoStarsKey(id, user.id) });
+    if (res === "added") {
+      haptics.success();
+      const left = STAR_BUDGET - (starsUsed + 1);
+      toast.success(left > 0 ? t("stars.added_left", { count: left }) : t("stars.added_last"));
+    }
+  };
+
 
   // ── Wybor MIEJSC z cudzego wyjazdu (2026-09-10) ───────────────────────────────
   // Zastapilo "Zapisz tą trasę". Cudzy plan rzadko pasuje w calosci; to, co realnie
@@ -2766,6 +2811,24 @@ export default function SharedRoute() {
                           <span className="text-[11px] font-semibold leading-none text-white tabular-nums">{likeStateOf(url).count}</span>
                         )}
                       </button>
+                      {/* WYROZNIENIE na kafelku - prawy dolny rog (lewy zajmuje serce, gorne
+                          plakietka "Znajomi" i wybor okladki). Gosc moze wyroznic wprost
+                          z siatki, autor widzi sam licznik. */}
+                      {canStar ? (
+                        <button onClick={(e) => { e.stopPropagation(); void toggleStarUi(url); }}
+                          aria-label={isStarred(url) ? t("stars.remove") : t("stars.add")}
+                          className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-1 active:scale-90 transition-transform">
+                          <BrandStar filled={isStarred(url)} className={`h-3.5 w-3.5 ${isStarred(url) ? "text-primary" : "text-white"}`} />
+                          {starCountOf(url) > 0 && (
+                            <span className="text-[11px] font-semibold leading-none text-white tabular-nums">{starCountOf(url)}</span>
+                          )}
+                        </button>
+                      ) : starCountOf(url) > 0 ? (
+                        <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-1">
+                          <BrandStar filled className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-[11px] font-semibold leading-none text-white tabular-nums">{starCountOf(url)}</span>
+                        </span>
+                      ) : null}
                       {/* Ikona eksploracji = "to jest okladka TEGO wyjazdu u mnie". Widzi ja KAZDY
                           uczestnik, nie tylko host (zgloszenie Nat 2026-09-01) - wczesniej byla
                           za `isOwner`, wiec uczestnik nie mial jak wybrac okladki swojej karty
@@ -3148,18 +3211,41 @@ export default function SharedRoute() {
               <Trash2 className="h-5 w-5 text-white" />
             </button>
           )}
-          {/* Polubienie zdjecia - lewy dolny rog, nad kropkami paginacji. */}
+          {/* SERCE i GWIAZDKA obok siebie, lewy dolny rog. To sa DWIE rozne rzeczy i dlatego
+              stoja osobno: serce jest bez limitu ("podoba mi sie"), a gwiazdka ma budzet
+              3 na caly wyjazd ("to jest najlepsze z tego wyjazdu") - i tylko dla goscia,
+              bo autor nie przyznaje wyroznien sam sobie. */}
           {(() => {
             const url = visiblePhotos[viewerIndex];
             const st = likeStateOf(url);
+            const starred = isStarred(url);
+            const stars = starCountOf(url);
             return (
-              <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
-                aria-label={st.liked ? t("aria.unlike_photo") : t("aria.like_photo")}
-                className="absolute left-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
+              <div className="absolute left-3 z-10 flex items-center gap-2"
                 style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
-                <BrandHeart filled={st.liked} className={`h-5 w-5 ${st.liked ? "text-primary" : "text-white"}`} />
-                {st.count > 0 && <span className="text-white text-sm font-semibold tabular-nums">{st.count}</span>}
-              </button>
+                <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
+                  aria-label={st.liked ? t("aria.unlike_photo") : t("aria.like_photo")}
+                  className="h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform">
+                  <BrandHeart filled={st.liked} className={`h-5 w-5 ${st.liked ? "text-primary" : "text-white"}`} />
+                  {st.count > 0 && <span className="text-white text-sm font-semibold tabular-nums">{st.count}</span>}
+                </button>
+                {/* Gosc dostaje GUZIK, reszta - gdy sa juz wyroznienia - sam licznik.
+                    ⛔ Nie `disabled` na guziku: klik w wylaczony guzik przechodzi na rodzica,
+                    a rodzicem jest tu nakladka zamykajaca podglad. */}
+                {canStar ? (
+                  <button onClick={(e) => { e.stopPropagation(); void toggleStarUi(url); }}
+                    aria-label={starred ? t("stars.remove") : t("stars.add")}
+                    className="h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform">
+                    <BrandStar filled={starred} className={`h-5 w-5 ${starred ? "text-primary" : "text-white"}`} />
+                    {stars > 0 && <span className="text-white text-sm font-semibold tabular-nums">{stars}</span>}
+                  </button>
+                ) : stars > 0 ? (
+                  <span className="h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5">
+                    <BrandStar filled className="h-5 w-5 text-primary" />
+                    <span className="text-white text-sm font-semibold tabular-nums">{stars}</span>
+                  </span>
+                ) : null}
+              </div>
             );
           })()}
           {/* KTO WIDZI TO ZDJECIE - prawy dolny rog, naprzeciw polubienia. Pigulka pokazuje stan

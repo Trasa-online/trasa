@@ -332,5 +332,16 @@
   "likes": {
     "title": "Who liked it",
     "empty": "Nobody has liked this trip yet."
+  },
+  "stars": {
+    "add": "Highlight this photo",
+    "remove": "Remove the highlight",
+    "added_left_one": "Highlighted. You have {{count}} highlight left on this trip.",
+    "added_left_other": "Highlighted. You have {{count}} highlights left on this trip.",
+    "added_last": "Highlighted. That was your last highlight on this trip.",
+    "budget_spent_one": "You get {{count}} highlight per trip. Take it off another photo to give it here.",
+    "budget_spent_other": "You get {{count}} highlights per trip. Take one off another photo to give it here.",
+    "not_allowed": "You cannot highlight photos from your own trip.",
+    "failed": "Could not save the highlight"
   }
 }
