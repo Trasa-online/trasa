@@ -670,7 +670,7 @@ function BusinessGuard() {
       location.pathname.startsWith("/admin") ||
       location.pathname === "/auth" ||
       location.pathname.startsWith("/set-password") ||
-      location.pathname === "/settings" ||
+      location.pathname.startsWith("/settings") ||
       location.pathname === "/moj-profil"
     ) return;
 
@@ -858,6 +858,9 @@ const App = () => (
               Na web zostaje (testowy flow sesji grupowej odblokowany w WebWaitlistGate). */}
           <Route path="/create" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
+          {/* Ustawienia = hub z podstronami (kierunek B, 2026-09-17). Kazda podstrona ma
+              WLASNY adres, wiec gest wstecz i historia dzialaja bez dodatkowej logiki. */}
+          <Route path="/settings/:section" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/statystyki" element={<RequireAuth><Stats /></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />

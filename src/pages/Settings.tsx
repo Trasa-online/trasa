@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { checkUsername, cleanUsername, escapeLike, usernameKey, type UsernameProblem, checkFirstName, FIRST_NAME_MAX, type FirstNameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
+import { SettingsScreen, SettingsGroup, SettingsRow, SettingsActionCard } from "@/components/settings/SettingsUI";
+import BlockedPeople from "@/components/settings/BlockedPeople";
+import DeleteAccountFlow from "@/components/settings/DeleteAccountFlow";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +13,7 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, UserX, LifeBuoy, Info, Lock, Wrench } from "lucide-react";
 import TrashSheet from "@/components/profile/TrashSheet";
 import AvatarFrameSheet, { useMyAvatarFrame } from "@/components/profile/AvatarFrameSheet";
 import AvatarFrame from "@/components/profile/AvatarFrame";
@@ -577,68 +580,140 @@ function LanguageSection() {
   );
 }
 
-const Settings = () => {
-  const { user, loading, signOut } = useAuth();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USTAWIENIA = HUB Z PODSTRONAMI (kierunek B z eksploracji, wybor Nat 2026-09-17;
+// makiety w Figmie: `[NEW] Ekrany` -> "Ustawienia konta - eksploracja kierunkow").
+//
+// Do 17.09 byl to JEDEN przewijany strumien pietnastu pozycji z dwoma przypadkowymi
+// naglowkami `h3`. Trzy rzeczy, ktore to psuly, i ktore ta przebudowa naprawia:
+//   1. BRAK GRUP. "Kosz" sasiadowal ze zgoda na analityke, a "Regulamin" z serwerem
+//      spolecznosci. Teraz ekran glowny to SZESC wierszy, a tresc siedzi na podstronach.
+//   2. DWA MODELE ZAPISU bez roznicy wizualnej. Formularz profilu czekal na "Zapisz zmiany",
+//      wszystko pod nim zapisywalo sie natychmiast. Teraz formularz ma WLASNA podstrone
+//      z guzikiem, a wiersze na hubie albo prowadza dalej (chevron), albo pokazuja stan.
+//   3. ZMIEN HASLO POD ZGLOS BLAD. Bezpieczenstwo konta jest teraz PIERWSZA grupa.
+//
+// ⚠️ Kosz ZOSTAJE na najwyzszym poziomie (jedno tapniecie z huba), choc jest rzadki:
+// to sciezka ratunkowa "gdzie to zniknelo", a nie codzienna zakladka. Schowanie go
+// o poziom glebiej bylo w eksploracji swiadomie odrzucone.
+//
+// Routing: `/settings` = hub, `/settings/:section` = podstrona. Kazda podstrona ma wlasny
+// adres, wiec gest wstecz i historia dzialaja bez dodatkowej logiki.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Karta profilu = glowny obiekt huba (wzor: Substack/PayPal). Zolta, bo to JEDYNY
+ *  akcent na tym ekranie - wiersze ustawien zostaja neutralne. */
+function ProfileCard({ name, nick, avatarUrl, frame, onClick }: {
+  name: string; nick: string; avatarUrl: string; frame: { avatar_frame?: string | null; avatar_frame_color?: string | null } | undefined; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3.5 rounded-[24px] bg-[#FDF184] px-4 py-4 text-left active:scale-[0.99] transition-transform"
+    >
+      <span className="relative h-14 w-14 shrink-0">
+        <AvatarFrame kind={isAvatarFrame(frame?.avatar_frame) ? (frame!.avatar_frame as any) : null} color={frame?.avatar_frame_color} size={56} />
+        <Avatar className="h-14 w-14">
+          <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
+          <AvatarFallback className="bg-orange-100 text-primary text-lg font-bold">{(name || "U").charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[17px] font-bold text-[#5B2C06]">{name}</span>
+        {nick && <span className="block truncate text-[13px] text-[#9A7B63]">@{nick}</span>}
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-[#5B2C06]" />
+    </button>
+  );
+}
+
+function SettingsHub() {
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation("settings");
+  const [trashOpen, setTrashOpen] = useState(false);
+  const { data: myFrame } = useMyAvatarFrame(user?.id);
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: rows, error } = await (supabase as any).rpc("get_my_profile");
+      if (error) throw error;
+      return Array.isArray(rows) ? rows[0] : rows;
+    },
+  });
+  const name = (profile as any)?.first_name || (profile as any)?.username || "";
+  const nick = (profile as any)?.username || "";
+  const admin = isHardcodedAdmin(user?.email);
+  const go = (s: string) => () => navigate(`/settings/${s}`);
+
+  return (
+    <SettingsScreen title={t("title")}>
+      <ProfileCard name={name} nick={nick} avatarUrl={(profile as any)?.avatar_url || ""} frame={myFrame} onClick={go("profil")} />
+
+      <SettingsGroup>
+        <SettingsRow icon={<Lock className="h-4 w-4" />} label={t("hub.account")} desc={t("hub.account_desc")} onClick={go("konto")} />
+        <SettingsRow icon={<Bell className="h-4 w-4" />} label={t("hub.notifications")} desc={t("hub.notifications_desc")} onClick={go("powiadomienia")} />
+        <SettingsRow icon={<Shield className="h-4 w-4" />} label={t("hub.privacy")} desc={t("hub.privacy_desc")} onClick={go("prywatnosc")} />
+        {/* Kosz otwiera ARKUSZ, nie podstrone - to ten sam TrashSheet, co dotad. */}
+        <SettingsRow icon={<Trash2 className="h-4 w-4" />} label={t("trash")} desc={t("hub.trash_desc")} onClick={() => setTrashOpen(true)} />
+        <SettingsRow icon={<LifeBuoy className="h-4 w-4" />} label={t("hub.help")} desc={t("hub.help_desc")} onClick={go("pomoc")} />
+        <SettingsRow icon={<Info className="h-4 w-4" />} label={t("hub.about")} desc={t("hub.about_desc")} onClick={go("o-aplikacji")} />
+        {/* Pozycje administracyjne maja WLASNY wiersz, a nie trzy luzne na koncu listy -
+            inaczej dol ekranu wygladal inaczej zaleznie od konta. */}
+        {admin && <SettingsRow icon={<Wrench className="h-4 w-4" />} label={t("hub.team")} desc={t("hub.team_desc")} badge="admin" onClick={go("zespol")} />}
+      </SettingsGroup>
+
+      <div className="space-y-3">
+        <SettingsActionCard label={t("logout")} onClick={async () => { await signOut(); navigate("/auth"); }} />
+        <SettingsActionCard label={t("delete_account")} onClick={go("usun-konto")} />
+      </div>
+
+      <p className="pb-2 text-center text-xs text-muted-foreground">{t("version", { version: APP_VERSION })}</p>
+      <TrashSheet open={trashOpen} onOpenChange={setTrashOpen} />
+    </SettingsScreen>
+  );
+}
+
+// Wersja aplikacji: z `package.json` przez define w vite.config (fallback pusty, zeby nigdy
+// nie pokazac "undefined").
+const APP_VERSION = (import.meta as any).env?.VITE_APP_VERSION || "1.0";
+
+/** Edycja profilu - JEDYNE miejsce z modelem "zmiany czekaja na guzik". */
+function ProfileEditScreen() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation("settings");
-  const { restart: restartOnboarding } = useOnboarding();
-
   const [firstName, setFirstName] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
-  // "Customizuj" - arkusz z ramkami awatara i kolorem (prosba Nat 2026-09-11).
   const [framesOpen, setFramesOpen] = useState(false);
   const { data: myFrame } = useMyAvatarFrame(user?.id);
 
-  const [trashOpen, setTrashOpen] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) navigate("/auth");
-  }, [user, loading, navigate]);
-
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
+    enabled: !!user,
     queryFn: async () => {
-      // [H3] wlasny profil przez RPC (SECURITY DEFINER) - po REVOKE invite_code/
-      // deleted_* z profiles bezposredni select("*") nie zwrocilby tych kolumn.
       const { data: rows, error } = await (supabase as any).rpc("get_my_profile");
       if (error) throw error;
-      const data = Array.isArray(rows) ? rows[0] : rows;
-      return data;
+      return Array.isArray(rows) ? rows[0] : rows;
     },
-    enabled: !!user,
-  });
-
-  const { data: isAdmin } = useQuery({
-    queryKey: ["is-admin", user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user?.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      return !!data;
-    },
-    enabled: !!user,
   });
 
   useEffect(() => {
     if (profile) {
       setFirstName((profile as any).first_name || "");
-      setUsername(profile.username || "");
-      setAvatarUrl(profile.avatar_url || "");
+      setUsername((profile as any).username || "");
+      setAvatarUrl((profile as any).avatar_url || "");
       setBio((profile as any).bio || "");
     }
   }, [profile]);
 
-  // Sprawdzanie nazwy NA BIEZACO. Do 2026-09-07 ten ekran nie sprawdzal niczego: zapisywal
-  // wprost do bazy, a UNIQUE porownuje bajt w bajt, wiec "berd " przechodzilo obok istniejacego
-  // "berd" i pozwalalo podszyc sie pod admina. Bledu nawet nie bylo widac, bo mutacja nie miala
-  // obslugi bledu. Twarde bariery sa w bazie (migracja 20260907b) - to jest szybka informacja
-  // zwrotna dla usera.
+  // Sprawdzanie nazwy NA BIEZACO. Twarde bariery sa w bazie (migracja 20260907b) - to jest
+  // szybka informacja zwrotna dla usera, zeby nie dowiadywal sie o kolizji dopiero z toasta.
   const [uStatus, setUStatus] = useState<"idle" | "checking" | "ok" | "taken" | UsernameProblem>("idle");
   const originalUsername = (profile as any)?.username ?? "";
   useEffect(() => {
@@ -650,22 +725,18 @@ const Settings = () => {
     const tmr = setTimeout(async () => {
       const { data, error } = await supabase.from("profiles").select("id")
         .ilike("username", escapeLike(value)).neq("id", user?.id ?? "").limit(1);
-      // Blad zapytania nie moze blokowac zapisu - ostatnie slowo i tak ma baza.
       if (error) { setUStatus("ok"); return; }
       setUStatus(data && data.length > 0 ? "taken" : "ok");
     }, 400);
     return () => clearTimeout(tmr);
   }, [username, originalUsername, user?.id]);
   const usernameBlocked = uStatus !== "idle" && uStatus !== "ok";
-  // Imie: te same reguly, co nazwa (limit 30, litery, wulgaryzmy) - patrz checkFirstName.
   const firstNameProblem: FirstNameProblem | null = firstName.trim() ? checkFirstName(firstName) : null;
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        // trim OBOWIAZKOWY: bez niego "dagusiia " wchodzilo do bazy razem ze spacja, a profil
-        // publiczny (szukany po dokladnym username z adresu) przestawal sie otwierac.
         .update({ first_name: cleanUsername(firstName), username: cleanUsername(username), avatar_url: avatarUrl, bio: bio.trim() || null } as any)
         .eq("id", user?.id);
       if (error) throw error;
@@ -674,8 +745,6 @@ const Settings = () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast.success(t("toast_saved"));
     },
-    // Bez tego zapis odrzucony przez baze (zajeta nazwa, zakazane slowo) konczyl sie CISZA -
-    // user byl przekonany, ze zmiana weszla.
     onError: (err: any) => {
       if (err?.code === "23505") { setUStatus("taken"); toast.error(t("username_taken")); return; }
       if (String(err?.message ?? "").includes("username_not_allowed")) { setUStatus("banned"); toast.error(t("username_banned")); return; }
@@ -692,8 +761,7 @@ const Settings = () => {
     if (file.size > 5 * 1024 * 1024) { toast.error(t("avatar_size_error")); return; }
     const fileName = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(fileName, file, { upsert: true, contentType: file.type });
+      .from("avatars").upload(fileName, file, { upsert: true, contentType: file.type });
     await uploadThumb("avatars", fileName, file);
     if (uploadError) { toast.error(t("toast_avatar_error")); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
@@ -702,24 +770,14 @@ const Settings = () => {
 
   const handleNativePhotoPick = async () => {
     try {
-      const photo = await CapCamera.getPhoto({
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Photos,
-        quality: 90,
-        width: 800,
-        height: 800,
-      });
-      if (!photo.base64String) {
-        toast.error(t("toast_avatar_error"));
-        return;
-      }
+      const photo = await CapCamera.getPhoto({ resultType: CameraResultType.Base64, source: CameraSource.Photos, quality: 90, width: 800, height: 800 });
+      if (!photo.base64String) { toast.error(t("toast_avatar_error")); return; }
       const format = photo.format || "jpeg";
       const mime = format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
       const binary = atob(photo.base64String);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const file = new File([bytes], `avatar.${format}`, { type: mime });
-      await handleAvatarUpload(file);
+      await handleAvatarUpload(new File([bytes], `avatar.${format}`, { type: mime }));
     } catch (err: any) {
       const msg = String(err?.message ?? err);
       if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
@@ -728,232 +786,239 @@ const Settings = () => {
     }
   };
 
+  const displayName = firstName || username || "";
+
+  return (
+    <SettingsScreen title={t("hub.profile")} back="/settings">
+      <div className="flex flex-col items-center gap-3 py-2">
+        <div className="relative">
+          <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : null} color={myFrame?.avatar_frame_color} size={80} />
+          <Avatar className="h-20 w-20">
+            <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
+            <AvatarFallback className="bg-orange-100 text-primary text-2xl font-bold">{displayName.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+          </Avatar>
+          {isNative ? (
+            <button type="button" onClick={handleNativePhotoPick} className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow" aria-label={t("avatar_change_aria")}>
+              <Camera className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <label className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow">
+              <Camera className="h-3.5 w-3.5" />
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
+            </label>
+          )}
+        </div>
+        <button
+          onClick={() => setFramesOpen(true)}
+          aria-label={t("customize.title")}
+          className="flex items-center gap-2.5 rounded-full bg-secondary pl-1.5 pr-4 py-1.5 text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
+        >
+          <span className="relative h-8 w-8 shrink-0">
+            <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : "stars"} color={myFrame?.avatar_frame_color} size={32} />
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
+              <AvatarFallback className="bg-orange-100 text-primary text-xs font-bold">{displayName.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+            </Avatar>
+          </span>
+          {t("customize.title")}
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+        {user && <AvatarFrameSheet open={framesOpen} onOpenChange={setFramesOpen} userId={user.id} />}
+      </div>
+
+      <div className="space-y-4 rounded-[20px] bg-muted/60 p-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="first_name">{t("first_name")}</Label>
+            <span className="text-xs text-muted-foreground/70 tabular-nums">{firstName.length}/{FIRST_NAME_MAX}</span>
+          </div>
+          <Input id="first_name" value={firstName} onChange={(e) => setFirstName(e.target.value.slice(0, FIRST_NAME_MAX))} maxLength={FIRST_NAME_MAX} autoCapitalize="words" autoCorrect="off" placeholder={t("first_name_placeholder")} className="bg-background" />
+          {firstNameProblem && <p className="text-xs leading-snug text-destructive">{t(`first_name_status.${firstNameProblem}`)}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="username">{t("username")}</Label>
+          <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t("username_placeholder")} autoCapitalize="none" autoCorrect="off" spellCheck={false} className="bg-background" />
+          {uStatus !== "idle" && (
+            <p className={`text-xs leading-snug ${uStatus === "ok" ? "text-green-600" : uStatus === "checking" ? "text-muted-foreground" : "text-destructive"}`}>{t(`username_status.${uStatus}`)}</p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="bio">{t("bio")}</Label>
+            <span className="text-xs text-muted-foreground/70 tabular-nums">{bio.length}/80</span>
+          </div>
+          <textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value.slice(0, 80))} maxLength={80} rows={2} placeholder={t("bio_placeholder")} className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/40 placeholder:text-muted-foreground/60 leading-relaxed" />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <button
+          onClick={() => updateProfileMutation.mutate()}
+          disabled={updateProfileMutation.isPending || usernameBlocked || !!firstNameProblem}
+          className="w-full rounded-2xl bg-primary py-3.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+        >
+          {updateProfileMutation.isPending ? t("saving") : t("save_changes")}
+        </button>
+        <p className="px-2 text-center text-xs text-muted-foreground">{t("profile_save_hint")}</p>
+      </div>
+    </SettingsScreen>
+  );
+}
+
+function AccountScreen() {
+  const { t } = useTranslation("settings");
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  return (
+    <SettingsScreen title={t("hub.account")} back="/settings">
+      {/* Te dwie sekcje rysuja wlasne karty (i wlasne rozwijane formularze), wiec NIE
+          owijamy ich w SettingsGroup - wyszedlby kontener w kontenerze. */}
+      <div className="space-y-2">
+        <LinkedAccountsSection />
+        <ChangePasswordSection />
+        <p className="px-3 pt-1 text-xs leading-relaxed text-muted-foreground">{t("password_note")}</p>
+      </div>
+      <SettingsActionCard label={t("logout")} onClick={async () => { await signOut(); navigate("/auth"); }} />
+    </SettingsScreen>
+  );
+}
+
+function NotificationsScreen() {
+  const { t } = useTranslation("settings");
+  return (
+    <SettingsScreen title={t("hub.notifications")} back="/settings">
+      <div className="space-y-2">
+        <PushToggleSection />
+        <p className="px-3 pt-1 text-xs leading-relaxed text-muted-foreground">{t("push_note")}</p>
+      </div>
+    </SettingsScreen>
+  );
+}
+
+/** Prywatnosc i dane - powierzchnia, ktorej w aplikacji NIE BYLO. Zbiera w jednym miejscu
+ *  rzeczy dotad rozsiane po produkcie: zgode na analityke, zablokowanych (menu na cudzym
+ *  profilu), zgody systemowe (pytane w chwili uzycia) i dokumenty. */
+function PrivacyScreen() {
+  const { t } = useTranslation("settings");
+  const navigate = useNavigate();
+  const [locStatus] = useSystemPermission("location", isNative);
+  const { t: tc } = useTranslation("common");
+  const locLabel = !locStatus || locStatus === "unsupported" ? null
+    : locStatus === "granted" ? tc("permissions.location.status_on")
+    : locStatus === "denied" ? tc("permissions.location.status_off")
+    : tc("permissions.location.status_ask");
+  return (
+    <SettingsScreen title={t("hub.privacy")} back="/settings">
+      <div className="space-y-2">
+        <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("group.data")}</p>
+        <CookieConsentSection />
+      </div>
+
+      <SettingsGroup label={t("group.people")}>
+        <SettingsRow icon={<UserX className="h-4 w-4" />} label={t("blocked.title")} desc={t("blocked.desc")} onClick={() => navigate("/settings/zablokowani")} />
+      </SettingsGroup>
+
+      {/* ⛔ To NIE jest miejsce pierwszego pytania o zgode - o push i lokalizacje pytamy
+          w chwili uzycia (permissionPrompts.ts). Tutaj pokazujemy STAN i droge do Ustawien. */}
+      {isNative && (
+        <div className="space-y-2">
+          <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("group.permissions")}</p>
+          <NativePushRow />
+          {locLabel && (
+            <div className="overflow-hidden rounded-[20px] bg-muted/60">
+              <SettingsRow icon={<Shield className="h-4 w-4" />} label={t("location")} state={locLabel} onClick={() => openAppSettings()} />
+            </div>
+          )}
+          <p className="px-3 pt-1 text-xs leading-relaxed text-muted-foreground">{t("permissions_note")}</p>
+        </div>
+      )}
+
+      <SettingsGroup label={t("group.documents")}>
+        <SettingsRow icon={<FileText className="h-4 w-4" />} label={t("terms_short")} onClick={() => navigate("/terms")} />
+        <SettingsRow icon={<FileText className="h-4 w-4" />} label={t("privacy_policy")} onClick={() => navigate("/privacy")} />
+      </SettingsGroup>
+    </SettingsScreen>
+  );
+}
+
+function HelpScreen({ userId }: { userId: string }) {
+  const { t } = useTranslation("settings");
+  return (
+    <SettingsScreen title={t("hub.help")} back="/settings">
+      <BugReportSection userId={userId} />
+      <SocialContactSection />
+    </SettingsScreen>
+  );
+}
+
+function AboutScreen() {
+  const { t } = useTranslation("settings");
+  const navigate = useNavigate();
+  return (
+    <SettingsScreen title={t("hub.about")} back="/settings">
+      <div className="space-y-2">
+        <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("group.app")}</p>
+        <LanguageSection />
+      </div>
+      <SettingsGroup label={t("group.documents")}>
+        <SettingsRow icon={<FileText className="h-4 w-4" />} label={t("terms_short")} onClick={() => navigate("/terms")} />
+        <SettingsRow icon={<FileText className="h-4 w-4" />} label={t("privacy_policy")} onClick={() => navigate("/privacy")} />
+      </SettingsGroup>
+      <p className="pt-2 text-center text-xs text-muted-foreground">{t("version", { version: APP_VERSION })}</p>
+    </SettingsScreen>
+  );
+}
+
+function TeamScreen() {
+  const { t } = useTranslation("settings");
+  const { restart: restartOnboarding } = useOnboarding();
+  return (
+    <SettingsScreen title={t("hub.team")} back="/settings">
+      <SettingsGroup label={t("group.team")} note={t("team_note")}>
+        <SettingsRow icon={<RotateCcw className="h-4 w-4" />} label={t("show_onboarding")} onClick={() => { toast.success(t("onboarding_reset")); restartOnboarding(); }} />
+        {/* Ekran startowy widac normalnie tylko przy ZIMNYM starcie, wiec podglad na zadanie. */}
+        <SettingsRow icon={<RotateCcw className="h-4 w-4" />} label={t("show_splash")} onClick={() => window.dispatchEvent(new Event("spontaway:replay-splash"))} />
+      </SettingsGroup>
+    </SettingsScreen>
+  );
+}
+
+function BlockedScreen({ userId }: { userId: string }) {
+  const { t } = useTranslation("settings");
+  return (
+    <SettingsScreen title={t("blocked.title")} back="/settings/prywatnosc">
+      <BlockedPeople userId={userId} />
+    </SettingsScreen>
+  );
+}
+
+const Settings = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const { section } = useParams();
+
+  useEffect(() => {
+    if (!loading && !user) navigate("/auth");
+  }, [user, loading, navigate]);
+
   if (!user) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
     </div>
   );
 
-  const displayName = firstName || username || "";
-
-  return (
-    <div className="pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
-      <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-        <button
-          onClick={() => goBackOr(navigate, "/moj-profil")}
-          className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg font-bold">{t("title")}</h1>
-      </div>
-
-      <div className="p-4 space-y-3 max-w-lg mx-auto">
-
-        {/* Avatar + ramka + "Customizuj" (prosba Nat 2026-09-11: customizacja bezposrednio pod
-            awatarem i zmiana zdjecia w jednym miejscu). Ikona wejscia = ZYWA miniatura nakladki
-            (obecnej albo gwiazdek), nie statyczny sparkle. */}
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="relative">
-            <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : null} color={myFrame?.avatar_frame_color} size={80} />
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
-              <AvatarFallback className="bg-orange-100 text-primary text-2xl font-bold">
-                {displayName.charAt(0).toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-            {isNative ? (
-              <button
-                type="button"
-                onClick={handleNativePhotoPick}
-                className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow"
-                aria-label={t("avatar_change_aria")}
-              >
-                <Camera className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <label className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow">
-                <Camera className="h-3.5 w-3.5" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
-                />
-              </label>
-            )}
-          </div>
-          {displayName && <p className="text-base font-bold">{displayName}</p>}
-          <button
-            onClick={() => setFramesOpen(true)}
-            aria-label={t("customize.title")}
-            className="flex items-center gap-2.5 rounded-full bg-secondary pl-1.5 pr-4 py-1.5 text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
-          >
-            <span className="relative h-8 w-8 shrink-0">
-              <AvatarFrame kind={isAvatarFrame(myFrame?.avatar_frame) ? myFrame!.avatar_frame : "stars"} color={myFrame?.avatar_frame_color} size={32} />
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
-                <AvatarFallback className="bg-orange-100 text-primary text-xs font-bold">{displayName.charAt(0).toUpperCase() || "U"}</AvatarFallback>
-              </Avatar>
-            </span>
-            {t("customize.title")}
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-          {user && <AvatarFrameSheet open={framesOpen} onOpenChange={setFramesOpen} userId={user.id} />}
-        </div>
-
-        {/* Profile fields */}
-        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="first_name">{t("first_name")}</Label>
-              <span className="text-xs text-muted-foreground/70 tabular-nums">{firstName.length}/{FIRST_NAME_MAX}</span>
-            </div>
-            <Input
-              id="first_name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value.slice(0, FIRST_NAME_MAX))}
-              maxLength={FIRST_NAME_MAX}
-              autoCapitalize="words"
-              autoCorrect="off"
-              placeholder={t("first_name_placeholder")}
-              className="bg-background"
-            />
-            {firstNameProblem && (
-              <p className="text-xs leading-snug text-destructive">{t(`first_name_status.${firstNameProblem}`)}</p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="username">{t("username")}</Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={t("username_placeholder")}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              className="bg-background"
-            />
-            {uStatus !== "idle" && (
-              <p className={`text-xs leading-snug ${uStatus === "ok" ? "text-green-600" : uStatus === "checking" ? "text-muted-foreground" : "text-destructive"}`}>
-                {t(`username_status.${uStatus}`)}
-              </p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="bio">{t("bio")}</Label>
-              <span className="text-xs text-muted-foreground/70 tabular-nums">{bio.length}/80</span>
-            </div>
-            <textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value.slice(0, 80))}
-              maxLength={80}
-              rows={2}
-              placeholder={t("bio_placeholder")}
-              className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/40 placeholder:text-muted-foreground/60 leading-relaxed"
-            />
-          </div>
-          <button
-            onClick={() => updateProfileMutation.mutate()}
-            disabled={updateProfileMutation.isPending || usernameBlocked || !!firstNameProblem}
-            className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-colors disabled:opacity-50"
-          >
-            {updateProfileMutation.isPending ? t("saving") : t("save_changes")}
-          </button>
-        </div>
-
-        {/* Linked accounts */}
-        <LinkedAccountsSection />
-
-        {/* Other settings */}
-        <div className="space-y-2">
-          <LanguageSection />
-
-          <PushToggleSection />
-
-          <CookieConsentSection />
-
-          {/* KOSZ (2026-09-15): usuniety wyjazd / kolekcja czeka 7 dni. Wejscie stoi w Ustawieniach,
-              a nie na profilu - to sciezka ratunkowa ("gdzie to zniknelo"), nie codzienna zakladka. */}
-          <button
-            onClick={() => setTrashOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
-          >
-            <Trash2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm font-medium flex-1">{t("trash")}</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-
-          <Link
-            to="/terms"
-            className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
-          >
-            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm font-medium flex-1">{t("terms")}</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-
-        </div>
-
-        {/* Spolecznosc i kontakt */}
-        <SocialContactSection />
-
-        {/* Bug report */}
-        <div className="space-y-2">
-          <BugReportSection userId={user.id} />
-        </div>
-
-        {/* Password */}
-        <div className="space-y-2">
-          <ChangePasswordSection />
-        </div>
-
-        {/* Admin: reset onboardingu (dla testerow - czysci flage NA TYM urzadzeniu). */}
-        {isHardcodedAdmin(user.email) && (
-          <div className="space-y-2">
-            <button
-              onClick={() => {
-                toast.success("Onboarding zresetowany");
-                restartOnboarding();
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
-            >
-              <RotateCcw className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="text-sm font-medium flex-1">{t("show_onboarding")}<span className="text-muted-foreground font-normal">(admin)</span></span>
-            </button>
-            {/* Ekran startowy widac normalnie tylko przy ZIMNYM starcie, wiec zeby dalo sie go
-                obejrzec bez ubijania aplikacji - podglad na zadanie (prosba Nat 2026-09-01). */}
-            <button
-              onClick={() => window.dispatchEvent(new Event("spontaway:replay-splash"))}
-              className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
-            >
-              <RotateCcw className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="text-sm font-medium flex-1">{t("show_splash")}<span className="text-muted-foreground font-normal">(admin)</span></span>
-            </button>
-          </div>
-        )}
-
-        {/* Danger zone */}
-        <div className="space-y-2">
-          <button
-            onClick={async () => { await signOut(); navigate("/auth"); }}
-            className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
-          >
-            <LogOut className="h-4 w-4 text-destructive flex-shrink-0" />
-            <span className="text-sm font-medium text-destructive flex-1">{t("logout")}</span>
-          </button>
-
-          <DeleteAccountButton onDeleted={() => { signOut(); navigate("/"); }} />
-
-          <TrashSheet open={trashOpen} onOpenChange={setTrashOpen} />
-        </div>
-
-      </div>
-    </div>
-  );
+  switch (section) {
+    case "profil": return <ProfileEditScreen />;
+    case "konto": return <AccountScreen />;
+    case "powiadomienia": return <NotificationsScreen />;
+    case "prywatnosc": return <PrivacyScreen />;
+    case "zablokowani": return <BlockedScreen userId={user.id} />;
+    case "pomoc": return <HelpScreen userId={user.id} />;
+    case "o-aplikacji": return <AboutScreen />;
+    case "zespol": return isHardcodedAdmin(user.email) ? <TeamScreen /> : <SettingsHub />;
+    case "usun-konto": return <DeleteAccountFlow />;
+    default: return <SettingsHub />;
+  }
 };
 
 import { Component, ErrorInfo, ReactNode } from "react";

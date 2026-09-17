@@ -1,5 +1,5 @@
 {
-  "title": "Profile settings",
+  "title": "Settings",
   "first_name": "First name",
   "username": "Username",
   "save_changes": "Save changes",
@@ -131,5 +131,78 @@
     "chars": "Letters only (a hyphen or apostrophe is fine)",
     "banned": "That name is not allowed"
   },
-  "trash": "Trash"
+  "trash": "Trash",
+  "hub": {
+    "profile": "Your profile",
+    "account": "Account and security",
+    "account_desc": "Sign-in, password",
+    "notifications": "Notifications",
+    "notifications_desc": "Push and what you get",
+    "privacy": "Privacy and data",
+    "privacy_desc": "Analytics, blocked people, permissions",
+    "trash_desc": "Trips come back for 7 days",
+    "help": "Help and contact",
+    "help_desc": "Report a bug, community",
+    "about": "About the app",
+    "about_desc": "Language, terms, version",
+    "team": "Team tools",
+    "team_desc": "Onboarding, splash screen"
+  },
+  "group": {
+    "signin": "Sign-in",
+    "push": "Push notifications",
+    "data": "What we collect",
+    "people": "People",
+    "permissions": "System permissions",
+    "documents": "Documents",
+    "app": "App",
+    "team": "Team only"
+  },
+  "password_note": "You change your password through a link sent to your account email - we do not store it in the app.",
+  "push_note": "This setting decides whether we send notifications at all. Choosing what they are about is coming soon.",
+  "permissions_note": "We ask for permissions when they are needed. Here you can see how things stand and change them in your phone settings.",
+  "team_note": "You see this because your account has the admin role.",
+  "profile_save_hint": "Changes on this screen wait for the button. Every other setting saves right away.",
+  "privacy_policy": "Privacy policy",
+  "location": "Location",
+  "version": "spontaway · version {{version}}",
+  "back": "Back",
+  "onboarding_reset": "Onboarding reset",
+  "blocked": {
+    "title": "Blocked people",
+    "desc": "Who you cannot see and who cannot see you",
+    "unblock": "Unblock",
+    "unblocked": "{{name}} can see you again",
+    "unblock_error": "Could not unblock. Please try again.",
+    "loading": "Loading...",
+    "someone": "Someone",
+    "empty_title": "You have not blocked anyone",
+    "empty_desc": "Blocked people disappear from search, collections and trips. You can unblock them here.",
+    "confirm_title": "Unblock {{name}}?",
+    "confirm_desc": "You will see each other's content again. They will not be notified."
+  },
+  "delete": {
+    "intro": "Before you do this, read what goes away with your account. This cannot be undone - the 7 day trash does not apply here.",
+    "gone_title": "Gone for good",
+    "gone": {
+      "trips": "Your trips along with their photos and notes",
+      "collections": "Collections you created and everything in them",
+      "notes": "Notes and photos you added to places",
+      "stars": "Starred places",
+      "follows": "Followers, following and friends",
+      "messages": "Messages in trip chats"
+    },
+    "stays_title": "Stays with other people",
+    "stays": {
+      "shared_collections": "Places you added to shared collections stay with their owners",
+      "group_trips": "Group trips you do not own stay with the host"
+    },
+    "type_intro": "Type your username to confirm. This is the one barrier you cannot pass by reflex.",
+    "type_label": "Your username",
+    "type_hint": "The name does not match yet.",
+    "type_ok": "Matches.",
+    "confirm_cta": "Delete account for good",
+    "done": "Account deleted"
+  },
+  "terms_short": "Terms of use"
 }
