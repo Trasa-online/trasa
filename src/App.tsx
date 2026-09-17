@@ -558,7 +558,12 @@ function SplashController() {
   const done = bootDone && minElapsed;
 
   useEffect(() => {
-    const t = setTimeout(() => setMinElapsed(true), 500);
+    // 1500 zamiast 500 (prosba Nat 2026-09-17): podpis "Stworzone w Polsce" u dolu ma byc
+    // do przeczytania. `SplashDraw` trzyma swoj czas sam (HOLD_MS), ale `SplashPulse` -
+    // wariant kolejnych startow w ciagu 12 h - nie ma zadnej animacji do odczekania i bez
+    // tego mrugal na pol sekundy. ⚠️ To DOLNA granica, nie gorna: ekran i tak znika dopiero,
+    // gdy boot jest gotowy.
+    const t = setTimeout(() => setMinElapsed(true), 1500);
     return () => clearTimeout(t);
   }, []);
 

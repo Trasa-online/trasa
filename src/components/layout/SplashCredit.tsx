@@ -11,16 +11,27 @@ import { BrandHeart } from "@/components/BrandHeart";
 //
 // Serce jest PELNE i w pomaranczu marki; tekst brazowy, bo to podpis, nie komunikat.
 //
-// WERSALIKI (decyzja Nat 2026-09-16 - kapitaliki probowane tego samego dnia i odrzucone:
-// "nie pasuja"). Wersaliki chodza `text-transform`em, wiec tresc w locale zostaje pisana
-// normalnie i tlumacz nie musi krzyczec.
+// WERSALIKI (decyzja Nat 2026-09-16 - kapitaliki probowane tego samego dnia i odrzucone).
 //
-// ⚠️ ROZMIAR JEST STALY: 15 px (zgloszenie Nat 2026-09-17 "dalej sa kapitaliki zamiast
-// wersalikow"). ⛔ To NIE byly kapitaliki - `text-transform: uppercase` bylo na miejscu,
-// a `small-caps` nie ma w kodzie, w zbudowanym CSS ani w paczce natywnej (sprawdzone we
-// wszystkich trzech warstwach). Napis po prostu BYL ZA MALY: 13 px wersalikow przy szerokim
-// odstepie i kryciu 70 % czyta sie dokladnie tak, jak kapitaliki, bo kapitaliki to z definicji
-// wersaliki sprowadzone do wysokosci x.
+// ⛔ TRZECIE zgloszenie "to nadal kapitaliki" (2026-09-17). `font-variant-caps: small-caps`
+// zostalo usuniete juz przy pierwszym (commit d05f0701) i nie ma go ANI w zrodle, ANI
+// w zbudowanym CSS, ANI w paczce natywnej - sprawdzone, computed style w WebKit oddaje
+// `uppercase` / `fontVariantCaps: normal`. Skoro nie umiem tego odtworzyc, zamykamy KAZDA
+// furtke naraz zamiast zgadywac dalej:
+//   1. tekst w locale jest juz ZAPISANY WIELKIMI LITERAMI - wielkosc liter nie zalezy wiec
+//      od tego, czy `text-transform` gdziekolwiek zadziala (`uppercase` zostaje, bo na
+//      wielkich literach nic nie zmienia, a chroni przed tlumaczem piszacym minuskami);
+//   2. `fontVariantCaps: "normal"` i `fontFeatureSettings: "normal"` gasza kapitaliki
+//      nawet gdyby szly z dziedziczenia albo z funkcji OpenType fontu;
+//   3. ODSTEP MIEDZYLITEROWY zszedl z .07em na .035em - szeroko rozstrzelone male wersaliki
+//      to jest dokladnie wizualny podpis kapitalikow, wiec przy tej wielkosci litery czytaly
+//      sie jak kapitaliki, nawet bedac wersalikami.
+// ⛔ Regula "tresc w locale pisana normalnie, wielkie litery robi CSS" zostaje tu ZLAMANA
+// swiadomie - po trzech podejsciach pewnosc jest wazniejsza od elegancji.
+//
+// ⚠️ ROZMIAR: 12 px i tak ma zostac. Podpis ma byc AKCENTEM, nie komunikatem (prosba Nat
+// 2026-09-17: "zalezy mi na malym tekscie"). Podniesienie do 15 px tego samego dnia bylo
+// moja bledna diagnoza - problemem nie byla wielkosc, tylko to, jak litery sie czytaly.
 //
 // ⛔ Wczesniejszy `clamp(12px, 3.4vw, 14px)` ZNIKA i nie przywracaj go. Mial chronic przed
 // wyjechaniem angielskiej wersji poza ekran iPhone'a SE - i nie chronil przed niczym:
@@ -33,8 +44,14 @@ export default function SplashCredit({ className = "" }: { className?: string })
   const { t } = useTranslation("common");
   return (
     <p
-      className={`absolute inset-x-0 flex items-center justify-center gap-1.5 px-4 text-[15px] font-semibold uppercase tracking-[0.07em] text-[#5B2C06]/85 ${className}`}
-      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)", textWrap: "balance" }}
+      className={`absolute inset-x-0 flex items-center justify-center gap-1.5 px-4 text-[12px] font-medium uppercase tracking-[0.035em] text-[#5B2C06]/75 ${className}`}
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)",
+        textWrap: "balance",
+        // Gasimy kapitaliki jawnie - patrz komentarz na gorze pliku.
+        fontVariantCaps: "normal",
+        fontFeatureSettings: "normal",
+      }}
     >
       {t("splash.made_in")}
       <BrandHeart className="h-[12px] w-[14px] shrink-0 text-primary" />

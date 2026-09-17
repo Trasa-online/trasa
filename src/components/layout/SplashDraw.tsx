@@ -36,7 +36,10 @@ const SPLASH_BG = "#FEFEFE";   // tlo ekranu ORAZ kolor przeslony - musza byc id
 const DRAW_MS = 900;   // czas rysowania "S"
 const POP_MS = 520;    // zapalenie gwiazdki
 const STAR_LEAD = 140; // gwiazdka rusza tyle przed koncem rysowania (inaczej jest przerwa)
-const HOLD_MS = 240;   // chwila na komplecie, zeby oko zdazylo odczytac znak
+const HOLD_MS = 1240;  // chwila na komplecie: znak + CZAS NA PRZECZYTANIE PODPISU u dolu
+                       // (prosba Nat 2026-09-17: +1 s, "zeby kazdy zdazyl przeczytac ten tekst").
+                       // ⚠️ To jest DOLNA granica czasu splashu, nie gorna - ekran i tak czeka
+                       // na `done`, wiec przy wolnym starcie nic sie nie wydluza dodatkowo.
 const FADE_MS = 380;   // wygaszenie ekranu
 const MARK_W_PX = 140; // szerokosc znaku na ekranie
 
