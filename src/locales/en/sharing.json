@@ -95,7 +95,16 @@
     "remove": "Remove this day",
     "remove_title": "Remove day {{day}}?",
     "remove_desc": "The trip gets one day shorter and the following days move up.",
-    "remove_desc_dated": "The trip gets one day shorter: it will end a day earlier and the following days move up."
+    "remove_desc_dated": "The trip gets one day shorter: it will end a day earlier and the following days move up.",
+    "remove_section": "Remove a single day",
+    "remove_section_desc": "The trip gets one day shorter and the days after it move up.",
+    "remove_moves_one": "{{count}} place from this day will not disappear - it joins the adjacent day, together with its photos, notes and highlights.",
+    "remove_moves_other": "{{count}} places from this day will not disappear - they join the adjacent day, together with their photos, notes and highlights.",
+    "shorten_title_one": "Shorten the trip to 1 day?",
+    "shorten_title_other": "Shorten the trip to {{count}} days?",
+    "shorten_desc_one": "{{count}} place from the days being removed moves to day {{to}}, together with its photos, notes and highlights. Nothing is lost.",
+    "shorten_desc_other": "{{count}} places from the days being removed move to day {{to}}, together with their photos, notes and highlights. Nothing is lost.",
+    "shorten_confirm": "Shorten trip"
   },
   "toast": {
     "pick_cover_desc": "In the Gallery tab, pick the photo that should represent this trip in Explore.",

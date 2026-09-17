@@ -3,6 +3,7 @@ import { BrandStar } from "@/components/BrandStar";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useTranslation } from "react-i18next";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
+import { avatarSrc } from "@/lib/avatar";
 import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
@@ -27,6 +28,12 @@ import type { ListTheme } from "@/lib/listThemes";
 //    (kafelek ~105 px); na siatce - ikona (kafelek ~46 px, "Restauracja" konczylo jako "Rest…").
 
 export type TileSize = "grid" | "feed";
+
+/** Jak kafelek KOLEKCJI przedstawia ludzi.
+ *  - "pill"    = pigulka autora (awatar z nakladka + nazwa + nick). Eksploracja, udostepnianie.
+ *  - "avatars" = sam klaster awatarow bez nazw i bez nakladek. Profil wlasny i publiczny
+ *                (prosba Nat 2026-09-17) - tam nazwa autora stoi juz w naglowku ekranu. */
+export type PeopleStyle = "pill" | "avatars";
 
 /** `isNew` = miejsce dodane przez autora od ostatniego obejrzenia kolekcji przez TEGO usera
  *  (baza: saved_collections.seen_item_count). Dostaje brandowa gwiazdke na okladce. */
@@ -135,6 +142,85 @@ function AuthorPill({ it, tone, ink, size }: { it: GridItem; tone: "brand" | "ti
       <span className="truncate">{it.authorName || it.authorHandle}</span>
       {!!handle && !!it.authorName && (
         <span className="shrink-0 font-semibold opacity-70">{handle}</span>
+      )}
+    </span>
+  );
+}
+
+/** Ile awatarow miesci sie w klastrze. Piaty i dalsi ida w licznik obok. */
+const CLUSTER_SHOWN = 4;
+
+/** Srodki awatarow w ulamkach pudelka - OSOBNY uklad na kazda liczbe osob. Sztywna siatka
+ *  2x2 przy dwoch osobach zostawialaby pusty dolny rzad i klaster czytalby sie jako obciety;
+ *  przy trzech - jako brakujacy czwarty. */
+const CLUSTER_POS: Record<number, [number, number][]> = {
+  1: [[0.5, 0.5]],
+  2: [[0.3, 0.3], [0.7, 0.7]],
+  3: [[0.29, 0.29], [0.71, 0.29], [0.5, 0.74]],
+  4: [[0.29, 0.29], [0.71, 0.29], [0.29, 0.71], [0.71, 0.71]],
+};
+
+/** AUTOR I WSPOLTWORCY JAKO SAME AWATARY (prosba Nat 2026-09-17, wzor: klaster tworcow przy
+ *  filmie na YouTube). Uklad TYLKO na profilach - wlasnym i publicznym.
+ *
+ *  Dlaczego bez nazwy autora: na profilu patrzysz wlasnie na jego naglowek, wiec pigulka
+ *  z imieniem i nickiem powtarzala to, co stoi dwa centymetry wyzej, a zabierala pol rzedu
+ *  chipow. W EKSPLORACJI pigulka ZOSTAJE - tam autor jest informacja, nie powtorzeniem.
+ *
+ *  Autor jest PIERWSZY i na wierzchu; dalej wspoltworcy w kolejnosci z zapytania.
+ *  Kolekcja jednoosobowa dostaje jeden awatar na cale pudelko, wiec uklad dziala tak samo
+ *  dla kolekcji wlasnej i wspolnej - nie ma osobnego przypadku do utrzymania.
+ *
+ *  Awatary sa BEZ NAKLADEK (prosba Nat): cztery ramki po 24 px, kazda z wlasnymi gwiazdkami
+ *  i kolorem, zlewaly sie w kolorowa plame i to one rzucaly sie w oczy zamiast twarzy.
+ *  Nakladka zostaje wszedzie, gdzie awatar stoi sam i ma na nia rozmiar.
+ */
+function PeopleCluster({ it, theme, size }: { it: GridItem; theme: ListTheme; size: TileSize }) {
+  const feed = size === "feed";
+  const crew = [
+    { id: it.authorId ?? "owner", avatar: it.authorAvatar },
+    ...(it.coAuthors ?? []).map((c) => ({ id: c.id, avatar: c.avatar_url })),
+  ];
+  const shown = crew.slice(0, CLUSTER_SHOWN);
+  const extra = crew.length - shown.length;
+  // ⚠️ Kolekcja JEDNOOSOBOWA dostaje MNIEJSZE pudelko (32 px zamiast 44). Awatar na cale
+  // 44 px byl ciezszy niz cztery twarze w klastrze, a to wlasnie kolekcja jednoosobowa jest
+  // przypadkiem domyslnym: w "Moje kolekcje" kazdy kafelek pokazywalby moje wlasne zdjecie
+  // w rozmiarze wiekszym niz gdziekolwiek indziej na tym ekranie. Sprawdzone renderem
+  // w WebKit na trzech motywach kolekcji.
+  const solo = shown.length === 1;
+  const box = solo ? (feed ? 32 : 26) : (feed ? 44 : 34);
+  const pos = CLUSTER_POS[shown.length] ?? CLUSTER_POS[CLUSTER_SHOWN];
+  // Obwodka w kolorze KAFELKA, nie biala: to ona rozdziela sasiadujace twarze, a biel na
+  // kremowym czy piaskowym motywie nie rozdzielalaby niczego.
+  const av = solo ? box : Math.round(box * 0.56);
+  return (
+    <span className={`flex shrink-0 items-center ${feed ? "gap-1.5" : "gap-1"}`}>
+      <span className="relative block shrink-0" style={{ width: box, height: box }}>
+        {shown.map((p, i) => (
+          <img
+            key={p.id}
+            src={avatarSrc(p.avatar)}
+            alt=""
+            draggable={false}
+            className="absolute rounded-full bg-orange-100 object-cover"
+            style={{
+              width: av, height: av,
+              left: `${pos[i][0] * 100}%`, top: `${pos[i][1] * 100}%`,
+              transform: "translate(-50%, -50%)",
+              zIndex: shown.length - i,
+              boxShadow: shown.length > 1 ? `0 0 0 2px ${theme.bg}` : undefined,
+            }}
+          />
+        ))}
+      </span>
+      {/* Piata i dalsze osoby: sam licznik. Bez niego kolekcja dwunastu osob wygladalaby
+          dokladnie tak samo jak czteroosobowa. */}
+      {extra > 0 && (
+        <span className={`inline-flex items-center rounded-full px-2 font-bold leading-none ${feed ? "h-[22px] text-[12px]" : "h-[18px] text-[10px]"}`}
+          style={{ backgroundColor: tintBg(theme.ink), color: theme.ink }}>
+          {"+" + extra}
+        </span>
       )}
     </span>
   );
@@ -261,7 +347,7 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
   );
 }
 
-export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize }) {
+export function ListTile({ it, size = "feed", people = "pill" }: { it: GridItem; size?: TileSize; people?: PeopleStyle }) {
   const { t } = useTranslation("homefeed");
   const theme = it.theme!;
   const feed = size === "feed";
@@ -276,11 +362,15 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
           Wczesniej chipy mialy wlasny rzad pod tytulem - kafelek miał przez to trzy osobne
           linie podpisu nad zdjeciami. `items-center`, bo pigulka autora jest wyzsza od chipow. */}
       <div className={`flex flex-wrap items-center ${feed ? "gap-1.5" : "gap-1"}`}>
-        {it.showAuthor && <AuthorPill it={it} tone="tint" ink={theme.ink} size={size} />}
+        {/* Profil = sam sklad w awatarach (PeopleCluster). Eksploracja = pigulka autora
+            z nazwa, bo tam nie wiadomo, czyja to kolekcja. Patrz `PeopleStyle`. */}
+        {it.showAuthor && (people === "avatars"
+          ? <PeopleCluster it={it} theme={theme} size={size} />
+          : <AuthorPill it={it} tone="tint" ink={theme.ink} size={size} />)}
         {/* Wspoltworcy: nachodzace awatary tuz przy autorze - na kafelku nie ma miejsca na
             handle, a chodzi o sam sygnal "to jest wspolna kolekcja". Pelne nazwiska sa
             w belce kolekcji i w arkuszu pod "+N". */}
-        {!!it.coAuthors?.length && (
+        {people !== "avatars" && !!it.coAuthors?.length && (
           <span className="flex items-center -space-x-1.5">
             {it.coAuthors.slice(0, 3).map((c) => (
               <FramedAvatar key={c.id} src={c.avatar_url} frame={c.avatar_frame} color={c.avatar_frame_color}
@@ -344,7 +434,7 @@ export function ListTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
 }
 
 // Kafelek z obsluga tapniecia. `className` = dodatkowe klasy wrappera (np. snap w feedzie).
-export function GridTile({ it, onOpen, size = "feed", className = "" }: { it: GridItem; onOpen: () => void; size?: TileSize; className?: string }) {
+export function GridTile({ it, onOpen, size = "feed", className = "", people = "pill" }: { it: GridItem; onOpen: () => void; size?: TileSize; className?: string; people?: PeopleStyle }) {
   return (
     <div className={`w-full ${className}`}>
       <div
@@ -353,7 +443,7 @@ export function GridTile({ it, onOpen, size = "feed", className = "" }: { it: Gr
         onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
         className="group block w-full text-left active:opacity-90 transition-opacity"
       >
-        {it.kind === "trip" ? <TripTile it={it} size={size} /> : <ListTile it={it} size={size} />}
+        {it.kind === "trip" ? <TripTile it={it} size={size} /> : <ListTile it={it} size={size} people={people} />}
       </div>
     </div>
   );

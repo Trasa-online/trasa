@@ -751,7 +751,7 @@ const TravelerProfile = () => {
             </p>
           </div>
         )}
-        <GridTile it={item} size="feed" onOpen={() => navigate(`/lista/${l.id}`)} />
+        <GridTile it={item} size="feed" people="avatars" onOpen={() => navigate(`/lista/${l.id}`)} />
       </div>
     );
   };
@@ -792,7 +792,7 @@ const TravelerProfile = () => {
                   // Licznik zapisow tylko na WLASNYCH - to informacja zwrotna dla autora.
                   savesCount: l._shared ? undefined : Number(l.saves_count ?? 0),
                 };
-                return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
+                return <GridTile key={l.id} it={item} size="feed" people="avatars" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}
     </div>
   );

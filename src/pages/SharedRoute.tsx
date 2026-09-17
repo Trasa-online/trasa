@@ -238,6 +238,7 @@ export default function SharedRoute() {
   const [datesSheetOpen, setDatesSheetOpen] = useState(false);
   const [daysSheetOpen, setDaysSheetOpen] = useState(false);
   const [askRemoveDay, setAskRemoveDay] = useState<number | null>(null);
+  const [askShorten, setAskShorten] = useState<{ to: number; moving: number } | null>(null);
   const [dayDraft, setDayDraft] = useState(1);   // wlasciciel: zakres dat wyjazdu
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
@@ -1206,17 +1207,51 @@ export default function SharedRoute() {
     toast.success(t("toast.days_saved", { count: next }));
   };
 
-  // USUNIECIE PUSTEGO DNIA (zgloszenie testerki: "chcialabym miec mozliwosc usuniecia dnia,
-  // jesli np. nigdzie nie bylam, bo zachorowalam"). Dostepne TYLKO dla dnia bez miejsc -
-  // usuwanie dnia z trescia kasowaloby miejsca po cichu.
+  // SKROCENIE WYJAZDU PYTA, ZANIM PRZESUNIE MIEJSCA (pytanie Nat 2026-09-17: "jesli user
+  // niechcacy zmieni 3 dni na 2, a w trzecim mial zdjecia, notatki i wyroznienia, to utraci
+  // to?"). Nie utraci: zdjecia (`pin_photos`), notatki (`pin_ratings`) i gwiazdka
+  // (`pins.is_top`) wisza na PINIE, a pin tylko zmienia `day_index` - nic nie jest kasowane.
+  // ⚠️ Ale do 17.09 nie bylo o tym ANI SLOWA: krokomierz zapisywal od razu, wiec user widzial
+  // wylacznie to, ze dzien 3 zniknal razem z jego trescia. Brak straty, ktorego nie widac,
+  // jest dla uzytkownika nie do odroznienia od straty. Dlatego pytamy - i mowimy wprost,
+  // ile miejsc sie przesunie i ze ida z calym dorobkiem.
+  const requestDayCount = (n: number) => {
+    const next = Math.min(MAX_TRIP_DAYS, Math.max(1, n));
+    const moving = (pins as any[]).filter((pn) => pinDay(pn) > next).length;
+    if (moving > 0) { setAskShorten({ to: next, moving }); return; }
+    void saveDayCount(next);
+  };
+
+  // USUNIECIE POJEDYNCZEGO DNIA (zgloszenie testerki: "chcialabym miec mozliwosc usuniecia dnia,
+  // jesli np. nigdzie nie bylam, bo zachorowalam"). Dziala dla KAZDEGO dnia, takze z miejscami
+  // (pytanie Nat 2026-09-17: "w jaki sposob user moze usunac tylko pojedynczy dzien?").
+  //
+  // Do 17.09 guzik stal wylacznie w stanie zero dnia, wiec dzien z choc jednym miejscem nie
+  // mial ZADNEGO wejscia - a krokomierz "Dostosuj ilosc dni" tu nie pomaga, bo on skraca
+  // wyjazd OD KONCA: komu wypadl dzien 2, ten skasowalby nim dzien 5. Teraz miejsca z
+  // usuwanego dnia schodza na dzien SASIEDNI zamiast ginac - zdjecia, notatki i gwiazdki
+  // jada z nimi, bo wisza na pinie.
   // ⚠️ Wyjazd skraca sie o jeden dzien, a kolejne dni przesuwaja sie w gore. Przy wyjezdzie
   // z DATAMI znaczy to takze, ze konczy sie dzien wczesniej (`end_date` - 1) - copy w arkuszu
   // mowi to wprost, bo inaczej byla by to niespodzianka.
   const removeDay = async (day: number) => {
-    if (!id) return;
-    const above = (pins as any[]).filter((pn) => pinDay(pn) > day);
-    for (const pn of above) {
-      await (supabase as any).from("pins").update({ day_index: pinDay(pn) - 1 }).eq("id", pn.id);
+    if (!id || dayCount <= 1) return;
+    // Dzien 1 nie ma poprzednika, wiec jego miejsca ZOSTAJA na dniu 1, a dotychczasowy
+    // dzien 2 dosuwa sie do nich. Dla kazdego innego dnia miejsca schodza o jeden w dol.
+    // Cel liczymy ze STARYCH numerow, zanim cokolwiek zapiszemy.
+    const moves = new Map<number, string[]>();
+    for (const pn of pins as any[]) {
+      const d = pinDay(pn);
+      if (d < day) continue;
+      const target = d === day ? Math.max(1, day - 1) : d - 1;
+      if (target === d) continue;
+      if (!moves.has(target)) moves.set(target, []);
+      moves.get(target)!.push(pn.id);
+    }
+    // Jedno zapytanie na dzien docelowy, nie jedno na pin: dzien z dwudziestoma miejscami
+    // to byloby dwadziescia osobnych zapisow i widoczne mruganie listy.
+    for (const [target, ids] of moves) {
+      await (supabase as any).from("pins").update({ day_index: target }).in("id", ids);
     }
     if (tripStart && tripEnd) {
       const end = new Date(tripEnd.getTime() - 86400000);
@@ -1226,6 +1261,7 @@ export default function SharedRoute() {
       await (supabase as any).from("routes").update({ day_number: Math.max(1, dayCount - 1) }).eq("id", id);
     }
     pickDay(null);
+    setDaysSheetOpen(false);
     haptics.success();
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
     queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
@@ -3061,12 +3097,66 @@ export default function SharedRoute() {
               aria-label={t("day.count_more")}
               className="h-12 w-12 rounded-full border border-border flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform disabled:opacity-30">+</button>
           </div>
-          <button onClick={() => void saveDayCount(dayDraft)}
+          <button onClick={() => requestDayCount(dayDraft)}
             className="mt-7 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-white active:scale-[0.98] transition-transform">
             {t("common:buttons.save")}
           </button>
+
+          {/* WYRZUCENIE JEDNEGO DNIA ZE SRODKA. Krokomierz wyzej skraca wyjazd OD KONCA -
+              komu wypadl dzien 2 z pieciu, temu nie sluzy do niczego. Dlatego kazdy dzien
+              ma tu wlasny wiersz z liczba miejsc i wlasny kosz. Wiersz pokazuje liczbe
+              miejsc, zeby bylo widac, co sie przeniesie, zanim user tapnie kosz. */}
+          {isOwner && dayCount > 1 && (
+            <div className="mt-7 border-t border-border/60 pt-5">
+              <p className="text-[14px] font-bold">{t("day.remove_section")}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{t("day.remove_section_desc")}</p>
+              <div className="mt-2 max-h-[30dvh] overflow-y-auto">
+                {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => {
+                  const n = (pins as any[]).filter((pn) => pinDay(pn) === d).length;
+                  return (
+                    <div key={d} className="flex items-center gap-3 py-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14px] font-semibold">{t("days.nth", { n: d })}</span>
+                        <span className="block text-[12px] text-muted-foreground">
+                          {n ? `${n} ${placeWord(n)}` : t("day.no_places")}
+                        </span>
+                      </span>
+                      {/* Arkusz zamykamy w tym samym zapisie stanu, w ktorym otwieramy
+                          potwierdzenie - nowa nakladka wchodzi od razu, wiec tapniecie nie
+                          ma jak spasc na wyjazd pod spodem. */}
+                      <button onClick={() => { setDaysSheetOpen(false); setAskRemoveDay(d); }}
+                        aria-label={t("day.remove")}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground active:scale-90 transition-transform">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
+
+      {/* SKROCENIE WYJAZDU. To NIE jest akcja destrukcyjna - nic nie ginie, miejsca tylko
+          zjezdzaja na ostatni dzien - wiec guzik jest pomaranczowy, nie czerwony. Pytamy
+          mimo to, bo z samego krokomierza nie widac, ze cokolwiek sie przesunie. */}
+      <AlertDialog open={askShorten !== null} onOpenChange={(o) => { if (!o) setAskShorten(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("day.shorten_title", { count: askShorten?.to ?? 1 })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("day.shorten_desc", { count: askShorten?.moving ?? 0, to: askShorten?.to ?? 1 })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); const a = askShorten; setAskShorten(null); if (a) void saveDayCount(a.to); }}>
+              {t("day.shorten_confirm")}
+            </AlertDialogAction>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Usuniecie pustego dnia. Copy MUSI powiedziec o skroceniu wyjazdu - przy wyjezdzie
           z datami zmienia sie takze data konca, a to jest niespodzianka, jesli o niej nie
@@ -3077,6 +3167,14 @@ export default function SharedRoute() {
             <AlertDialogTitle>{t("day.remove_title", { day: askRemoveDay ?? 0 })}</AlertDialogTitle>
             <AlertDialogDescription>
               {tripStart ? t("day.remove_desc_dated") : t("day.remove_desc")}
+              {/* Dzien z miejscami: mowimy WPROST, ze nic nie ginie. Bez tego zdania kosz
+                  przy dniu z dorobkiem wyglada jak kasowanie zdjec i notatek. `span`, nie
+                  `p` - opis jest juz akapitem i akapit w akapicie jest nieprawidlowy. */}
+              {!!askRemoveDay && (pins as any[]).filter((pn) => pinDay(pn) === askRemoveDay).length > 0 && (
+                <span className="mt-2 block">
+                  {t("day.remove_moves", { count: (pins as any[]).filter((pn) => pinDay(pn) === askRemoveDay).length })}
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

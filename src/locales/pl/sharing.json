@@ -95,7 +95,19 @@
     "remove": "Usuń ten dzień",
     "remove_title": "Usunąć dzień {{day}}?",
     "remove_desc": "Wyjazd skróci się o jeden dzień, a kolejne dni przesuną się w górę.",
-    "remove_desc_dated": "Wyjazd skróci się o jeden dzień: skończy się dzień wcześniej, a kolejne dni przesuną się w górę."
+    "remove_desc_dated": "Wyjazd skróci się o jeden dzień: skończy się dzień wcześniej, a kolejne dni przesuną się w górę.",
+    "remove_section": "Usuń pojedynczy dzień",
+    "remove_section_desc": "Wyjazd skróci się o ten jeden dzień, a kolejne przesuną się w górę.",
+    "remove_moves_one": "{{count}} miejsce z tego dnia nie zniknie - dołączy do sąsiedniego dnia razem ze zdjęciami, notatkami i wyróżnieniami.",
+    "remove_moves_few": "{{count}} miejsca z tego dnia nie znikną - dołączą do sąsiedniego dnia razem ze zdjęciami, notatkami i wyróżnieniami.",
+    "remove_moves_many": "{{count}} miejsc z tego dnia nie zniknie - dołączą do sąsiedniego dnia razem ze zdjęciami, notatkami i wyróżnieniami.",
+    "shorten_title_one": "Skrócić wyjazd do 1 dnia?",
+    "shorten_title_few": "Skrócić wyjazd do {{count}} dni?",
+    "shorten_title_many": "Skrócić wyjazd do {{count}} dni?",
+    "shorten_desc_one": "{{count}} miejsce z dni, których nie będzie, przeniesie się na dzień {{to}} - razem ze zdjęciami, notatkami i wyróżnieniami. Nic nie ginie.",
+    "shorten_desc_few": "{{count}} miejsca z dni, których nie będzie, przeniosą się na dzień {{to}} - razem ze zdjęciami, notatkami i wyróżnieniami. Nic nie ginie.",
+    "shorten_desc_many": "{{count}} miejsc z dni, których nie będzie, przeniesie się na dzień {{to}} - razem ze zdjęciami, notatkami i wyróżnieniami. Nic nie ginie.",
+    "shorten_confirm": "Skróć wyjazd"
   },
   "toast": {
     "pick_cover_desc": "W zakładce Galeria zaznacz zdjęcie, które ma reprezentować wyjazd w eksploracji.",

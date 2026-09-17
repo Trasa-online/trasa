@@ -580,7 +580,7 @@ export default function PublicProfile() {
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
                 };
-                return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
+                return <GridTile key={l.id} it={item} size="feed" people="avatars" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}
               </div>
             )
