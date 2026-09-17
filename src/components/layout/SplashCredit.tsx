@@ -15,20 +15,26 @@ import { BrandHeart } from "@/components/BrandHeart";
 // "nie pasuja"). Wersaliki chodza `text-transform`em, wiec tresc w locale zostaje pisana
 // normalnie i tlumacz nie musi krzyczec.
 //
-// ⚠️ ROZMIAR JEST ZMIENNY I TAK MA BYC. Wersaliki sa DUZO szersze od minusek, a angielska
-// wersja jest dluga: zmierzone w WebKit przy `letter-spacing: .07em` - "MADE IN POLAND,
-// SHARED WORLDWIDE" ma 273 px przy 12 px, 295 przy 13 px i 318 przy 14 px. Na iPhonie SE
-// (320 px szerokosci, minus serce i odstep) mieści sie tylko ta pierwsza. Stad `clamp`:
-// waski telefon dostaje 12 px, zwykly ~13 px, Pro Max pelne 14 px. Polska wersja (160-186 px)
-// miesci sie zawsze - to angielska wyznacza gorna granice.
-// ⛔ Nie wpisuj tu stalych 14 px "bo tak wygladalo na podgladzie" - na SE napis wyjedzie
-// poza ekran albo zawinie sie na dwie linie tuz nad krawedzia.
+// ⚠️ ROZMIAR JEST STALY: 15 px (zgloszenie Nat 2026-09-17 "dalej sa kapitaliki zamiast
+// wersalikow"). ⛔ To NIE byly kapitaliki - `text-transform: uppercase` bylo na miejscu,
+// a `small-caps` nie ma w kodzie, w zbudowanym CSS ani w paczce natywnej (sprawdzone we
+// wszystkich trzech warstwach). Napis po prostu BYL ZA MALY: 13 px wersalikow przy szerokim
+// odstepie i kryciu 70 % czyta sie dokladnie tak, jak kapitaliki, bo kapitaliki to z definicji
+// wersaliki sprowadzone do wysokosci x.
+//
+// ⛔ Wczesniejszy `clamp(12px, 3.4vw, 14px)` ZNIKA i nie przywracaj go. Mial chronic przed
+// wyjechaniem angielskiej wersji poza ekran iPhone'a SE - i nie chronil przed niczym:
+// "MADE IN POLAND, SHARED WORLDWIDE" ma 273 px, a na SE zostaje 268 px, wiec zdanie zawija
+// sie na dwie linie TAKZE przy 12 px. Clamp zmniejszal wiec polski napis w zamian za nic.
+// Zmierzone w WebKit na zbudowanym bundlu: przy 15 px przepelnienie wynosi 0 px na SE, 16
+// i Pro Max, w obu jezykach - angielski zawija sie na dwie linie dokladnie tak jak wczesniej.
+// `text-wrap: balance` dzieli te dwie linie rowno, zamiast zostawiac samotne slowo.
 export default function SplashCredit({ className = "" }: { className?: string }) {
   const { t } = useTranslation("common");
   return (
     <p
-      className={`absolute inset-x-0 flex items-center justify-center gap-1.5 px-4 font-semibold uppercase tracking-[0.07em] text-[#5B2C06]/70 ${className}`}
-      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)", fontSize: "clamp(12px, 3.4vw, 14px)" }}
+      className={`absolute inset-x-0 flex items-center justify-center gap-1.5 px-4 text-[15px] font-semibold uppercase tracking-[0.07em] text-[#5B2C06]/85 ${className}`}
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)", textWrap: "balance" }}
     >
       {t("splash.made_in")}
       <BrandHeart className="h-[12px] w-[14px] shrink-0 text-primary" />
