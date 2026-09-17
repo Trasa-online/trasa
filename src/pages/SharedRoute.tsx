@@ -75,7 +75,11 @@ import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { ParticipantsRow } from "@/components/route/ParticipantsRow";
 import PeopleSheet from "@/components/route/PeopleSheet";
 import { BrandBookmark } from "@/components/BrandBookmark";
+import { BrandHeart } from "@/components/BrandHeart";
 import TripLikeButton from "@/components/route/TripLikeButton";
+import TripLikesSheet from "@/components/route/TripLikesSheet";
+import TripCoverSheet from "@/components/route/TripCoverSheet";
+import { routeLikersKey } from "@/lib/routeLikers";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { resolvePlaceDbId } from "@/lib/placeLists";
@@ -302,6 +306,9 @@ export default function SharedRoute() {
   // miejsc. Stepper "podsumowania" zostal usuniety z flow (prosba Nat 2026-08-30) - publikacja to
   // jeden guzik "Opublikuj" na dole.
   const [publishing, setPublishing] = useState(false);
+  // Arkusz okladki: "publish" = krok przed publikacja, "adjust" = zmiana po publikacji.
+  const [coverSheet, setCoverSheet] = useState<null | "publish" | "adjust">(null);
+  const [likesOpen, setLikesOpen] = useState(false);
   // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
   // do miniaturek (prosba Nat 2026-08-30).
   const [reorderMode, setReorderMode] = useState(false);
@@ -807,28 +814,30 @@ export default function SharedRoute() {
   // Miniature eksploracji domykamy automatycznie (losowe zdjecie usera), bo bramka feedu jej
   // wymaga - user nie musi juz niczego wybierac. Toast z "Cofnij" (publikacja jest odwracalna
   // przez 6 s, potem juz nie - dlatego bez dodatkowego dialogu).
-  const handlePublish = async () => {
+  // ⚠️ PUBLIKACJA ZAWSZE PRZECHODZI PRZEZ WYBOR OKLADKI (prosba Nat 2026-09-17), takze gdy
+  // okladka jest juz ustawiona: user ma miec pewnosc, ze jego wyjazd wejdzie do eksploracji
+  // z kadrem, ktory sam widzial. Wczesniej brak okladki BLOKOWAL guzik toastem "wybierz
+  // okladke" i odsylal do zakladki Galeria - czyli sciana zamiast kroku w drodze.
+  const handlePublish = () => {
     if (!id || publishing) return;
     if (!(pins as any[]).length) { toast.error(t("toast.need_place")); return; }
-    // Okladka eksploracji jest teraz WARUNKIEM publikacji (prosba Nat 2026-08-30) - wczesniej
-    // losowalismy ja po cichu, wiec wyjazd trafial do feedu z przypadkowym zdjeciem.
-    if (!(route as any)?.list_cover_url) {
-      haptics.warning();
-      toast.error(t("toast.pick_cover"), {
-        description: t("toast.pick_cover_desc"),
-        action: { label: "Galeria", onClick: () => setPlanTab("galeria") },
-      });
-      return;
-    }
+    setCoverSheet("publish");
+  };
+
+  const doPublish = async (coverUrl: string) => {
+    if (!id || publishing) return;
     setPublishing(true);
     try {
+      // Okladke zapisujemy PRZED publikacja - bramka feedu jej wymaga, a gdyby publikacja
+      // przeszla, a zapis okladki nie, wyjazd wyladowalby w eksploracji bez miniatury.
+      await handleSetCover(coverUrl, true);
       await publishTrip([id]);
       // Zdjecia dodane przy miejscach (pin_photos) staja sie czescia galerii MIEJSC dopiero teraz -
       // publikacja jest momentem, w ktorym tresc wyjazdu staje sie publiczna (RPC security definer,
       // bo przenosi tez zdjecia innych uczestnikow; zgloszenie Nat 2026-08-30).
       const { data: synced } = await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
       if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] place photos synced: ${synced}`);
-      const cover = (route as any)?.list_cover_url as string | null;
+      const cover = coverUrl;
       track("trip_published", { route_id: id, city: route.city ?? null, place_count: (pins as any[]).length, has_cover: !!cover });
       haptics.success();
       // Opublikowany wyjazd zbiera polubienia i zapisy - miekkie pytanie o push, gdy toast
@@ -854,7 +863,53 @@ export default function SharedRoute() {
       console.error("[SharedRoute] publish failed:", e instanceof Error ? e.message : e);
       haptics.error();
       toast.error(t("toast.publish_failed"));
-    } finally { setPublishing(false); }
+    } finally { setPublishing(false); setCoverSheet(null); }
+  };
+
+  // Wgranie zdjecia POD OKLADKE. `toGallery` decyduje, czy laduje tez w galerii wyjazdu:
+  // przy publikacji tak (to pierwsze zdjecie wyjazdu, nalezy do wspomnienia), przy zmianie
+  // okladki NIE - wtedy jest to kadr zrobiony pod kafelek, a nie wspomnienie (prosba Nat).
+  const uploadCoverPhoto = async (file: File, toGallery: boolean): Promise<string | null> => {
+    if (!user || !id) return null;
+    try {
+      const path = `${user.id}/${route.id}/cover_${Date.now()}_${Math.floor(Math.random() * 1e6)}.jpg`;
+      const { error } = await uploadWithThumb("route-images", path, file);
+      if (error) { console.error("[SharedRoute] cover upload:", error.message); toast.error(t("toast.photos_add_failed")); return null; }
+      const url = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+      const verdict = await moderateImageUrl(url, "trip_gallery", { route_id: route.id });
+      if (verdict === "rejected") {
+        await (supabase as any).storage.from("route-images").remove([path, `${path}.thumb`]);
+        toast.error(MODERATION_REJECTED_MESSAGE);
+        return null;
+      }
+      const portrait = await isPortraitCover(url);
+      if (toGallery) {
+        // Zdjecie zostaje w galerii nawet gdy nie nadaje sie na okladke - jako zdjecie
+        // wyjazdu jest w porzadku, tylko kafelek by je przycial.
+        await (supabase as any).rpc("append_route_photos", { p_route_id: route.id, p_urls: [url] });
+        queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+      }
+      if (!portrait) {
+        haptics.error();
+        toast.error(t("toast.cover_portrait_only"));
+        if (!toGallery) await (supabase as any).storage.from("route-images").remove([path, `${path}.thumb`]);
+        return null;
+      }
+      return url;
+    } catch (e: any) {
+      console.error("[SharedRoute] cover upload failed:", e?.message ?? e);
+      toast.error(t("toast.photos_add_failed"));
+      return null;
+    }
+  };
+
+  // Zaznaczenie zdjecia w arkuszu okladki. Odrzucamy panoramy - kafelek w eksploracji
+  // kadruje do 9:16 i gubi w nich polowe tresci.
+  const canPickCover = async (url: string): Promise<boolean> => {
+    if (await isPortraitCover(url)) return true;
+    haptics.error();
+    toast.error(t("toast.cover_portrait_only"));
+    return false;
   };
 
   // Etap W TRAKCIE: zapis wlasnej notki (pin_ratings). PlaceNoteEditor sam debounce'uje -> zapis
@@ -2409,7 +2464,23 @@ export default function SharedRoute() {
             {/* Polubienie = BRANDOWE SERCE na wysokosci tytulu (prosba Nat 2026-09-13; gwiazdka
                 zostaje dla "topki"): kontur = nie polubione, pelne = polubione, licznik obok gdy > 0.
                 Tylko gosc. */}
-            {!isOwner && (
+            {/* ⚠️ AUTOR I UCZESTNIK NIE MOGA POLUBIC WLASNEGO WYJAZDU (decyzja Nat 2026-09-17,
+                egzekwuje to trigger `guard_like_not_own_trip` w bazie). Dla nich serce nie jest
+                przelacznikiem, tylko LICZNIKIEM z wejsciem na liste "kto polubil" - dzieki temu
+                autor widzi odzew na swoj wyjazd w tym samym miejscu, w ktorym gosc go zostawia.
+                ⛔ Do 17.09 warunkiem bylo `!isOwner`, wiec UCZESTNIK wspolnego wyjazdu polubial
+                go normalnie - stad 4 takie polubienia na prodzie. Teraz bramka to `canEdit`. */}
+            {canEdit ? (
+              isPublished && (
+                <button onClick={() => { haptics.light(); setLikesOpen(true); }} aria-label={t("likes.title")}
+                  className="flex shrink-0 items-center gap-1.5 active:scale-90 transition-transform">
+                  <BrandHeart filled className="h-7 w-7 text-primary" />
+                  {routeLike.count > 0 && (
+                    <span className="text-[15px] font-bold tabular-nums text-foreground">{routeLike.count}</span>
+                  )}
+                </button>
+              )
+            ) : (
               <TripLikeButton liked={routeLike.liked} count={routeLike.count} onToggle={() => void toggleLike()} label={t("aria.like_trip")} />
             )}
             {/* ZAPIS obok serca (prosba Nat 2026-09-16). Zszedl z dolnego paska, bo zapis
@@ -2900,17 +2971,26 @@ export default function SharedRoute() {
               badge: unreadChat,
               onClick: () => setChatOpen(true),
             } as TripFab] : []),
-            {
-              // "+" znaczy "dodaj to, na co patrzysz" (prosba Nat 2026-09-08): w Miejscach
-              // dodaje miejsce, w Galerii otwiera wybor zdjec.
+            // "DODAJ NOWE MIEJSCE" ZESZLO Z TEGO STOSU DO DOLNEGO PASKA (prosba Nat 2026-09-17),
+            // obok publikacji, jako guzik secondary. Zostaje tu sam wariant GALERII: tam "+"
+            // nie ma odpowiednika na dolnym pasku, a kafelek z kreskowanym obrysem w siatce
+            // jest widoczny dopiero po przewinieciu do konca zdjec.
+            ...(planTab === "galeria" && canAddPhotos ? [{
               key: "add",
-              label: planTab === "galeria" && canAddPhotos ? t("add_photo_cta") : t("add_place"),
+              label: t("add_photo_cta"),
               icon: <Plus className="h-6 w-6" strokeWidth={2.4} />,
-              onClick: () => {
-                if (planTab === "galeria" && canAddPhotos) photoInputRef.current?.click();
-                else setAddPlaceOpen(true);
-              },
-            },
+              onClick: () => photoInputRef.current?.click(),
+            } as TripFab] : []),
+            // "Dostosuj okladke" - dopiero PO publikacji (prosba Nat 2026-09-17). Przed nia
+            // okladke wybiera sie w kroku publikacji, wiec druga droga tylko by go dublowala.
+            // Wlasciciel zmienia okladke eksploracji, uczestnik swoja wlasna - o to dba juz
+            // `setCoverFromGallery`, wiec obaj dostaja ten sam wiersz.
+            ...(isPublished ? [{
+              key: "cover",
+              label: t("cover.action"),
+              icon: <ImageIcon className="h-6 w-6" strokeWidth={2.2} />,
+              onClick: () => setCoverSheet("adjust"),
+            } as TripFab] : []),
             // "Dostosuj ilosc dni" W STOSIE, nie tylko w menu "..." (prosba Nat 2026-09-16,
             // TRZECIE podejscie). Dwa wczesniejsze wyladowaly w menu "..." i w kreatorze -
             // a Nat przez "chevron" cala czas rozumiala TEN rozwijany stos, nie wiersz z lista.
@@ -2933,6 +3013,26 @@ export default function SharedRoute() {
           ]}
         />
       )}
+
+      {/* Okladka: ten sam arkusz przed publikacja i po niej - rozni je tylko tryb.
+          "publish" potwierdza i od razu publikuje, "adjust" zapisuje sama okladke. */}
+      {id && (
+        <TripCoverSheet
+          open={coverSheet !== null}
+          onOpenChange={(v) => { if (!v) setCoverSheet(null); }}
+          mode={coverSheet === "adjust" ? "adjust" : "publish"}
+          photos={galleryPhotos}
+          value={resolveStored(myCover) ?? (route as any).list_cover_url ?? null}
+          busy={publishing}
+          onPick={canPickCover}
+          onUpload={(file) => uploadCoverPhoto(file, coverSheet === "publish")}
+          onConfirm={(url) => {
+            if (coverSheet === "adjust") { setCoverSheet(null); void setCoverFromGallery(url); }
+            else void doPublish(url);
+          }}
+        />
+      )}
+      {id && <TripLikesSheet open={likesOpen} onOpenChange={setLikesOpen} routeId={id} />}
 
       <PeopleSheet
         open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.trip_title")}
@@ -3052,7 +3152,10 @@ export default function SharedRoute() {
       {/* Po przeniesieniu zmiany kolejnosci do stosu FAB dolny pasek bywa PUSTY (wyjazd
           w trakcie, jeszcze bez publikacji) - wtedy zostawal sam bialy pasek z kreska.
           Renderujemy go dopiero, gdy jest w nim jakakolwiek akcja. */}
-      {!noteEditing && !editingName && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish)) || !canEdit) && (
+      {/* ⚠️ Warunek dosypuje `canEdit && planTab !== "galeria"`, bo od 2026-09-17 pasek niesie
+          takze "Dodaj nowe miejsce" - bez tego opublikowany wyjazd (brak guzika publikacji)
+          zostawalby BEZ dodawania miejsc w ogole, skoro akcja zeszla ze stosu FAB. */}
+      {!noteEditing && !editingName && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish || planTab !== "galeria")) || !canEdit) && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (
@@ -3077,6 +3180,16 @@ export default function SharedRoute() {
                 {/* Dolny pasek zostaje dla akcji ETAPU (wybor miejsc / publikacja). "Dodaj
                     miejsce", czat i zmiana kolejnosci mieszkaja w stosie plywajacych guzikow
                     pod chevronem (prosba Nat 2026-08-30 i 2026-09-10). */}
+                {/* DODAJ NOWE MIEJSCE - guzik secondary obok publikacji (prosba Nat 2026-09-17).
+                    Szary fill, bo to akcja secondary (styl YouTube), a pomarancz zostaje dla
+                    akcji, ktora konczy etap. W zakladce Galeria go nie ma - tam "+" dotyczy
+                    zdjec i siedzi w stosie. */}
+                {canEdit && planTab !== "galeria" && (
+                  <button onClick={() => setAddPlaceOpen(true)}
+                    className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform">
+                    <Plus className="h-4 w-4 stroke-[3]" />{t("add_place")}
+                  </button>
+                )}
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
                 {isOwner && stage === "planning" && pins.length > 0 && (
                   <button onClick={startChoosing}

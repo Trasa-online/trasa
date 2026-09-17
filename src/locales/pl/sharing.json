@@ -331,5 +331,20 @@
     "now_friends": "To zdjęcie widzą teraz tylko Twoi znajomi",
     "now_public": "To zdjęcie widzą teraz wszyscy",
     "failed": "Nie udało się zmienić widoczności zdjęcia"
+  },
+  "cover": {
+    "action": "Dostosuj okładkę",
+    "title_publish": "Wybierz okładkę wyjazdu",
+    "title_adjust": "Dostosuj okładkę",
+    "desc_publish": "Tak Twój wyjazd pokaże się w eksploracji. Wybierz zdjęcie, po którym da się poznać, o czym był.",
+    "desc_adjust": "Zdjęcie z galerii albo zupełnie nowe. Nowe trafi tylko na okładkę - nie doda się do galerii wyjazdu.",
+    "add_photo": "Dodaj zdjęcie na okładkę",
+    "add_own": "Nowe zdjęcie",
+    "confirm_publish": "Opublikuj wyjazd",
+    "confirm_adjust": "Zapisz okładkę"
+  },
+  "likes": {
+    "title": "Kto polubił",
+    "empty": "Nikt jeszcze nie polubił tego wyjazdu."
   }
 }

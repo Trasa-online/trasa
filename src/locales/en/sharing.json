@@ -317,5 +317,20 @@
     "now_friends": "Only your friends can see this photo now",
     "now_public": "Everyone can see this photo now",
     "failed": "Could not change the photo audience"
+  },
+  "cover": {
+    "action": "Adjust the cover",
+    "title_publish": "Choose a cover for your trip",
+    "title_adjust": "Adjust the cover",
+    "desc_publish": "This is how your trip shows up in Explore. Pick a photo that says what it was about.",
+    "desc_adjust": "A photo from the gallery, or a brand new one. A new one becomes the cover only - it will not be added to the trip gallery.",
+    "add_photo": "Add a cover photo",
+    "add_own": "New photo",
+    "confirm_publish": "Publish the trip",
+    "confirm_adjust": "Save the cover"
+  },
+  "likes": {
+    "title": "Who liked it",
+    "empty": "Nobody has liked this trip yet."
   }
 }
