@@ -284,6 +284,23 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
    nie ma tez wspolnego "skoku" na wejsciu.
    ⛔ Sam `transform` - zadnego `opacity`. Pomaranczowy znak marki ma byc zawsze kryjacy
    (ta sama regula, co przy animacjach splashu). */
+/* DUZE SERCE po podwojnym tapnieciu w zdjecie galerii (prosba Nat 2026-09-17).
+   Wchodzi z przestrzeleniem skali i gasnie - gest ma dac natychmiastowa odpowiedz,
+   ale nie zostac na ekranie. Krycie animujemy swiadomie: to element ULOTNY, a nie
+   znak marki (zakaz `opacity` dotyczy animacji znaku spontaway na splashu). */
+@keyframes photo-like-burst {
+  0%   { transform: translate(-50%, -50%) scale(0.25); opacity: 0; }
+  18%  { transform: translate(-50%, -50%) scale(1.18); opacity: 1; }
+  38%  { transform: translate(-50%, -50%) scale(0.94); opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1.02); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.12); opacity: 0; }
+}
+.animate-photo-like-burst { animation: photo-like-burst 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  /* Bez ruchu serce tylko mignie - sam sygnal zostaje, znika skakanie skali. */
+  .animate-photo-like-burst { animation: photo-like-burst 600ms linear forwards; }
+}
+
 @keyframes star-twinkle {
   0%, 100% { transform: rotate(-10deg) scale(0.9); }
   50%      { transform: rotate(10deg) scale(1.1); }

@@ -14,7 +14,7 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users, Globe2 } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users, Globe2 } from "lucide-react";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -309,6 +309,11 @@ export default function SharedRoute() {
   // Arkusz okladki: "publish" = krok przed publikacja, "adjust" = zmiana po publikacji.
   const [coverSheet, setCoverSheet] = useState<null | "publish" | "adjust">(null);
   const [likesOpen, setLikesOpen] = useState(false);
+  // Podwojne tapniecie w zdjecie = polubienie + duze serce w miejscu palca (prosba Nat
+  // 2026-09-17, wzor z Instagrama). Czas i miejsce ostatniego tapniecia trzymamy w REFIE,
+  // nie w stanie - przerysowanie na kazde tapniecie zgubiloby klatke animacji.
+  const lastPhotoTap = useRef<{ t: number; x: number; y: number } | null>(null);
+  const [likeBurst, setLikeBurst] = useState<{ id: number; x: number; y: number } | null>(null);
   // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
   // do miniaturek (prosba Nat 2026-08-30).
   const [reorderMode, setReorderMode] = useState(false);
@@ -769,6 +774,32 @@ export default function SharedRoute() {
     haptics.light();
     const liked = await togglePhotoLike(url, user.id, cur.liked);
     if (liked !== next.liked) setLikeOverrides((o) => ({ ...o, [url]: cur }));
+  };
+
+  // ⚠️ Podwojne tapniecie ZAWSZE POLUBIA, nigdy nie cofa (wzor z Instagrama): cofniecie
+  // polubienia przez przypadkowy podwojny tap byloby strata, ktorej user nie zauwazy.
+  // Serce wyskakuje tez wtedy, gdy zdjecie bylo juz polubione - gest ma dawac odpowiedz.
+  const likePhotoAt = async (url: string, x: number, y: number) => {
+    if (!user?.id) { toast.error(t("toast.login_to_like")); return; }
+    const burstId = Date.now();
+    setLikeBurst({ id: burstId, x, y });
+    window.setTimeout(() => setLikeBurst((b) => (b && b.id === burstId ? null : b)), 900);
+    if (likeStateOf(url).liked) { haptics.light(); return; }
+    await togglePhotoLikeUi(url);
+  };
+
+  // Rozpoznanie podwojnego tapniecia. Prog 40 px, bo palec nie trafia dwa razy w ten sam
+  // piksel, a bez niego dwa tapniecia w PRZECIWNE rogi zdjecia liczylyby sie jako jedno.
+  const onPhotoTap = (url: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const now = Date.now();
+    const prev = lastPhotoTap.current;
+    if (prev && now - prev.t < 300 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 40) {
+      lastPhotoTap.current = null;
+      void likePhotoAt(url, e.clientX, e.clientY);
+      return;
+    }
+    lastPhotoTap.current = { t: now, x: e.clientX, y: e.clientY };
   };
 
   // Wlasna okladka wyjazdu (route_member_covers) - kazdy uczestnik widzi swoja, wybor jednej
@@ -2720,13 +2751,21 @@ export default function SharedRoute() {
                           <Users className="h-3 w-3" />{t("photo_audience.badge")}
                         </span>
                       )}
-                      {/* Licznik polubien (gdy sa) - siatka zostaje czysta, lajkuje sie w podgladzie. */}
-                      {likeStateOf(url).count > 0 && (
-                        <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[11px] font-semibold text-white">
-                          <Heart className={`h-3 w-3 ${likeStateOf(url).liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-                          {likeStateOf(url).count}
-                        </span>
-                      )}
+                      {/* POLUBIENIE WPROST Z SIATKI (prosba Nat 2026-09-17). Do tej pory byl tu
+                          sam licznik i tylko gdy > 0 - zeby polubic, trzeba bylo wejsc w zdjecie.
+                          ⛔ To ZNOSI wczesniejsza regule "siatka zostaje czysta, lajkuje sie
+                          w podgladzie": serce jest teraz na kazdym kafelku, bo bez niego
+                          najczestszy gest w galerii kosztowal dwa dodatkowe tapniecia.
+                          ⛔ Brandowe serce (`BrandHeart`), NIE lucide `Heart` - i pomaranczem
+                          marki, nie czerwienia; czerwony fill byl tu jedynym kolorem spoza palety. */}
+                      <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
+                        aria-label={likeStateOf(url).liked ? t("aria.unlike_photo") : t("aria.like_photo")}
+                        className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-1 active:scale-90 transition-transform">
+                        <BrandHeart filled={likeStateOf(url).liked} className={`h-3.5 w-3.5 ${likeStateOf(url).liked ? "text-primary" : "text-white"}`} />
+                        {likeStateOf(url).count > 0 && (
+                          <span className="text-[11px] font-semibold leading-none text-white tabular-nums">{likeStateOf(url).count}</span>
+                        )}
+                      </button>
                       {/* Ikona eksploracji = "to jest okladka TEGO wyjazdu u mnie". Widzi ja KAZDY
                           uczestnik, nie tylko host (zgloszenie Nat 2026-09-01) - wczesniej byla
                           za `isOwner`, wiec uczestnik nie mial jak wybrac okladki swojej karty
@@ -3092,7 +3131,8 @@ export default function SharedRoute() {
       {/* Fullscreen podglad zdjecia galerii (object-contain, kropki paginacji + polubienie). */}
       {viewerIndex !== null && visiblePhotos[viewerIndex] && (
         <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
-          <img src={visiblePhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+          <img src={visiblePhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain"
+            onClick={onPhotoTap(visiblePhotos[viewerIndex])} />
           <button onClick={() => setViewerIndex(null)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
             <X className="h-5 w-5 text-white" />
           </button>
@@ -3117,8 +3157,8 @@ export default function SharedRoute() {
                 aria-label={st.liked ? t("aria.unlike_photo") : t("aria.like_photo")}
                 className="absolute left-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
                 style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
-                <Heart className={`h-5 w-5 ${st.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-                {st.count > 0 && <span className="text-white text-sm font-semibold">{st.count}</span>}
+                <BrandHeart filled={st.liked} className={`h-5 w-5 ${st.liked ? "text-primary" : "text-white"}`} />
+                {st.count > 0 && <span className="text-white text-sm font-semibold tabular-nums">{st.count}</span>}
               </button>
             );
           })()}
@@ -3141,6 +3181,14 @@ export default function SharedRoute() {
               </button>
             );
           })()}
+          {/* Duze serce W MIEJSCU PALCA po podwojnym tapnieciu. `fixed` + wspolrzedne z
+              zdarzenia, wiec trafia dokladnie tam, gdzie user stuknal, niezaleznie od tego,
+              jak zdjecie jest wykadrowane. Znika samo po 900 ms. */}
+          {likeBurst && (
+            <span aria-hidden className="pointer-events-none fixed z-[96]" style={{ left: likeBurst.x, top: likeBurst.y }}>
+              <BrandHeart filled className="animate-photo-like-burst h-24 w-24 text-primary drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]" />
+            </span>
+          )}
           {/* Kropki zamiast strzalek - sugeruja przewijanie gestem (prosba Nat 2026-08-30). */}
           <PhotoPagination count={visiblePhotos.length} index={viewerIndex} />
         </div>
