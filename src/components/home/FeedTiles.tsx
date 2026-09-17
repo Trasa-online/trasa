@@ -399,27 +399,38 @@ export function ListTile({ it, size = "feed", people = "pill" }: { it: GridItem;
         {/* "Nowe miejsce!" - w tym samym rzedzie co reszta chipow, dociagniete do PRAWEJ
             krawedzi (prosba Nat 2026-09-14). Biale tlo, zeby odcinalo sie od kazdego z 9
             kolorow palety - reszta chipow jest przezroczysta. */}
-        {!!it.newCount && (
-          <span className={`ml-auto inline-flex items-center gap-1.5 rounded-full bg-white font-bold leading-none text-[#5B2C06] shadow-sm ${size === "feed" ? "h-[30px] px-3 text-[14px]" : "h-[22px] px-2 text-[11px]"}`}>
-            <BrandStar className={`text-primary ${size === "feed" ? "h-[15px] w-[15px]" : "h-3 w-3"}`} />
-            {t("new_place")}
+        {/* PRAWA STRONA rzedu: "Nowe miejsce!" i licznik zapisow. Jedna wspolna grupa z `ml-auto`,
+            zeby przy obu naraz dociagnela sie CALOSC - dwa osobne `ml-auto` w jednym rzedzie
+            rozjechalyby je na dwie krawedzie. */}
+        {(!!it.newCount || !!it.savesCount) && (
+          <span className={`ml-auto flex items-center ${feed ? "gap-1.5" : "gap-1"}`}>
+            {!!it.newCount && (
+              <span className={`inline-flex items-center gap-1.5 rounded-full bg-white font-bold leading-none text-[#5B2C06] shadow-sm ${size === "feed" ? "h-[30px] px-3 text-[14px]" : "h-[22px] px-2 text-[11px]"}`}>
+                <BrandStar className={`text-primary ${size === "feed" ? "h-[15px] w-[15px]" : "h-3 w-3"}`} />
+                {t("new_place")}
+              </span>
+            )}
+            {/* Ile osob zapisalo kolekcje - ten sam tint co chipy, bo to informacja zwrotna dla
+                autora, nie sygnal: nie krzyczy biela jak "Nowe miejsce!". Zero sie NIE renderuje
+                (wiekszosci kolekcji nikt jeszcze nie zapisal, a rzad zer wygladalby jak zepsuty
+                widok), wiec licznik podajemy wylacznie na "Moje kolekcje". */}
+            {!!it.savesCount && (
+              <Chip ink={theme.ink} size={size}>
+                <BrandBookmark className={feed ? "h-[13px] w-[13px]" : "h-[10px] w-[10px]"} />
+                <span aria-label={t("stats.saves_aria", { count: it.savesCount })}>{it.savesCount}</span>
+              </Chip>
+            )}
           </span>
         )}
       </div>
-      {/* Tytul + licznik zapisow NA JEGO WYSOKOSCI, po prawej (prosba Nat 2026-09-15). Wczesniej
-          licznik stal w rzedzie chipow i wchodzil pod pigulki, zabierajac gore kafelka; przy
-          tytule jest miejsce, bo tytul rzadko dobija do prawej krawedzi.
-          Ile osob zapisalo kolekcje: ten sam tint co chipy, bo to informacja zwrotna dla autora,
-          nie sygnal - nie krzyczy bielą jak "Nowe miejsce!". Zero sie NIE renderuje: wiekszosci
-          kolekcji nikt jeszcze nie zapisal, a rzad zer wygladalby jak zepsuty widok. */}
-      <div className={`flex items-start gap-2 ${feed ? "mt-2.5" : "mt-1.5"}`}>
-        <p className={`min-w-0 flex-1 line-clamp-2 font-bold leading-[1.15] ${feed ? "text-[22px]" : "text-[17px]"}`}>{it.title}</p>
-        {!!it.savesCount && (
-          <Chip ink={theme.ink} size={size} className="shrink-0">
-            <BrandBookmark className={feed ? "h-[13px] w-[13px]" : "h-[10px] w-[10px]"} />
-            <span aria-label={t("stats.saves_aria", { count: it.savesCount })}>{it.savesCount}</span>
-          </Chip>
-        )}
+      {/* Tytul dostaje CALA szerokosc - licznik zapisow wrocil do rzedu chipow (prosba Nat
+          2026-09-17). Stal tu od 2026-09-15, bo w rzedzie chipow wchodzil pod PIGULKE AUTORA
+          i zabieral gore kafelka; na profilu pigulki juz tam nie ma (od 2026-09-17 jest klaster
+          awatarow), wiec powod zniknal, a licznik wrocil miedzy pozostale liczby o kolekcji -
+          liczbe miejsc i miasto. ⚠️ `savesCount` podajemy TYLKO na wlasnym profilu, wiec
+          w eksploracji (gdzie pigulka autora zostaje) ten rzad sie nie zageszcza. */}
+      <div className={feed ? "mt-2.5" : "mt-1.5"}>
+        <p className={`line-clamp-2 font-bold leading-[1.15] ${feed ? "text-[22px]" : "text-[17px]"}`}>{it.title}</p>
       </div>
       <div className={`grid grid-cols-3 ${feed ? "mt-3.5 gap-2" : "mt-2.5 gap-1.5"}`}>
         {shown.map((p, i) => <MiniPlace key={`${p.name}-${i}`} place={p} size={size} />)}

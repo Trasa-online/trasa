@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { resolveStored } from "@/components/PlacePhoto";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
@@ -9,27 +9,28 @@ import { useTripShortcut } from "@/hooks/useTripShortcut";
 import { BrandTripMark } from "@/components/BrandTripMark";
 import { tripName, type NamingStrings } from "@/lib/placeNaming";
 
-// SKROT DO WYJAZDU = PIGULKA NAD DOLNA NAWIGACJA (kierunek A, wybor Nat 2026-09-16;
-// makiety: Figma `[NEW] Ekrany` -> "Skrot do wyjazdu na Eksploracji - eksploracja kierunkow").
+// SKROT DO WYJAZDU (roboczego albo "w trakcie") = PIGULKA POD GORNA BELKA EKSPLORACJI.
 //
-// Do 16.09 to byla NAKLADKA pod gorna belka: szara karta shadcn z cieniem, chowana w GORE
-// i zwezona `pr-28`, zeby nie zaslonic mini-mapy kafelka pod spodem. Cztery rzeczy zmienily
-// sie razem, bo wynikaja z jednej decyzji "to jest rzecz w toku, a nie tresc do odkrywania":
+// HISTORIA MIEJSCA, bo wracalo dwa razy: do 16.09 byla to NAKLADKA pod belka (szara karta
+// shadcn z cieniem, zwezona `pr-28`, zeby nie zaslonic mini-mapy kafelka), 16.09 zeszla NA DOL
+// nad `BottomNav`, a 17.09 wrocila na gore na prosbe Nat. Wrocilo MIEJSCE, nie tamten uklad -
+// trzy rzeczy z wersji dolnej zostaja, bo rozwiazywaly realne problemy:
+//   * KOLORY Z MARKI: zolte tlo `#FDF184`, brazowy tekst `#5B2C06`, pomarancz `#EE5307`
+//     WYLACZNIE jako kropka i wersaliki "W TRAKCIE" (na zoltym ma 3,08:1, wiec nigdy nie niesie
+//     dluzszego tekstu). ⛔ Zadnego `bg-card` / `bg-muted` - to byly jedyne szarosci Eksploracji.
+//   * BIALA OBWODKA 2 px zamiast cienia - zolty `#FDF184` jest tez w palecie kafelkow kolekcji.
+//   * PIGULKA HUGUJE TRESC i stoi na srodku, nie rozciaga sie na cala szerokosc.
 //
-//  1. MIEJSCE. Element zeszedl na dol, nad `BottomNav` - tam, gdzie iOS trzyma rzeczy w toku
-//     (Apple Books, Spotify). To kasuje `pr-28` U ZRODLA: na dole nie ma czego omijac, wiec
-//     nie ma juz projektowania "dookola przeszkody". Skrot jest tez STALE widoczny - nie chowa
-//     sie po przewinieciu feedu, bo skrot, ktorego trzeba szukac, przestaje byc skrotem.
-//  2. KOLORY Z MARKI. Zolte tlo `#FDF184`, brazowy tekst i chevron `#5B2C06`, a pomarancz
-//     `#EE5307` WYLACZNIE jako kropka i etykieta stanu "w trakcie". ⛔ Zadnego `bg-card`,
-//     `bg-muted` ani prawie czarnego kolka - to byly jedyne szarosci shadcn w Eksploracji.
-//  3. SEPARACJA PRZEZ OBWODKE, NIE CIEN. Element lezy na zdjeciu okladki, a cien tam nie
-//     oddziela, tylko brudzi. Biala obwodka 2 px rozwiazuje tez KOLIZJE: zolty `#FDF184` jest
-//     w palecie kafelkow kolekcji, wiec bez niej zolty skrot na zoltej kolekcji znika
-//     (sprawdzone na makiecie A3).
-//  4. GEST W DOL. Skoro element siedzi przy dolnej krawedzi, "odsun to z drogi" znaczy teraz
-//     w dol. Krzyzyk zniknal - przy tej szerokosci zjadal tytul, a jego target mial 24 px
-//     zamiast wymaganych 44 (cala pigulka ma 56 px wysokosci, wiec target jest z zapasem).
+// ⚠️ Element jest W UKLADZIE (zwykly blok miedzy belka a feedem), a NIE `fixed`/`absolute`.
+// To wlasnie kasuje powod, dla ktorego wersja sprzed 16.09 miala `pr-28`: skrot nie lezy na
+// okladce, tylko stoi nad nia, wiec nie ma czego omijac - ani mini-mapy, ani pigulki autora.
+// Feed przewija sie pod spodem (skrot jest POZA scrollerem), wiec jest widoczny caly czas.
+//
+// KRZYZYK WROCIL (prosba Nat 2026-09-17: "zeby userzy mogli w prosty sposob zamknac ten baner").
+// Zdjelismy go 16.09, bo przy pigulce na cala szerokosc zjadal tytul i mial target 24 px.
+// Teraz jest OSOBNYM guzikiem obok pigulki i ma pelne 44 px, wiec tamten zarzut nie wraca.
+// Gest zostaje jako skrot dla tych, ktorzy go znaja - ale kierunek jest teraz W GORE, bo
+// "odsun to z drogi" znaczy tyle, co "schowaj pod belke", przy ktorej element stoi.
 //
 // SCHOWANIE ZYJE TYLKO DO ZAMKNIECIA APLIKACJI (prosba Nat 2026-09-16: "pojedyncze zamkniecie
 // nie powinno wywolywac calkowitego zamkniecia na zawsze"). Do tego dnia klucz szedl do
@@ -52,9 +53,11 @@ try { localStorage.removeItem(LEGACY_HIDDEN_KEY); } catch { /* localStorage nied
 const DISMISS_PX = 36;
 // Ruch powyzej tylu px liczymy jako gest, a nie tapniecie - ponizej klik ma dojsc do skutku.
 const TAP_SLOP = 6;
-// Odstep od dolu = wysokosc pilla nawigacji (64) + 8 px przerwy + jej wlasny dolny margines.
-// Trzymane w jednym miejscu, bo zmiana wysokosci `BottomNav` musi ruszyc tez ten element.
-const BOTTOM_OFFSET = "calc(max(20px, env(safe-area-inset-bottom, 0px)) + 72px)";
+// Wysokosc calego pasa (pigulka 56 px + gorny odstep 8 px) - potrzebna, bo znikanie robimy
+// ZWINIECIEM `max-height`, nie wyjazdem w bok. ⚠️ Wyjazd w gore renderowalby sie NA gornej
+// belce: `TabTopBar` nie ma ani tla, ani `z-index`, a skrot stoi po nim w DOM. Zwiniecie
+// chowa pigulke pod wlasna krawedzia i przy okazji plynnie dosuwa feed do belki.
+const STRIP_PX = 64;
 
 export default function ActiveTripBanner() {
   const { t } = useTranslation("hometrip");
@@ -66,8 +69,8 @@ export default function ActiveTripBanner() {
   const navigate = useNavigate();
   const { data: trip } = useTripShortcut(!isAnonymous ? user?.id : null);
 
-  // Gest: przeciagniecie W DOL. `offset` to biezace przesuniecie (>= 0), `closing` odpala
-  // animacje zjazdu pod krawedz, a dopiero po niej znika komponent.
+  // Gest: przeciagniecie W GORE. `offset` to biezace przesuniecie (<= 0), `closing` odpala
+  // zwiniecie pasa, a dopiero po nim znika komponent.
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -78,14 +81,14 @@ export default function ActiveTripBanner() {
   const hideKey = trip ? `${trip.id}:${trip.stage}` : "";
   // Czy ten skrot byl juz schowany W TYM URUCHOMIENIU - czytane RAZ na klucz. Celowo nie przy
   // kazdym renderze: `dismiss` dopisuje do zbioru od razu, wiec odczyt w renderze ubilby
-  // komponent w trakcie animacji chowania (skrot znikalby skokiem zamiast zjechac w dol).
+  // komponent w trakcie animacji chowania (skrot znikalby skokiem zamiast sie zwinac).
   const wasHidden = useMemo(() => (hideKey ? dismissedThisRun.has(hideKey) : false), [hideKey]);
   const dismiss = useCallback(() => {
     if (!hideKey) return;
     haptics.light();
     dismissedThisRun.add(hideKey);
     setClosing(true);
-    window.setTimeout(() => setHidden(true), 200);
+    window.setTimeout(() => setHidden(true), 220);
   }, [hideKey]);
 
   const onTouchStart = (e: ReactTouchEvent<HTMLElement>) => {
@@ -99,17 +102,17 @@ export default function ActiveTripBanner() {
     const p = e.touches[0];
     const dy = p.clientY - start.current.y;
     const dx = p.clientX - start.current.x;
-    // Tylko wyrazny ruch w dol. Poziomy albo w gore oddajemy tresci (feed pod spodem).
-    if (dy < -TAP_SLOP || Math.abs(dx) > Math.abs(dy)) { start.current = null; setOffset(0); setDragging(false); return; }
-    if (dy > TAP_SLOP) { moved.current = true; setDragging(true); }
+    // Tylko wyrazny ruch w gore. Poziomy albo w dol oddajemy tresci (feed pod spodem).
+    if (dy > TAP_SLOP || Math.abs(dx) > Math.abs(dy)) { start.current = null; setOffset(0); setDragging(false); return; }
+    if (dy < -TAP_SLOP) { moved.current = true; setDragging(true); }
     // Opor przy dalszym ciagnieciu - skrot nie ucieka za daleko za palcem.
-    setOffset(Math.min(dy, 72));
+    setOffset(Math.max(dy, -72));
   };
   const endDrag = () => {
     if (!start.current) return;
     start.current = null;
     setDragging(false);
-    if (offset >= DISMISS_PX) dismiss();
+    if (-offset >= DISMISS_PX) dismiss();
     else setOffset(0);
   };
 
@@ -134,55 +137,69 @@ export default function ActiveTripBanner() {
     <div
       data-no-swipe
       data-no-drag
-      // Pigulka HUGUJE tresc i stoi na srodku, zamiast rozciagac sie na cala szerokosc
-      // (zgloszenie Nat 2026-09-17: "za dlugi, nachodzi brzydko na okladki"). Kontener
-      // zostaje pelnej szerokosci, bo niesie gest chowania - to guzik w srodku jest waski.
-      className="fixed inset-x-0 z-40 flex justify-center px-3"
+      className="shrink-0 overflow-hidden px-3 pt-2"
       style={{
-        bottom: BOTTOM_OFFSET,
-        transform: `translateY(${closing ? 140 : offset}px)`,
+        maxHeight: closing ? 0 : STRIP_PX,
         opacity: closing ? 0 : 1,
-        transition: dragging ? "none" : "transform 200ms ease-out, opacity 200ms ease-out",
+        transition: "max-height 220ms ease-out, opacity 160ms ease-out",
       }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={endDrag}
       onTouchCancel={endDrag}
     >
-      <button
-        onClick={() => {
-          // Po przeciagnieciu nie nawigujemy - palec chcial schowac skrot, nie go otworzyc.
-          if (moved.current) { moved.current = false; return; }
-          haptics.light();
-          navigate(`/route/${trip.id}`);
+      <div
+        className="flex items-center justify-center gap-2"
+        style={{
+          transform: `translateY(${offset}px)`,
+          transition: dragging ? "none" : "transform 200ms ease-out",
         }}
-        className="h-14 max-w-[min(320px,100%)] flex items-center gap-2.5 rounded-full border-2 border-white bg-[#FDF184] pl-2 pr-3.5 text-left active:scale-[0.99] transition-transform"
       >
-        <span className="h-10 w-10 rounded-xl overflow-hidden bg-[#fcede3] flex items-center justify-center shrink-0">
-          {cover ? (
-            <img src={cover} alt="" className="w-full h-full object-cover" />
-          ) : (
-            /* ⛔ INLINE svg, NIE `BrandIcon` z maska CSS. Ten skrot chowa sie gestem, czyli
-               zyje w warstwie z animowanym `transform`, a WebKit na iOS gubi tam
-               `-webkit-mask-image` - znak potrafil zniknac albo wyrenderowac sie jako plama.
-               Ta sama pulapka, co przy gwiazdkach w nakladkach awatara (CLAUDE.md). */
-            <BrandTripMark className="h-5 w-5 block text-[#ef9d78]" />
-          )}
-        </span>
-        <span className="min-w-0 max-w-[214px]">
-          <span className="flex items-center gap-1.5">
-            {/* Etap wyjazdu. Pomarancz WYLACZNIE dla "w trakcie" - na zoltym tle czyta sie
-                slabo (3,08:1), wiec niesie go kropka i wersaliki, nigdy dluzszy tekst.
-                ⛔ Przez `t()`: do 2026-09-16 oba napisy byly wpisane po POLSKU wprost w JSX. */}
-            {ongoing && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" aria-hidden />}
-            <span className={`text-[10px] font-bold uppercase tracking-[0.04em] truncate ${ongoing ? "text-primary" : "text-[#5B2C06]/70"}`}>
-              {ongoing ? t("shortcut.stage_ongoing") : t("shortcut.stage_draft")}
-            </span>
+        <button
+          onClick={() => {
+            // Po przeciagnieciu nie nawigujemy - palec chcial schowac skrot, nie go otworzyc.
+            if (moved.current) { moved.current = false; return; }
+            haptics.light();
+            navigate(`/route/${trip.id}`);
+          }}
+          className="h-14 min-w-0 max-w-[min(300px,100%)] flex items-center gap-2.5 rounded-full border-2 border-white bg-[#FDF184] pl-2 pr-3.5 text-left active:scale-[0.99] transition-transform"
+        >
+          <span className="h-10 w-10 rounded-xl overflow-hidden bg-[#fcede3] flex items-center justify-center shrink-0">
+            {cover ? (
+              <img src={cover} alt="" className="w-full h-full object-cover" />
+            ) : (
+              /* ⛔ INLINE svg, NIE `BrandIcon` z maska CSS. Ten skrot chowa sie gestem, czyli
+                 zyje w warstwie z animowanym `transform`, a WebKit na iOS gubi tam
+                 `-webkit-mask-image` - znak potrafil zniknac albo wyrenderowac sie jako plama.
+                 Ta sama pulapka, co przy gwiazdkach w nakladkach awatara (CLAUDE.md). */
+              <BrandTripMark className="h-5 w-5 block text-[#ef9d78]" />
+            )}
           </span>
-          <span className="block text-[15px] font-semibold text-[#5B2C06] truncate">{title}</span>
-        </span>
-        <ChevronRight className="h-5 w-5 text-[#5B2C06] shrink-0" />
-      </button>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5">
+              {/* Etap wyjazdu. Pomarancz WYLACZNIE dla "w trakcie" - na zoltym tle czyta sie
+                  slabo (3,08:1), wiec niesie go kropka i wersaliki, nigdy dluzszy tekst.
+                  ⛔ Przez `t()`: do 2026-09-16 oba napisy byly wpisane po POLSKU wprost w JSX. */}
+              {ongoing && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" aria-hidden />}
+              <span className={`text-[10px] font-bold uppercase tracking-[0.04em] truncate ${ongoing ? "text-primary" : "text-[#5B2C06]/70"}`}>
+                {ongoing ? t("shortcut.stage_ongoing") : t("shortcut.stage_draft")}
+              </span>
+            </span>
+            <span className="block text-[15px] font-semibold text-[#5B2C06] truncate">{title}</span>
+          </span>
+          <ChevronRight className="h-5 w-5 text-[#5B2C06] shrink-0" />
+        </button>
+        {/* Krzyzyk = OSOBNY guzik obok pigulki, w tym samym zoltym i z ta sama biala obwodka
+            (to jedna rzecz, nie dwie). ⚠️ Pelne 44 x 44 px - poprzedni krzyzyk siedzial
+            W SRODKU pigulki i mial 24 px, i to byl powod jego zdjecia 16.09, nie sam pomysl. */}
+        <button
+          onClick={dismiss}
+          aria-label={t("shortcut.hide")}
+          className="h-11 w-11 shrink-0 flex items-center justify-center rounded-full border-2 border-white bg-[#FDF184] text-[#5B2C06] active:scale-95 transition-transform"
+        >
+          <X className="h-5 w-5" strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
   );
 }

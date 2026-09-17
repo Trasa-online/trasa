@@ -848,20 +848,18 @@ const Explore = () => {
         </PullToRefresh>
       ) : (
         <>
-          {/* Skrot do wyjazdu "w trakcie" / roboczego - TYLKO w widoku feedu. W trybie kart miejsc
-              (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
-              dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
+          {/* Skrot do wyjazdu "w trakcie" / roboczego = PIGULKA POD GORNA BELKA (prosba Nat
+              2026-09-17; 16.09 stala nad dolna nawigacja, wczesniej byla nakladka na feedzie).
+              Stoi W UKLADZIE, miedzy belka a scrollerem: nie lezy na okladce, wiec nie zaslania
+              ani mini-mapy, ani pigulki autora - i nie potrzebuje juz ani `fixed`, ani liczenia
+              odstepu od wysokosci `BottomNav`. Jest POZA scrollerem, wiec zostaje widoczny, jak
+              daleko by user nie zjechal feedem - w tym cala jego wartosc.
+              Przy otwartej wyszukiwarce znika razem z feedem - ekran wynikow ma byc czysty
+              (prosba Nat 2026-09-06). ⛔ W trybie kart miejsc (swiper) go NIE MA: wysokosc karty
+              9:16 liczy sie ze stalego chrome i dolozenie pasa rozjechaloby zamrozony layout
+              (CLAUDE.md - PlaceSwiper sizing). */}
+          {!searchOpen && <ActiveTripBanner />}
           <div className="relative flex-1 min-h-0 flex flex-col">
-            {/* Skrot do wyjazdu "w trakcie" / roboczego = PIGULKA NAD DOLNA NAWIGACJA
-                (kierunek A, wybor Nat 2026-09-16). Element pozycjonuje sie SAM (`fixed`, odstep
-                liczony od wysokosci BottomNav), wiec nie owijamy go juz nakladka `absolute`
-                i nie chowamy po przewinieciu: skrot ma byc widoczny niezaleznie od tego, jak
-                daleko user zjedzie feedem - w tym cala jego wartosc.
-                ⚠️ Nie wkladaj go w kontener z `transform` (np. animowana nakladke) - `fixed`
-                liczy sie wtedy wzgledem tego kontenera, nie ekranu, i pigulka ucieka z miejsca.
-                Przy otwartej wyszukiwarce znika razem z feedem - ekran wynikow ma byc czysty
-                (prosba Nat 2026-09-06). */}
-            {!searchOpen && <ActiveTripBanner />}
             {/* EKSPLORACJA (IA 2026-09-13): jedna kolumna kafelkow wyjazdow i list od WSZYSTKICH
                 (DiscoveryFeed bez followingOnly), karta po karcie ze snapem. Zakladka "Glowna"
                 (siatka 2 kolumny) i osobny feed obserwowanych (/feed) zdjete z paska tego dnia -
