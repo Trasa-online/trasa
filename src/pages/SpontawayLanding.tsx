@@ -61,8 +61,8 @@ const COPY = {
     },
     features: [
       { title: "Odkrywaj najlepsze\nmiejsca i wydarzenia", body: "Zobacz gdzie i jak najlepiej spędzić czas.", cta: "Zacznij odkrywać", img: "/mockup_odkrywaj.png", alt: "Karty miejsc i wydarzeń w aplikacji Spontaway" },
-      { title: "Twórz własne\nkolekcje tematyczne", body: "Odwiedzone lub te, które chcesz odwiedzić.\nZapisuj miejsca i podziel się z innymi swoją opinią.", cta: "Stwórz pierwszą listę", img: "/mockup_listy.png", alt: "Lista miejsc „Fav kawiarnie” w aplikacji Spontaway" },
-      { title: "Dziel się wrażeniami\nz przeżytych podróży", body: "Planuj i twórz podsumowania wyjazdów, pomagając innym użytkownikom w ich podróżach.", cta: "Dodaj pierwszy wyjazd", img: "/mockup_dziel_sie.png", alt: "Planowanie wyjazdu i podsumowanie podróży w aplikacji Spontaway" },
+      { title: "Twórz własne\nkolekcje tematyczne", body: "Odwiedzone lub te, które chcesz odwiedzić.\nZapisuj miejsca i podziel się z innymi swoją opinią.", cta: "Stwórz pierwszą listę", img: "/kolekcje_grafika.png", alt: "Lista miejsc „Fav kawiarnie” w aplikacji Spontaway" },
+      { title: "Dziel się wrażeniami\nz przeżytych podróży", body: "Planuj i twórz podsumowania wyjazdów, pomagając innym użytkownikom w ich podróżach.", cta: "Dodaj pierwszy wyjazd", img: "/dziel_sie.png", alt: "Planowanie wyjazdu i podsumowanie podróży w aplikacji Spontaway" },
     ],
     stats: { heading: "SPONTAWAY TO", countries: "Krajów", cities: "Miast", possibilities: "Możliwości" },
     business: {
@@ -74,28 +74,28 @@ const COPY = {
       mockupAlt: "Wizytówka lokalu w aplikacji: zdjęcia, menu, godziny otwarcia i wydarzenie",
     },
     inquiry: {
-      title: "Zapytaj o ofertę",
-      body: "Zostaw kontakt, a odezwiemy się z ofertą dopasowaną do Twojego lokalu.",
+      title: "Witamy na pokładzie",
+      body: "Na podany adres e-mail prześlemy link aktywacyjny oraz więcej szczegółów",
       venue: "Nazwa lokalu",
       venuePlaceholder: "np. Kawiarnia Poranek",
       city: "Miasto",
       cityPlaceholder: "np. Łódź",
       person: "Osoba do kontaktu",
-      personPlaceholder: "Imię i nazwisko",
+      personPlaceholder: "Imię i\u00a0Nazwisko",
       email: "E-mail",
       emailPlaceholder: "kontakt@twojlokal.pl",
       phone: "Telefon",
-      phonePlaceholder: "opcjonalnie",
-      message: "Czego potrzebujesz?",
-      messagePlaceholder: "Napisz kilka słów o lokalu i o tym, co chcesz osiągnąć (opcjonalnie)",
-      optional: "opcjonalne",
-      submit: "Wyślij zapytanie",
+      phonePlaceholder: "123 123 123",
+      message: "Dodatkowe informacje",
+      messagePlaceholder: "Kilka słów o\u00a0lokalu, docelowych klientach itp.",
+      optional: "opcjonalnie",
+      submit: "Wyślij",
       sending: "Wysyłam...",
       doneTitle: "Zapytanie poszło!",
       done: "Odezwiemy się na podany adres w ciągu dwóch dni roboczych.",
       error: "Nie udało się wysłać. Spróbuj jeszcze raz.",
       close: "Zamknij",
-      consentPre: "Wysyłając zapytanie, zgadzasz się na kontakt w sprawie oferty. Szczegóły w ",
+      consentPre: "Wysyłając formularz zgadzasz się na kontakt w\u00a0sprawie oferty. Szczegóły w\u00a0",
       consentLink: "polityce prywatności",
     },
     footerCta: { title: "Odkrywaj, planuj, dziel się!", sub: "Pobierz Spontaway i zacznij zabawę", note: "Za darmo na iOS... i wkrótce na Android!" },
@@ -134,8 +134,8 @@ const COPY = {
     },
     features: [
       { title: "Discover the best\nplaces and events", body: "See where and how to spend your time best.", cta: "Start exploring", img: "/mockup_odkrywaj.png", alt: "Place and event cards in the Spontaway app" },
-      { title: "Build your own\nthemed collections", body: "Places you have been to, or the ones you still want to see.\nSave them and share your take with others.", cta: "Create your first list", img: "/mockup_listy.png", alt: "A place list in the Spontaway app" },
-      { title: "Share what you brought\nback from a trip", body: "Plan your trips and turn them into recaps that help other travellers.", cta: "Add your first trip", img: "/mockup_dziel_sie.png", alt: "Trip planning and trip recap in the Spontaway app" },
+      { title: "Build your own\nthemed collections", body: "Places you have been to, or the ones you still want to see.\nSave them and share your take with others.", cta: "Create your first list", img: "/kolekcje_grafika.png", alt: "A place list in the Spontaway app" },
+      { title: "Share what you brought\nback from a trip", body: "Plan your trips and turn them into recaps that help other travellers.", cta: "Add your first trip", img: "/dziel_sie.png", alt: "Trip planning and trip recap in the Spontaway app" },
     ],
     stats: { heading: "SPONTAWAY IS", countries: "Countries", cities: "Cities", possibilities: "Possibilities" },
     business: {
@@ -145,8 +145,8 @@ const COPY = {
       mockupAlt: "A place listing in the app: photos, menu, opening hours and an event",
     },
     inquiry: {
-      title: "Ask about our offer",
-      body: "Leave your details and we will come back with an offer made for your place.",
+      title: "Welcome aboard",
+      body: "We will send an activation link and more details to the address you give us",
       venue: "Name of the place",
       venuePlaceholder: "e.g. Poranek Coffee",
       city: "City",
@@ -156,11 +156,11 @@ const COPY = {
       email: "Email",
       emailPlaceholder: "hello@yourplace.com",
       phone: "Phone",
-      phonePlaceholder: "optional",
-      message: "What do you need?",
-      messagePlaceholder: "Tell us a bit about your place and what you want to achieve (optional)",
+      phonePlaceholder: "123 123 123",
+      message: "Anything else",
+      messagePlaceholder: "A few words about your place, who you want to reach, and so on.",
       optional: "optional",
-      submit: "Send the enquiry",
+      submit: "Send",
       sending: "Sending...",
       doneTitle: "Enquiry sent!",
       done: "We will get back to you at that address within two working days.",
@@ -499,14 +499,23 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           </div>
         </div>
 
-        {/* Telefony z aplikacja */}
-        <img
-          src="/hero_mockup.png"
-          alt={c.hero.heroAlt}
-          width={722}
-          height={774}
-          className="order-2 -mx-5 mt-6 w-[calc(100%+40px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]"
-        />
+        {/* Telefony z aplikacja + dwie gwiazdki marki (nowa grafika od Nat 2026-09-17).
+            Gwiazdki sa OSOBNYMI elementami, nie czescia PNG - tylko wtedy moga sie ruszac.
+            Pozycje i rozmiar w PROCENTACH kontenera, wiec trzymaja sie grafiki na kazdej
+            szerokosci ekranu; `aria-hidden`, bo nie niosa tresci. */}
+        <div className="relative order-2 -mx-5 mt-6 w-[calc(100%+40px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]">
+          <img
+            src="/grafika_hero.png"
+            alt={c.hero.heroAlt}
+            width={963}
+            height={1032}
+            className="w-full"
+          />
+          <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
+            className="animate-star-twinkle pointer-events-none absolute left-[45%] top-[2%] w-[6.5%]" />
+          <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
+            className="animate-star-twinkle-alt pointer-events-none absolute left-[4%] top-[83%] w-[6.5%]" />
+        </div>
 
       </div>
     </section>
@@ -642,6 +651,11 @@ function BusinessStrip({ c, onContact }: { c: Copy; onContact: () => void }) {
 // Zapisu NIE robimy z klienta: `business_inquiries` nie ma polityki INSERT dla anon,
 // wszystko idzie przez funkcje brzegowa `business-inquiry` (walidacja, limit, mail do nas).
 
+/** Kierunkowe w formularzu lokalu. Polska pierwsza (i domyslna), dalej sasiedzi i najwieksze
+ *  rynki europejskie - lista ma byc krotka, bo to pole opcjonalne przy zapytaniu o oferte,
+ *  a nie miedzynarodowy formularz rejestracji. */
+const DIAL_CODES = ["+48", "+49", "+420", "+421", "+380", "+370", "+44", "+353", "+31", "+32", "+33", "+34", "+39", "+1"];
+
 const INQ_FIELD =
   "h-[46px] w-full rounded-2xl border border-black/10 bg-white px-4 text-[14px] text-spontaway-brown outline-none placeholder:text-black/30 focus:border-spontaway-orange";
 
@@ -663,6 +677,10 @@ function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClo
   const nb = useNb();
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [form, setForm] = useState({ venue: "", city: "", person: "", email: "", phone: "", message: "" });
+  // Kierunkowy osobno od numeru (makieta Nat 2026-09-17). Lokale sa dzis polskie, wiec +48
+  // jest domyslne, ale lista musi istniec - inaczej lokal spoza Polski nie ma jak podac numeru,
+  // a pole i tak jest opcjonalne, wiec nikt go nie poprawi za niego.
+  const [dial, setDial] = useState("+48");
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -684,7 +702,9 @@ function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClo
         city: form.city.trim(),
         contact_name: form.person.trim(),
         email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
+        // Kierunkowy doklejamy TYLKO do niepustego numeru - inaczej do skrzynki zalozycielek
+        // trafialoby samo "+48" jako telefon lokalu.
+        phone: form.phone.trim() ? `${dial} ${form.phone.trim()}` : "",
         message: form.message.trim(),
         language: lang,
         source: "landing_b2c",
@@ -741,6 +761,12 @@ function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClo
               onSubmit={submit}
               className="flex flex-col gap-3 px-6 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 sm:pb-7"
             >
+              {/* E-MAIL JEST PIERWSZY (makieta Nat 2026-09-17). To jedyne pole, bez ktorego
+                  zapytanie jest bezuzyteczne - nie ma jak odpisac - wiec stoi nad reszta.
+                  Nazwa lokalu zaraz pod nim; cala reszta jest opcjonalna. */}
+              <InquiryField label={c.inquiry.email}>
+                <input required type="email" inputMode="email" autoComplete="email" value={form.email} onChange={set("email")} placeholder={c.inquiry.emailPlaceholder} className={INQ_FIELD} />
+              </InquiryField>
               <InquiryField label={c.inquiry.venue}>
                 <input required value={form.venue} onChange={set("venue")} placeholder={c.inquiry.venuePlaceholder} className={INQ_FIELD} />
               </InquiryField>
@@ -756,11 +782,27 @@ function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClo
                   </InquiryField>
                 </div>
               </div>
-              <InquiryField label={c.inquiry.email}>
-                <input required type="email" inputMode="email" autoComplete="email" value={form.email} onChange={set("email")} placeholder={c.inquiry.emailPlaceholder} className={INQ_FIELD} />
-              </InquiryField>
               <InquiryField label={c.inquiry.phone} hint={c.inquiry.optional}>
-                <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={set("phone")} placeholder={c.inquiry.phonePlaceholder} className={INQ_FIELD} />
+                <div className="flex gap-2">
+                  {/* Natywny <select>: na telefonie otwiera kolo iOS, ktorego niczym wlasnym
+                      nie zastapimy lepiej. `appearance-none` + wlasny chevron, zeby pole
+                      wygladalo jak sasiednie, a nie jak systemowy formularz. */}
+                  <div className="relative shrink-0">
+                    <select
+                      value={dial}
+                      onChange={(e) => setDial(e.target.value)}
+                      aria-label={c.inquiry.phone}
+                      className={`${INQ_FIELD} w-[92px] appearance-none pr-7`}
+                    >
+                      {DIAL_CODES.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-spontaway-brown/60">
+                      <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={set("phone")} placeholder={c.inquiry.phonePlaceholder} className={`${INQ_FIELD} flex-1`} />
+                </div>
               </InquiryField>
               <InquiryField label={c.inquiry.message} hint={c.inquiry.optional}>
                 <textarea
@@ -935,8 +977,8 @@ export default function SpontawayLanding() {
   const features = c.features;
   const imgMeta = [
     { w: 1038, h: 616, cls: "w-full max-w-[430px] lg:w-[676px] lg:max-w-none", body: 399 },
-    { w: 900, h: 792, cls: "w-full max-w-[340px] lg:w-[574px] lg:max-w-none", body: 382 },
-    { w: 834, h: 733, cls: "w-full max-w-[430px] lg:w-[600px] lg:max-w-none", body: 460 },
+    { w: 1066, h: 933, cls: "w-full max-w-[340px] lg:w-[574px] lg:max-w-none", body: 382 },
+    { w: 1112, h: 977, cls: "w-full max-w-[430px] lg:w-[600px] lg:max-w-none", body: 460 },
   ];
 
   return (

@@ -276,6 +276,24 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
    prosba Nat 2026-09-14). Wolno i plytko: karta ma "oddychac", a nie skakac. Osobne
    przesuniecie zamiast scale, zeby zdjecie nie tracilo ostrosci. Na tablecie/telefonie ta sama
    animacja, tylko mniejszy skok (patrz .biz-float--sm). */
+/* GWIAZDKI PRZY GRAFICE HERO na landingu B2C (prosba Nat 2026-09-17): delikatny obrot
+   i oddech skali, zeby kompozycja zylas, ale nie odciagala wzroku od naglowka.
+   ⚠️ Dwie instancje maja ROZNY czas i ujemne opoznienie - przy tej samej animacji obie
+   gwiazdki chodzilyby w idealnym zegarku i czytalyby sie jako jeden mechanizm, a nie
+   jako dwa niezalezne akcenty. Ujemne opoznienie startuje druga w polowie cyklu, wiec
+   nie ma tez wspolnego "skoku" na wejsciu.
+   ⛔ Sam `transform` - zadnego `opacity`. Pomaranczowy znak marki ma byc zawsze kryjacy
+   (ta sama regula, co przy animacjach splashu). */
+@keyframes star-twinkle {
+  0%, 100% { transform: rotate(-10deg) scale(0.9); }
+  50%      { transform: rotate(10deg) scale(1.1); }
+}
+.animate-star-twinkle { animation: star-twinkle 5.5s ease-in-out infinite; will-change: transform; }
+.animate-star-twinkle-alt { animation: star-twinkle 7.5s ease-in-out infinite -2.6s; will-change: transform; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-star-twinkle, .animate-star-twinkle-alt { animation: none; }
+}
+
 @keyframes biz-float {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-14px); }
