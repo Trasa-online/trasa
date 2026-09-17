@@ -133,6 +133,12 @@
     "removed": "Usunięto z kolekcji",
     "add_failed": "Nie udało się dodać. Spróbuj ponownie.",
     "remove_failed": "Nie udało się usunąć. Spróbuj ponownie.",
-    "user_fallback": "Użytkownik"
+    "user_fallback": "Użytkownik",
+    "add_confirm_one": "Dodaj {{count}} osobę",
+    "add_confirm_few": "Dodaj {{count}} osoby",
+    "add_confirm_many": "Dodaj {{count}} osób",
+    "added_count_one": "Dodano {{count}} osobę do kolekcji",
+    "added_count_few": "Dodano {{count}} osoby do kolekcji",
+    "added_count_many": "Dodano {{count}} osób do kolekcji"
   }
 }

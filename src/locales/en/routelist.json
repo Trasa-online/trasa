@@ -130,6 +130,10 @@
     "removed": "Removed from the collection",
     "add_failed": "Could not add. Try again.",
     "remove_failed": "Could not remove. Try again.",
-    "user_fallback": "User"
+    "user_fallback": "User",
+    "add_confirm_one": "Add {{count}} person",
+    "add_confirm_other": "Add {{count}} people",
+    "added_count_one": "Added {{count}} person to the collection",
+    "added_count_other": "Added {{count}} people to the collection"
   }
 }

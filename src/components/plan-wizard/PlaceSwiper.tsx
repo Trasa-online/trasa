@@ -1,3 +1,4 @@
+import { BrandSpinner } from "@/components/BrandSpinner";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check } from "lucide-react";
@@ -808,11 +809,7 @@ const EmptyState = ({
 
       {loadingExamples && (
         <div className="flex justify-center py-8">
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map(i => (
-              <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-            ))}
-          </div>
+          <BrandSpinner size={26} />
         </div>
       )}
 
@@ -1851,15 +1848,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-2 w-2 rounded-full bg-primary animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
+        <BrandSpinner size={34} />
       </div>
     );
   }
