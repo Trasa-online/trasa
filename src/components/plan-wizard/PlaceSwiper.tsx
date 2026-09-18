@@ -1,7 +1,8 @@
 import { BrandSpinner } from "@/components/BrandSpinner";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check } from "lucide-react";
+import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, Plus, Check } from "lucide-react";
+import { BrandCalendar } from "@/components/BrandIcon";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
@@ -1974,7 +1975,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         {onEditDate ? (
           <button onClick={onEditDate} className="text-xs text-muted-foreground inline-flex items-center gap-1 active:opacity-60" aria-label={t("edit_date_aria")}>
             {city} · {format(date, "d MMM")}
-            <CalendarDays className="h-3 w-3 opacity-60" />
+            <BrandCalendar className="h-3 w-3 opacity-60" />
           </button>
         ) : (
           <span className="text-xs text-muted-foreground">{city} · {format(date, "d MMM")}</span>

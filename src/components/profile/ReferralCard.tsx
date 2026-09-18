@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { QrCode, Share2, UserPlus } from "lucide-react";
+import { QrCode, UserPlus } from "lucide-react";
+import { BrandShare } from "@/components/BrandIcon";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useShare } from "@/hooks/useShare";
 import { haptics } from "@/hooks/useHaptics";
@@ -97,7 +98,7 @@ export default function ReferralCard({ userId }: { userId: string }) {
             onClick={onShare}
             className="flex-1 h-11 rounded-2xl bg-primary text-white font-bold text-[13px] uppercase tracking-wide flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
-            <Share2 className="h-4 w-4" />{t("referral.share_cta")}
+            <BrandShare className="h-4 w-4" />{t("referral.share_cta")}
           </button>
           <button
             onClick={() => { haptics.light(); setQrOpen(true); }}

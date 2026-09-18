@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bookmark, ChevronUp, Pencil, Trash2, CircleDashed, Heart, Minimize2, EyeOff } from "lucide-react";
+import { Bookmark, ChevronUp, Pencil, CircleDashed, Heart, Minimize2, EyeOff } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { API_BASE } from "@/lib/platform";
 import { avatarSrc } from "@/lib/avatar";
 import { UserAvatar } from "@/components/profile/FramedAvatar";
@@ -198,7 +199,7 @@ export default function TrasaBigCard({
             aria-label={t("card.delete")}
             className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
-            <Trash2 className="h-5 w-5 text-destructive" strokeWidth={2} />
+            <BrandTrash className="h-5 w-5 text-destructive" strokeWidth={2} />
           </button>
         )}
         <button

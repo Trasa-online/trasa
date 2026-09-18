@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Flag, Check, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
+import { BrandFlag } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -74,7 +75,7 @@ export default function ReportContentSheet({ targetType, targetId, trigger, clas
     <>
       {trigger ? trigger(start) : (
         <button onClick={start} className={`inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground active:opacity-60 transition-opacity ${className ?? ""}`}>
-          <Flag className="h-3.5 w-3.5" />{t("submit")}</button>
+          <BrandFlag className="h-3.5 w-3.5" />{t("submit")}</button>
       )}
 
       <Sheet open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>

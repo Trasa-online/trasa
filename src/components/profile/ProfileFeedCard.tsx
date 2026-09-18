@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Heart, Pencil, Trash2, Lock, CircleDashed, Maximize2, X } from "lucide-react";
+import { Bookmark, Heart, Pencil, Lock, CircleDashed, Maximize2, X } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarSrc } from "@/lib/avatar";
 import { isAvatarFrame } from "@/lib/avatarFrames";
@@ -239,7 +240,7 @@ export function ProfileFeedCard({
             )}
             {onDelete && (
               <button onClick={onDelete} aria-label={t("card.delete")} className="h-8 w-8 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors">
-                <Trash2 className="h-[17px] w-[17px]" />
+                <BrandTrash className="h-[17px] w-[17px]" />
               </button>
             )}
           </>

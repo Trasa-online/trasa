@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Search, X, Loader2, MapPin } from "lucide-react";
+import { Plus, Search, X, Loader2, MapPin } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -115,7 +116,7 @@ export function SavedPlaces({ city }: { city?: string }) {
         aria-label={t("saved.delete_place")}
         className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
       >
-        <Trash2 className="h-[18px] w-[18px]" />
+        <BrandTrash className="h-[18px] w-[18px]" />
       </button>
     </div>
   );

@@ -13,7 +13,8 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, UserX, LifeBuoy, Info, Lock, Wrench } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, LifeBuoy, Info, Lock, Wrench } from "lucide-react";
+import { BrandBlock, BrandTrash } from "@/components/BrandIcon";
 import TrashSheet from "@/components/profile/TrashSheet";
 import AvatarFrameSheet, { useMyAvatarFrame } from "@/components/profile/AvatarFrameSheet";
 import AvatarFrame from "@/components/profile/AvatarFrame";
@@ -271,7 +272,7 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
         onClick={() => setConfirm(true)}
         className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
       >
-        <Trash2 className="h-4 w-4 text-destructive flex-shrink-0" />
+        <BrandTrash className="h-4 w-4 text-destructive flex-shrink-0" />
         <span className="text-sm font-medium text-destructive flex-1">{t("delete_account")}</span>
       </button>
     );
@@ -662,7 +663,7 @@ function SettingsHub() {
         <SettingsRow icon={<Bell className="h-4 w-4" />} label={t("hub.notifications")} desc={t("hub.notifications_desc")} onClick={go("powiadomienia")} />
         <SettingsRow icon={<Shield className="h-4 w-4" />} label={t("hub.privacy")} desc={t("hub.privacy_desc")} onClick={go("prywatnosc")} />
         {/* Kosz otwiera ARKUSZ, nie podstrone - to ten sam TrashSheet, co dotad. */}
-        <SettingsRow icon={<Trash2 className="h-4 w-4" />} label={t("trash")} desc={t("hub.trash_desc")} onClick={() => setTrashOpen(true)} />
+        <SettingsRow icon={<BrandTrash className="h-4 w-4" />} label={t("trash")} desc={t("hub.trash_desc")} onClick={() => setTrashOpen(true)} />
         <SettingsRow icon={<LifeBuoy className="h-4 w-4" />} label={t("hub.help")} desc={t("hub.help_desc")} onClick={go("pomoc")} />
         <SettingsRow icon={<Info className="h-4 w-4" />} label={t("hub.about")} desc={t("hub.about_desc")} onClick={go("o-aplikacji")} />
         {/* Pozycje administracyjne maja WLASNY wiersz, a nie trzy luzne na koncu listy -
@@ -919,7 +920,7 @@ function PrivacyScreen() {
       </div>
 
       <SettingsGroup label={t("group.people")}>
-        <SettingsRow icon={<UserX className="h-4 w-4" />} label={t("blocked.title")} desc={t("blocked.desc")} onClick={() => navigate("/settings/zablokowani")} />
+        <SettingsRow icon={<BrandBlock className="h-4 w-4" />} label={t("blocked.title")} desc={t("blocked.desc")} onClick={() => navigate("/settings/zablokowani")} />
       </SettingsGroup>
 
       {/* ⛔ To NIE jest miejsce pierwszego pytania o zgode - o push i lokalizacje pytamy

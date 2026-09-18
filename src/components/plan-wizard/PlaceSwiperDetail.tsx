@@ -10,9 +10,9 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation, Check, Share2, Loader2 } from "lucide-react";
+import { MapPin, Navigation, Check, Loader2 } from "lucide-react";
 import { usePlaceShare } from "@/hooks/usePlaceShare";
-import { BrandIcon, PLUS_ICON } from "@/components/BrandIcon";
+import { BrandIcon, PLUS_ICON, BrandShare } from "@/components/BrandIcon";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { haptics } from "@/hooks/useHaptics";
 import { useDistanceReference, setGpsReference } from "@/lib/distanceReference";
@@ -564,7 +564,7 @@ const PlaceSwiperDetail = ({
               {onLike && placeShare.canShare && ep && (
                 <button onClick={handleShare} disabled={placeShare.loading} aria-label={t("share_place")}
                   className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform disabled:opacity-70">
-                  {placeShare.loading ? <Loader2 className="h-5 w-5 animate-spin text-[#5B2C06]" /> : <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />}
+                  {placeShare.loading ? <Loader2 className="h-5 w-5 animate-spin text-[#5B2C06]" /> : <BrandShare className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />}
                 </button>
               )}
             </div>

@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, MessageCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
+import { BrandChat } from "@/components/BrandIcon";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -61,13 +62,13 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; tone: Tone; label: 
   pin_visit:      { icon: MapPin,        tone: "gold",   label: (t, u) => t("notif.pin_visit", { user: u }) },
   friend_request: { icon: UserPlus,      tone: "orange", label: (t, u) => t("notif.friend_request", { user: u }) },
   friend_accept:  { icon: UserCheck,     tone: "orange", label: (t, u) => t("notif.friend_accept", { user: u }) },
-  visit_comment:  { icon: MessageCircle, tone: "brown",  label: (t, u, m) => t(m?.place_name ? "notif.visit_comment_place" : "notif.visit_comment", { user: u, place: m?.place_name }) },
+  visit_comment:  { icon: BrandChat, tone: "brown",  label: (t, u, m) => t(m?.place_name ? "notif.visit_comment_place" : "notif.visit_comment", { user: u, place: m?.place_name }) },
   photo_like:     { icon: Heart,         tone: "orange", label: (t, u, m) => t(m?.place_name ? "notif.photo_like_place" : "notif.photo_like", { user: u, place: m?.place_name }) },
   discovery_used: { icon: Bookmark,      tone: "brown",  label: (t, u, m) => t(m?.city ? "notif.discovery_used_city" : "notif.discovery_used", { user: u, city: m?.city }) },
   group_invite:       { icon: Users, tone: "orange", label: (t, u, m) => t(m?.city ? "notif.group_invite_city" : "notif.group_invite", { user: u, city: m?.city }) },
   route_invite:       { icon: Users, tone: "orange", label: (t, u, m) => t(m?.city ? "notif.route_invite_city" : "notif.route_invite", { user: u, city: m?.city }) },
   trip_places_reminder: { icon: MapPin, tone: "gold", label: (t, u, m) => t(m?.city ? "notif.trip_places_reminder_city" : "notif.trip_places_reminder", { user: u, city: m?.city }) },
-  trip_message:       { icon: MessageCircle, tone: "brown", label: (t, u, m) => t(m?.title ? "notif.trip_message_title" : m?.city ? "notif.trip_message_city" : "notif.trip_message", { user: u, title: m?.title, city: m?.city }) },
+  trip_message:       { icon: BrandChat, tone: "brown", label: (t, u, m) => t(m?.title ? "notif.trip_message_title" : m?.city ? "notif.trip_message_city" : "notif.trip_message", { user: u, title: m?.title, city: m?.city }) },
   group_route_ready:  { icon: Route, tone: "gold", label: (t, u, m) => t(m?.city ? "notif.group_route_ready_city" : "notif.group_route_ready", { user: u, city: m?.city }) },
   collection_approved: { icon: CheckCircle2, tone: "gold",  label: (t, _u, m) => t("notif.collection_approved", { title: m?.title ?? t("notif.list_fallback") }) },
   collection_rejected: { icon: XCircle,      tone: "brown", label: (t, _u, m) => t(m?.moderation_note ? "notif.collection_rejected_reason" : "notif.collection_rejected", { title: m?.title ?? t("notif.list_fallback"), reason: m?.moderation_note }) },

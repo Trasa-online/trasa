@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { moveManyToTrash, invalidateContentLists } from "@/lib/trash";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
@@ -227,7 +227,7 @@ const MyTrips = () => {
                               className="absolute top-3 right-3 p-1 rounded-2xl text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
                               aria-label={t("delete_aria")}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <BrandTrash className="h-3.5 w-3.5" />
                             </button>
                           </div>
                           {trip.routes

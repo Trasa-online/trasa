@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Flag, X, Check, Loader2 } from "lucide-react";
+import { X, Check, Loader2 } from "lucide-react";
+import { BrandFlag } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,7 +60,7 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
         onClick={startReport}
         className="mx-auto mt-1 flex items-center gap-1.5 text-xs text-muted-foreground active:opacity-60 transition-opacity"
       >
-        <Flag className="h-3.5 w-3.5" />
+        <BrandFlag className="h-3.5 w-3.5" />
         <span>{t("title")}<span className="font-semibold underline underline-offset-2">{t("report")}</span></span>
       </button>
 

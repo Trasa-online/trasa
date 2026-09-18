@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, Check, X, RefreshCw, Loader2, Trash2, ArrowLeft } from "lucide-react";
+import { Search, Plus, Check, X, RefreshCw, Loader2, ArrowLeft } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -250,7 +251,7 @@ export default function TripProposalsSheet({
           </span>
         ) : mine ? (
           <button onClick={() => remove(prop)} aria-label={t("aria.withdraw")} className="h-8 w-8 rounded-full flex items-center justify-center text-destructive active:scale-90 transition-transform shrink-0">
-            <Trash2 className="h-4 w-4" strokeWidth={2} />
+            <BrandTrash className="h-4 w-4" strokeWidth={2} />
           </button>
         ) : <span className="w-8 shrink-0" />}
       </div>

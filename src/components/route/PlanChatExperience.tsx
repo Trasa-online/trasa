@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2, Maximize2, Trash2 } from "lucide-react";
+import { Sparkles, Plus, ExternalLink, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Loader2, Maximize2 } from "lucide-react";
+import { BrandMap, BrandTrash } from "@/components/BrandIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -337,7 +338,7 @@ function LargeCarouselCard({
             aria-label={t("remove_pin_aria")}
             className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center active:bg-red-600 transition-colors"
           >
-            <Trash2 className="h-4 w-4 text-white" />
+            <BrandTrash className="h-4 w-4 text-white" />
           </button>
         )}
         {/* Creator avatars - below reorder row */}
@@ -1679,7 +1680,7 @@ window.addEventListener('message',function(e){
                             onClick={() => setShowMap(true)}
                             className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0"
                           >
-                            <MapIcon className="h-4 w-4" />
+                            <BrandMap className="h-4 w-4" />
                             {t("map_button")}
                           </button>
                         )}

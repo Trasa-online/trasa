@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2, Map as MapIcon } from "lucide-react";
+import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react";
+import { BrandMap } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -346,7 +347,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
               aria-label={t("map_picker.title")}
               className="h-12 w-12 shrink-0 rounded-xl bg-secondary/60 border border-border/60 flex items-center justify-center active:scale-90 transition-transform"
             >
-              <MapIcon className="h-5 w-5 text-foreground" />
+              <BrandMap className="h-5 w-5 text-foreground" />
             </button>
           </div>
         </div>

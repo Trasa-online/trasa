@@ -2,13 +2,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Undo2, Trash2 } from "lucide-react";
+import { Undo2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
+import { BrandIcon, LIST_ICON, BrandTrash } from "@/components/BrandIcon";
 import { resolveStored } from "@/components/PlacePhoto";
 import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 import { haptics } from "@/hooks/useHaptics";
@@ -73,7 +73,7 @@ export default function TrashSheet({ open, onOpenChange }: { open: boolean; onOp
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="rounded-t-3xl px-5 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] max-h-[88dvh] overflow-y-auto">
           <SheetTitle className="flex items-center gap-2 text-lg font-black">
-            <Trash2 className="h-5 w-5 text-primary" />{t("trash.title")}
+            <BrandTrash className="h-5 w-5 text-primary" />{t("trash.title")}
           </SheetTitle>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{t("trash.desc", { days: TRASH_DAYS })}</p>
 
@@ -81,7 +81,7 @@ export default function TrashSheet({ open, onOpenChange }: { open: boolean; onOp
             <div className="mt-4 space-y-3">{[0, 1].map((i) => <div key={i} className="h-14 rounded-2xl bg-muted animate-pulse" />)}</div>
           ) : entries.length === 0 ? (
             <div className="py-10 text-center">
-              <Trash2 className="mx-auto mb-3 h-12 w-12 text-[#ef9d78]" />
+              <BrandTrash className="mx-auto mb-3 h-12 w-12 text-[#ef9d78]" />
               <p className="text-base font-bold">{t("trash.empty_title")}</p>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{t("trash.empty_desc", { days: TRASH_DAYS })}</p>
             </div>
@@ -115,7 +115,7 @@ export default function TrashSheet({ open, onOpenChange }: { open: boolean; onOp
                       aria-label={t("trash.purge")}
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-destructive active:scale-90 transition-transform"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <BrandTrash className="h-4 w-4" />
                     </button>
                   </div>
                 );

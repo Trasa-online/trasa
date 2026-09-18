@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag, verdictOf } from "@/lib/routeTags";
-import { Check, CheckCheck, MoreHorizontal, Plus, Trash2 } from "lucide-react";
-import { BrandIcon, CAMERA_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { Check, CheckCheck, MoreHorizontal, Plus } from "lucide-react";
+import { BrandIcon, CAMERA_ICON, STAR_ICON, BrandTrash } from "@/components/BrandIcon";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -540,7 +540,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                   )}
                   {onDelete && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                      <Trash2 className="h-4 w-4" />
+                      <BrandTrash className="h-4 w-4" />
                       {deleteLabel ?? t("row.remove")}
                     </DropdownMenuItem>
                   )}

@@ -6,8 +6,8 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
-import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { Settings, UserCircle2, ArrowRight, Bell, Search, ChevronLeft } from "lucide-react";
+import { BrandIcon, LIST_ICON, STAR_ICON, BrandShare } from "@/components/BrandIcon";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
@@ -832,7 +832,7 @@ const TravelerProfile = () => {
               <Search className="h-5 w-5" />
             </button>
             <button onClick={handleShareProfile} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.share_profile_aria")}>
-              <Share2 className="h-5 w-5" />
+              <BrandShare className="h-5 w-5" />
             </button>
             <button onClick={() => setNotificationsOpen(true)} className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.notifications_aria")}>
               <Bell className="h-5 w-5" />

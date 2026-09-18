@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
-import { MapPin, Users, ChevronRight, ChevronDown, Trash2, Loader2, X } from "lucide-react";
+import { MapPin, Users, ChevronRight, ChevronDown, Loader2, X } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -449,7 +450,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     onClick={(e) => { e.stopPropagation(); removeDraft(d.city); setDrafts(getDrafts()); }}
                     className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 active:scale-90 transition-transform"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <BrandTrash className="h-4 w-4" />
                   </span>
                   <ChevronRight className="h-5 w-5 text-primary/50 shrink-0" />
                 </button>

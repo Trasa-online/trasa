@@ -18,7 +18,8 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
-import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2, Calendar as CalendarIcon } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Pencil, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { BrandCalendar, BrandTrash } from "@/components/BrandIcon";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -466,7 +467,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               )}
               {isOwner && (
                 <button onClick={handleDelete} disabled={deleting} aria-label={t("aria.delete")} className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform disabled:opacity-50">
-                  <Trash2 className="h-4 w-4" />
+                  <BrandTrash className="h-4 w-4" />
                 </button>
               )}
               <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
@@ -1366,7 +1367,7 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave,
         {city && <p className="mt-1 text-sm text-muted-foreground truncate">{city}</p>}
         {plannedDate && (
           <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
-            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            <BrandCalendar className="h-3.5 w-3.5 text-muted-foreground" />
             {new Date(plannedDate).toLocaleDateString(i18n.language === "en" ? "en-GB" : "pl-PL", { day: "numeric", month: "long" })}
           </p>
         )}
@@ -1512,7 +1513,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
         </div>
       </button>
       <button onClick={onDelete} aria-label={t("aria.remove_saved")} className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 active:scale-90 transition-colors shrink-0">
-        <Trash2 className="h-4 w-4" />
+        <BrandTrash className="h-4 w-4" />
       </button>
     </div>
   );

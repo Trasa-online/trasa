@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
-import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
+import { BrandCalendar, BrandTrash } from "@/components/BrandIcon";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { avatarSrc } from "@/lib/avatar";
@@ -165,7 +166,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
         aria-label={t("aria.delete_place")}
         className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0"
       >
-        <Trash2 className="h-4 w-4" />
+        <BrandTrash className="h-4 w-4" />
       </button>
     </Reorder.Item>
   );
@@ -752,7 +753,7 @@ export default function ComposeWyjazd() {
             className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           <button onClick={() => setDateSheet(true)}
             className={`shrink-0 h-[50px] rounded-2xl bg-secondary flex items-center gap-2 px-3.5 active:scale-95 transition-transform ${dateLabel ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-            <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+            <BrandCalendar className="h-5 w-5 text-muted-foreground" />
             {dateLabel && <span className="text-sm whitespace-nowrap">{dateLabel}</span>}
           </button>
         </div>

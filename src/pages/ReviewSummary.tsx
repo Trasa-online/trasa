@@ -16,7 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share, Share2, Info, MoreVertical, Loader2, GripVertical, Flag } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Plus, Info, MoreVertical, Loader2, GripVertical } from "lucide-react";
+import { BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash } from "@/components/BrandIcon";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import { buildTripStaticMapUrl } from "@/lib/staticMap";
@@ -104,7 +105,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
           <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
           <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">{categoryLabel}</span>
         </button>
-        <button onClick={onRemove} aria-label={t("aria.delete_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><Trash2 className="h-4 w-4" /></button>
+        <button onClick={onRemove} aria-label={t("aria.delete_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90 shrink-0"><BrandTrash className="h-4 w-4" /></button>
       </div>
 
       {/* "+ Podziel sie wrazeniami" - zwijana notka usera o tym miejscu (opt-in, domyslnie zwinieta). */}
@@ -1661,7 +1662,7 @@ const ReviewSummary = () => {
               aria-label={t("a11y.remove_place")}
               className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
             >
-              <Trash2 className="h-4 w-4" />
+              <BrandTrash className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -1721,7 +1722,7 @@ const ReviewSummary = () => {
             <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label={t("plan.earlier")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
             <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label={t("plan.later")} className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
           </div>
-          <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("a11y.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+          <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("a11y.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><BrandTrash className="h-4 w-4" /></button>
         </div>
       )}
     </div>
@@ -1854,13 +1855,13 @@ const ReviewSummary = () => {
             {viewerMenuOpen && (
               <div className="absolute right-0 top-12 w-56 rounded-2xl bg-card shadow-xl overflow-hidden py-1">
                 <button onClick={() => { if (viewerUrl !== heroPhoto) setCover(viewerUrl); setViewerMenuOpen(false); }} disabled={viewerUrl === heroPhoto} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-50">
-                  <ImageIcon className="h-4 w-4 shrink-0" />
+                  <BrandGallery className="h-4 w-4 shrink-0" />
                   {viewerUrl === heroPhoto ? t("viewer.is_cover") : t("viewer.set_cover")}
                   {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
                 </button>
                 {galleryPhotos.find((g) => g.url === viewerUrl)?.mine && (
                   <button onClick={() => { const gi = galleryPhotos.find((g) => g.url === viewerUrl); if (gi?.isGroup) removeGroupPhoto(viewerUrl); else removePhoto(viewerUrl, gi?.owner ?? routeId!); setViewerMenuOpen(false); }} className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40">
-                    <Trash2 className="h-4 w-4 shrink-0" /> {t("viewer.remove_photo")}
+                    <BrandTrash className="h-4 w-4 shrink-0" /> {t("viewer.remove_photo")}
                   </button>
                 )}
               </div>
@@ -2158,7 +2159,7 @@ const ReviewSummary = () => {
             )}
             {isOwner && isPublic && (
               <button onClick={shareLink} aria-label={t("a11y.share_route")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
-                <Share2 className="h-5 w-5 text-white" />
+                <BrandShare className="h-5 w-5 text-white" />
               </button>
             )}
           </div>
@@ -2301,16 +2302,16 @@ const ReviewSummary = () => {
                 <div className="flex-1 flex rounded-full bg-muted p-0.5">
                   <button onClick={() => setSummaryTab("plan")}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${summaryTab === "plan" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                    <MapIcon className="h-4 w-4" /> {t("tabs.places")}
+                    <BrandMap className="h-4 w-4" /> {t("tabs.places")}
                   </button>
                   <button onClick={() => setSummaryTab("galeria")}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${summaryTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                    <ImageIcon className="h-4 w-4" /> {t("tabs.photos")}
+                    <BrandGallery className="h-4 w-4" /> {t("tabs.photos")}
                   </button>
                 </div>
                 <button onClick={() => { if (!isPublic) { setVisibility(shareAnonymous ? "anon" : "profile"); notify.success(t("toast.route_public"), undefined, { position: "top-center" }); } setShareSheetOpen(true); }} aria-label={t("a11y.share_route")}
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
-                  <Share className="h-4 w-4 text-foreground" />
+                  <BrandShare className="h-4 w-4 text-foreground" />
                 </button>
                 <button onClick={() => { setEditingStepper(true); setStep(2); }} aria-label={t("a11y.edit_entry")}
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
@@ -2502,7 +2503,7 @@ const ReviewSummary = () => {
                   <div className="px-5 mt-5">
                     <button onClick={shareLink}
                       className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                      <Share2 className="h-4 w-4" /> {t("share_sheet.share_link")}
+                      <BrandShare className="h-4 w-4" /> {t("share_sheet.share_link")}
                     </button>
                   </div>
                   {/* Cofniecie udostepnienia - trasa znika z Eksploruj (zostaje prywatna). */}
@@ -2577,7 +2578,7 @@ const ReviewSummary = () => {
         ) : !isMemory ? (
           /* Robocza trasa (podsumowanie) -> SWIADOMA publikacja t("cta.finish_trip"). */
           <button onClick={() => { haptics.light(); setConfirmFinishOpen(true); }} disabled={finishing} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40">
-            <Flag className="h-4 w-4" />{t("cta.finish_trip")}</button>
+            <BrandFlag className="h-4 w-4" />{t("cta.finish_trip")}</button>
         ) : (
           <button onClick={() => navigate("/moj-profil?tab=wyjazdy")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
             {t("cta.done")}

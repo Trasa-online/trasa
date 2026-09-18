@@ -6,7 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, ArrowRight, Search, X, Trash2, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Search, X, Plus, Loader2 } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { haptics } from "@/hooks/useHaptics";
@@ -234,7 +235,7 @@ export default function StartWyjazd() {
                   aria-label={t("drafts.delete_aria")}
                   className="absolute top-3 right-3 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive active:scale-90 transition-colors"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <BrandTrash className="h-4 w-4" />
                 </button>
               )}
             </div>

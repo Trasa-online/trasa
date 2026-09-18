@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Send, Mic, MicOff, Camera, MapPin, Coffee, Utensils, Map, Loader2, Plus, Check } from "lucide-react";
+import { X, Send, Mic, MicOff, Camera, MapPin, Coffee, Utensils, Loader2, Plus, Check } from "lucide-react";
+import { BrandMap } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -250,7 +251,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
   chips.push({
     label: tHome("chip_sightseeing"),
     query: "",
-    icon: <Map className="h-3 w-3" />,
+    icon: <BrandMap className="h-3 w-3" />,
     action: () => setShowSightseeingCategories(true),
   });
   const visibleChips = chips.slice(0, 4);

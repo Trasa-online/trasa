@@ -1,6 +1,7 @@
 import { Reorder, useDragControls } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Trash2, GripVertical, Plus, Footprints, RefreshCw, ChevronUp, ChevronDown, MoveRight } from "lucide-react";
+import { GripVertical, Plus, Footprints, RefreshCw, ChevronUp, ChevronDown, MoveRight } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 
 export interface PlanPin {
@@ -215,7 +216,7 @@ const PinRowContent = ({
           }}
           className="flex-shrink-0 h-7 w-7 rounded flex items-center justify-center text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
         >
-          <Trash2 className="h-4 w-4" />
+          <BrandTrash className="h-4 w-4" />
         </button>
       </div>
     </>

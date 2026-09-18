@@ -10,7 +10,8 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Flag, Globe2, Loader2, Lock, MapPin, MoreHorizontal, Palette, Pencil, Plus, Share2, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Globe2, Loader2, Lock, MapPin, MoreHorizontal, Palette, Pencil, Plus, Users, X } from "lucide-react";
+import { BrandFlag, BrandShare, BrandTrash } from "@/components/BrandIcon";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scrollTopTapProps } from "@/lib/scrollTop";
@@ -973,7 +974,7 @@ export default function SharedList() {
             {!isOwner ? (
               <ReportContentSheet targetType="collection" targetId={col.id} trigger={(open) => (
                 <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center text-foreground/70 active:scale-90 transition-transform">
-                  <Flag className="h-5 w-5" strokeWidth={2} />
+                  <BrandFlag className="h-5 w-5" strokeWidth={2} />
                 </button>
               )} />
             ) : (
@@ -1018,7 +1019,7 @@ export default function SharedList() {
                     <Palette className="h-4 w-4" />{t("aria.list_theme")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                    <Trash2 className="h-4 w-4" />{t("aria.delete_list")}
+                    <BrandTrash className="h-4 w-4" />{t("aria.delete_list")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1173,7 +1174,7 @@ export default function SharedList() {
           )}
           <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")}
             className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
-            <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
+            <BrandShare className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
           </button>
         </div>
       </div>

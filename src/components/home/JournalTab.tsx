@@ -8,7 +8,8 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Loader2, Trash2, Sparkles, BookOpen, Images } from "lucide-react";
+import { Loader2, Sparkles, BookOpen, Images } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -383,7 +384,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
                 aria-label={entry.is_own ? t("journal.delete_aria") : t("journal.leave_aria")}
                 className="shrink-0 -mr-0.5 -mt-0.5 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive active:scale-90 transition-colors disabled:opacity-50"
               >
-                {deletingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {deletingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BrandTrash className="h-3.5 w-3.5" />}
               </button>
             )}
           </div>

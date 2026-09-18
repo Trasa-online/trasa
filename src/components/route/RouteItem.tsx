@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { MapPin, Trash2, Star, Eye } from "lucide-react";
+import { MapPin, Star, Eye } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import PinReviewBadges from "@/components/route/PinReviewBadges";
 
 interface RouteItemProps {
@@ -100,7 +101,7 @@ const RouteItem = ({ route, onDelete }: RouteItemProps) => {
             {t("edit")}
           </Button>
           <Button variant="outline" size="icon" onClick={() => onDelete(route.id)}>
-            <Trash2 className="h-4 w-4" />
+            <BrandTrash className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, Loader2, Share2, Bookmark, ListChecks } from "lucide-react";
+import { Plus, Check, Loader2, Bookmark, ListChecks } from "lucide-react";
+import { BrandShare } from "@/components/BrandIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -270,7 +271,7 @@ export default function SavePlaceSheet({
         {/* Stopka: Udostępnij to miejsce */}
         <div className="shrink-0 px-5 pt-2 pb-safe-4">
           <button type="button" onClick={onShare} disabled={placeShare.loading} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-70">
-            {placeShare.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}{t("save_sheet.share")}</button>
+            {placeShare.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandShare className="h-4 w-4" />}{t("save_sheet.share")}</button>
         </div>
 
         {/* Arkusz udostepniania z karta miejsca (nad tym arkuszem - z-95). */}

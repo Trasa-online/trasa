@@ -6,7 +6,8 @@ import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { track } from "@/lib/analytics";
-import { Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { Heart, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -438,7 +439,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                     className="h-7 w-7 -mt-1 -mr-1 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
                     aria-label={t("liked.remove_aria")}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <BrandTrash className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
@@ -648,7 +649,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
                 aria-label={t("collections.delete_aria")}
                 className="absolute top-0 right-0 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 active:text-destructive active:scale-90 transition-colors"
               >
-                <Trash2 className="h-4 w-4" />
+                <BrandTrash className="h-4 w-4" />
               </button>
             </div>
           );
@@ -685,7 +686,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                <Trash2 className="h-5 w-5 text-destructive" />
+                <BrandTrash className="h-5 w-5 text-destructive" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-base font-black leading-snug">{t("collections.delete_title")}</p>

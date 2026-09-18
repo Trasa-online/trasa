@@ -14,7 +14,8 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users, Globe2 } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Pencil, Plus, Loader2, GripVertical, Check, Camera, ThumbsUp, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users, Globe2 } from "lucide-react";
+import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash } from "@/components/BrandIcon";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -2253,7 +2254,7 @@ export default function SharedRoute() {
           {isOwner && dayCount > 1 && (
             <button onClick={() => setAskRemoveDay(activeDay)}
               className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-2 text-[13px] font-semibold text-foreground active:scale-95 transition-transform">
-              <Trash2 className="h-3.5 w-3.5" />{t("day.remove")}
+              <BrandTrash className="h-3.5 w-3.5" />{t("day.remove")}
             </button>
           )}
         </div>
@@ -2445,14 +2446,14 @@ export default function SharedRoute() {
             {!canEdit ? (
               <ReportContentSheet targetType="route" targetId={route.id} trigger={(open) => (
                 <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center text-foreground/70 active:scale-90 transition-transform">
-                  <Flag className="h-5 w-5" strokeWidth={2} />
+                  <BrandFlag className="h-5 w-5" strokeWidth={2} />
                 </button>
               )} />
             ) : (
               <div className="shrink-0 flex items-center gap-1.5">
                 <button onClick={() => handleShare()} aria-label={t("aria.share")}
                   className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center active:scale-90 transition-transform">
-                  <Share2 className="h-[18px] w-[18px] text-[#5B2C06]" strokeWidth={2.2} />
+                  <BrandShare className="h-[18px] w-[18px] text-[#5B2C06]" strokeWidth={2.2} />
                 </button>
                 {/* Akcje wyjazdu (opis, nazwa, zaproszenia, usuniecie) pod "..." w BELCE (prosba Nat
                     2026-09-13; wczesniej przy tytule). Biale kolko z delikatnym cieniem. */}
@@ -2479,7 +2480,7 @@ export default function SharedRoute() {
                     {/* Daty wyjazdu (zakres = podzial na dni) - tylko wlasciciel, jak dotad. */}
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDatesSheetOpen(true); }} className="gap-2.5 py-2.5">
-                        <CalendarIcon className="h-4 w-4" />{route.start_date ? t("aria.change_dates") : t("aria.add_dates")}
+                        <BrandCalendar className="h-4 w-4" />{route.start_date ? t("aria.change_dates") : t("aria.add_dates")}
                       </DropdownMenuItem>
                     )}
                     {/* "Dostosuj ilosc dni" - dostepne ZAWSZE (zgloszenie testerki 2026-09-16,
@@ -2489,7 +2490,7 @@ export default function SharedRoute() {
                         termin jest ustalony. */}
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDayDraft(dayCount); setDaysSheetOpen(true); }} className="gap-2.5 py-2.5">
-                        <CalendarIcon className="h-4 w-4" />{t("day.count_action")}
+                        <BrandCalendar className="h-4 w-4" />{t("day.count_action")}
                       </DropdownMenuItem>
                     )}
                     {/* Zapraszanie tylko HOST: inviteUsersToRoute idzie przez host-only RPC add_member_to_session. */}
@@ -2500,7 +2501,7 @@ export default function SharedRoute() {
                     )}
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                        <Trash2 className="h-4 w-4" />{t("aria.delete_trip")}
+                        <BrandTrash className="h-4 w-4" />{t("aria.delete_trip")}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -2603,7 +2604,7 @@ export default function SharedRoute() {
               i osobny wiersz "Dodaj daty" pod tytulem). */}
           {dateLabel && (
             <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
-              <CalendarIcon className="h-5 w-5 shrink-0" />
+              <BrandCalendar className="h-5 w-5 shrink-0" />
               <span className="text-base">{dateLabel}</span>
             </div>
           )}
@@ -2682,8 +2683,8 @@ export default function SharedRoute() {
                 Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
             {([
               { k: "miejsca" as const, Icon: MapPin, label: t("tabs.places") },
-              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: t("tabs.gallery") }] : []),
-              { k: "mapa" as const, Icon: MapIcon, label: t("tabs.map") },
+              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: BrandGallery, label: t("tabs.gallery") }] : []),
+              { k: "mapa" as const, Icon: BrandMap, label: t("tabs.map") },
             ]).map(({ k, Icon, label }) => {
               const on = planTab === k;
               return (
@@ -2870,7 +2871,7 @@ export default function SharedRoute() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
-                <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                <BrandGallery className="h-8 w-8 text-muted-foreground/50" />
                 {/* W wybranym DNIU mowimy, skad sie biora zdjecia tego dnia - guzik "dodaj"
                     wrzucilby zdjecie do calego wyjazdu, a nie do tego dnia (`review_photos`
                     nie ma dnia), wiec obiecywalby cos, czego nie zrobi. */}
@@ -3083,7 +3084,7 @@ export default function SharedRoute() {
             ...(id ? [{
               key: "chat",
               label: t("fabs.chat"),
-              icon: <MessageCircle className="h-6 w-6" strokeWidth={2.2} />,
+              icon: <BrandChat className="h-6 w-6" strokeWidth={2.2} />,
               badge: unreadChat,
               onClick: () => setChatOpen(true),
             } as TripFab] : []),
@@ -3104,7 +3105,7 @@ export default function SharedRoute() {
             ...(isPublished ? [{
               key: "cover",
               label: t("cover.action"),
-              icon: <ImageIcon className="h-6 w-6" strokeWidth={2.2} />,
+              icon: <BrandGallery className="h-6 w-6" strokeWidth={2.2} />,
               onClick: () => setCoverSheet("adjust"),
             } as TripFab] : []),
             // "Dostosuj ilosc dni" W STOSIE, nie tylko w menu "..." (prosba Nat 2026-09-16,
@@ -3115,7 +3116,7 @@ export default function SharedRoute() {
             ...(isOwner ? [{
               key: "days",
               label: t("day.count_action"),
-              icon: <CalendarIcon className="h-6 w-6" strokeWidth={2.2} />,
+              icon: <BrandCalendar className="h-6 w-6" strokeWidth={2.2} />,
               onClick: () => { setDayDraft(dayCount); setDaysSheetOpen(true); },
             } as TripFab] : []),
             // Zmiana kolejnosci zeszla tu z dolnego paska (prosba Nat 2026-09-10) i jest
@@ -3222,7 +3223,7 @@ export default function SharedRoute() {
               aria-label={t("aria.delete_photo")}
               className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
               style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-              <Trash2 className="h-5 w-5 text-white" />
+              <BrandTrash className="h-5 w-5 text-white" />
             </button>
           )}
           {/* SERCE i GWIAZDKA obok siebie, lewy dolny rog. To sa DWIE rozne rzeczy i dlatego
@@ -3378,7 +3379,7 @@ export default function SharedRoute() {
                     brazem - pomarancz ma na nim 3,08:1. */}
                 <button onClick={() => handleShare()}
                   className="w-full py-3 rounded-full bg-[#FDF184] text-[#5B2C06] font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                  <Share2 className="h-4 w-4" strokeWidth={2.4} />{t("share_trip_cta")}
+                  <BrandShare className="h-4 w-4" strokeWidth={2.4} />{t("share_trip_cta")}
                 </button>
               </>
             ) : (
@@ -3460,7 +3461,7 @@ export default function SharedRoute() {
                       <button onClick={() => { setDaysSheetOpen(false); setAskRemoveDay(d); }}
                         aria-label={t("day.remove")}
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground active:scale-90 transition-transform">
-                        <Trash2 className="h-4 w-4" />
+                        <BrandTrash className="h-4 w-4" />
                       </button>
                     </div>
                   );

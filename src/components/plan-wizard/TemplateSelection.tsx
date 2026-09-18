@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowRight, Map } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
+import { BrandMap } from "@/components/BrandIcon";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -89,7 +90,7 @@ const MapCell = ({ url }: { url: string | null }) => {
   if (!url || failed)
     return (
       <div className="w-full h-full bg-muted flex items-center justify-center">
-        <Map className="h-8 w-8 text-muted-foreground/30" />
+        <BrandMap className="h-8 w-8 text-muted-foreground/30" />
       </div>
     );
   return <img src={url} alt={t("template.map_alt")} className="w-full h-full object-cover" onError={() => setFailed(true)} />;

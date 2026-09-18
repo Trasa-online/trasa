@@ -3,7 +3,8 @@ import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, CalendarDays, History, Search, Loader2 } from "lucide-react";
+import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Search, Loader2 } from "lucide-react";
+import { BrandCalendar } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -589,7 +590,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               {!tripStart && (
                 <button onClick={() => { haptics.light(); setStep("tripDaysStep"); }}
                   className="w-full flex items-center gap-4 px-5 py-3 text-left active:bg-muted/50 transition-colors">
-                  <CalendarDays className="h-6 w-6 text-foreground shrink-0" strokeWidth={1.8} />
+                  <BrandCalendar className="h-6 w-6 text-foreground shrink-0" strokeWidth={1.8} />
                   <div className="flex-1 min-w-0">
                     <p className="text-[15px] font-medium text-foreground">{t("days_row_title")}</p>
                     <p className="text-[13px] text-muted-foreground">{t("days_row_desc")}</p>
