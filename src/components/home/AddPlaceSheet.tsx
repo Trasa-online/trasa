@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, MapPin, X } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { Plus, X } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
 
@@ -98,7 +98,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
               className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-muted/50 text-left"
             >
               <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <BrandPin className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{r.name}</p>

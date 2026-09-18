@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
-import { BrandChat, BrandBell, BrandUserPlus } from "@/components/BrandIcon";
+import { X, UserCheck, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
+import { BrandChat, BrandBell, BrandUserPlus, BrandPin } from "@/components/BrandIcon";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -59,7 +59,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; tone: Tone; label: 
   new_route:      { icon: Route,         tone: "gold",   label: (t, u) => t("notif.new_route", { user: u }) },
   route_updated:  { icon: Route,         tone: "gold",   label: (t, u) => t("notif.route_updated", { user: u }) },
   route_used:     { icon: Bookmark,      tone: "brown",  label: (t, u, m) => t(m?.city ? "notif.route_used_city" : "notif.route_used", { user: u, city: m?.city }) },
-  pin_visit:      { icon: MapPin,        tone: "gold",   label: (t, u) => t("notif.pin_visit", { user: u }) },
+  pin_visit:      { icon: BrandPin,        tone: "gold",   label: (t, u) => t("notif.pin_visit", { user: u }) },
   friend_request: { icon: BrandUserPlus,      tone: "orange", label: (t, u) => t("notif.friend_request", { user: u }) },
   friend_accept:  { icon: UserCheck,     tone: "orange", label: (t, u) => t("notif.friend_accept", { user: u }) },
   visit_comment:  { icon: BrandChat, tone: "brown",  label: (t, u, m) => t(m?.place_name ? "notif.visit_comment_place" : "notif.visit_comment", { user: u, place: m?.place_name }) },
@@ -67,7 +67,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; tone: Tone; label: 
   discovery_used: { icon: Bookmark,      tone: "brown",  label: (t, u, m) => t(m?.city ? "notif.discovery_used_city" : "notif.discovery_used", { user: u, city: m?.city }) },
   group_invite:       { icon: Users, tone: "orange", label: (t, u, m) => t(m?.city ? "notif.group_invite_city" : "notif.group_invite", { user: u, city: m?.city }) },
   route_invite:       { icon: Users, tone: "orange", label: (t, u, m) => t(m?.city ? "notif.route_invite_city" : "notif.route_invite", { user: u, city: m?.city }) },
-  trip_places_reminder: { icon: MapPin, tone: "gold", label: (t, u, m) => t(m?.city ? "notif.trip_places_reminder_city" : "notif.trip_places_reminder", { user: u, city: m?.city }) },
+  trip_places_reminder: { icon: BrandPin, tone: "gold", label: (t, u, m) => t(m?.city ? "notif.trip_places_reminder_city" : "notif.trip_places_reminder", { user: u, city: m?.city }) },
   trip_message:       { icon: BrandChat, tone: "brown", label: (t, u, m) => t(m?.title ? "notif.trip_message_title" : m?.city ? "notif.trip_message_city" : "notif.trip_message", { user: u, title: m?.title, city: m?.city }) },
   group_route_ready:  { icon: Route, tone: "gold", label: (t, u, m) => t(m?.city ? "notif.group_route_ready_city" : "notif.group_route_ready", { user: u, city: m?.city }) },
   collection_approved: { icon: CheckCircle2, tone: "gold",  label: (t, _u, m) => t("notif.collection_approved", { title: m?.title ?? t("notif.list_fallback") }) },
@@ -78,7 +78,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; tone: Tone; label: 
   route_liked:    { icon: Heart,    tone: "orange", label: (t, u, m) => t(m?.city ? "notif.route_liked_city" : "notif.route_liked", { user: u, city: m?.city }) },
   list_liked:     { icon: Heart,    tone: "orange", label: (t, u, m) => t(m?.title ? "notif.list_liked_title" : "notif.list_liked", { user: u, title: m?.title }) },
   list_saved:     { icon: Bookmark, tone: "brown",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },
-  list_updated:   { icon: MapPin,   tone: "gold",   label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
+  list_updated:   { icon: BrandPin,   tone: "gold",   label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
   list_invite:    { icon: Users,    tone: "orange", label: (t, u, m) => t(m?.title ? "notif.list_invite_title" : "notif.list_invite", { user: u, title: m?.title }) },
   business_thanks: { icon: Heart, tone: "orange", label: (t, _u, m) =>
     t(m?.kind === "photo" ? "notif.business_thanks_photo" : "notif.business_thanks", { business: m?.business_name ?? t("notif.business_fallback") }) },

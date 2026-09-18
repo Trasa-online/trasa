@@ -10,8 +10,8 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Loader2, MapPin, MoreHorizontal, Palette, Plus, Users, X } from "lucide-react";
-import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil, BrandNote } from "@/components/BrandIcon";
+import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Loader2, MoreHorizontal, Palette, Plus, Users, X } from "lucide-react";
+import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil, BrandNote, BrandPin } from "@/components/BrandIcon";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scrollTopTapProps } from "@/lib/scrollTop";
@@ -1013,7 +1013,7 @@ export default function SharedList() {
                     <Users className="h-4 w-4" />{t("aria.list_people")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setScopeOpen(true)} className="gap-2.5 py-2.5">
-                    <MapPin className="h-4 w-4" />{t("aria.list_scope")}
+                    <BrandPin className="h-4 w-4" />{t("aria.list_scope")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setThemeOpen(true)} className="gap-2.5 py-2.5">
                     <Palette className="h-4 w-4" />{t("aria.list_theme")}

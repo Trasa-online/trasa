@@ -1,5 +1,5 @@
-import { MapPin } from "lucide-react";
-import { BrandLock, BrandGlobe } from "@/components/BrandIcon";
+
+import { BrandLock, BrandGlobe, BrandPin } from "@/components/BrandIcon";
 import { BrandStar } from "@/components/BrandStar";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useTranslation } from "react-i18next";
@@ -345,7 +345,7 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
         {/* Feed: tytul 36 px i chipy 30 px (makieta Nat 2026-09-13 - wczesniej 24 / 26 px). */}
         <p className={`line-clamp-2 font-black leading-[1.05] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] ${feed ? "text-[36px] tracking-[-0.015em]" : "text-[19px]"}`}>{it.title}</p>
         <div className={`flex flex-wrap ${feed ? "mt-3.5 gap-2" : "mt-2 gap-1"}`}>
-          <Chip dark size={size}><MapPin className={feed ? "h-4 w-4" : "h-3 w-3"} strokeWidth={2.4} />{it.placesCount}</Chip>
+          <Chip dark size={size}><BrandPin className={feed ? "h-4 w-4" : "h-3 w-3"} strokeWidth={2.4} />{it.placesCount}</Chip>
           {it.where && <Chip dark size={size}>{it.where}</Chip>}
           {it.days != null && <Chip dark size={size}>{t("grid.days", { count: it.days })}</Chip>}
         </div>
@@ -399,7 +399,7 @@ export function ListTile({ it, size = "feed", people = "pill" }: { it: GridItem;
             `visitedCount` nie zostal podany - wtedy nie wiemy, ile autor odwiedzil, a "0"
             twierdziloby, ze nic. */}
         <Chip ink={theme.ink} size={size}>
-          <MapPin className={feed ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2.4} />
+          <BrandPin className={feed ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2.4} />
           {it.visitedCount != null ? `${it.visitedCount}/${it.placesCount}` : it.placesCount}
         </Chip>
         {it.where && <Chip ink={theme.ink} size={size}>{it.where}</Chip>}

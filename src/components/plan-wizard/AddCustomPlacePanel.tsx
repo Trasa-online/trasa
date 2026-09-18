@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Link, MapPin, Loader2, Plus } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { X, Link, Loader2, Plus } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { supabase } from "@/integrations/supabase/client";
@@ -248,7 +248,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
                 onMouseDown={(e) => { e.preventDefault(); handleSuggestionSelect(p); }}
                 className="w-full px-4 py-3 text-left text-sm border-b border-border/30 last:border-0 active:bg-accent flex items-start gap-2"
               >
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <BrandPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <div className="font-medium truncate">{p.structured_formatting?.main_text}</div>
                   <div className="text-xs text-muted-foreground truncate">{p.structured_formatting?.secondary_text}</div>
@@ -290,7 +290,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
           <div className="rounded-2xl border border-border bg-card p-4 space-y-1">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-primary" />
+                <BrandPin className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-base leading-tight">{preview.place_name}</p>

@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
-import { MapPin, Users, ChevronRight, ChevronDown, Loader2, X } from "lucide-react";
-import { BrandTrash } from "@/components/BrandIcon";
+import { Users, ChevronRight, ChevronDown, Loader2, X } from "lucide-react";
+import { BrandTrash, BrandPin } from "@/components/BrandIcon";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -40,7 +40,7 @@ function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSe
         {photos.length > 0 ? photos.map((url, i) => (
           <img key={i} src={url} alt="" className="h-6 w-6 rounded-full object-cover bg-muted border-2 border-secondary" style={{ zIndex: photos.length - i }} loading="lazy" />
         )) : (
-          <div className="h-6 w-6 rounded-full bg-muted border-2 border-secondary flex items-center justify-center"><MapPin className="h-3 w-3 text-muted-foreground" /></div>
+          <div className="h-6 w-6 rounded-full bg-muted border-2 border-secondary flex items-center justify-center"><BrandPin className="h-3 w-3 text-muted-foreground" /></div>
         )}
         {extra > 0 && (
           <div className="h-6 w-6 rounded-full bg-foreground/80 text-background text-[9px] font-bold flex items-center justify-center border-2 border-secondary" style={{ zIndex: 0 }}>+{extra}</div>
@@ -326,7 +326,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         ) : groupSessions.length === 0 ? (
           <EmptySection
             variant="solo"
-            icon={<MapPin className="h-6 w-6 text-primary" />}
+            icon={<BrandPin className="h-6 w-6 text-primary" />}
             title={t("dashboard.empty_title")}
             sub={t("dashboard.empty_sub")}
             cta={t("dashboard.empty_cta")}
@@ -473,7 +473,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-primary" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><BrandPin className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_solo_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_solo_desc")}</p>

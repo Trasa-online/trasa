@@ -14,8 +14,8 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, MoreHorizontal, ChevronLeft, Users } from "lucide-react";
-import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil, BrandUserPlus, BrandNote } from "@/components/BrandIcon";
+import { ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, MoreHorizontal, ChevronLeft, Users } from "lucide-react";
+import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil, BrandUserPlus, BrandNote, BrandPin } from "@/components/BrandIcon";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -2682,7 +2682,7 @@ export default function SharedRoute() {
             {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
                 Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
             {([
-              { k: "miejsca" as const, Icon: MapPin, label: t("tabs.places") },
+              { k: "miejsca" as const, Icon: BrandPin, label: t("tabs.places") },
               ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: BrandGallery, label: t("tabs.gallery") }] : []),
               { k: "mapa" as const, Icon: BrandMap, label: t("tabs.map") },
             ]).map(({ k, Icon, label }) => {
@@ -2994,7 +2994,7 @@ export default function SharedRoute() {
                   className="w-full flex items-center gap-3 px-5 py-3 text-left active:bg-secondary/60 transition-colors disabled:opacity-50"
                 >
                   <span className="h-10 w-10 shrink-0 rounded-xl bg-[#fcede3] flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-[#BC4206]" />
+                    <BrandPin className="h-5 w-5 text-[#BC4206]" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-semibold text-foreground truncate">{tr.title || scopeLabel(tr) || t("trip_default")}</span>

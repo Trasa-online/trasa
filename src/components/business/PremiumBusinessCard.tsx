@@ -30,7 +30,7 @@ import type { PlaceUserNote } from "@/lib/placeNotes";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
-import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, FileText, Instagram, Facebook, MapPin, Heart, ImagePlus } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, FileText, Instagram, Facebook, Heart, ImagePlus } from "lucide-react";
 import { BrandGlobe } from "@/components/BrandIcon";
 import type { LikeState } from "@/lib/placePhotoSocial";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";

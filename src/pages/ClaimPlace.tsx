@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ArrowLeft, MapPin } from "lucide-react";
-import { BrandCheck } from "@/components/BrandIcon";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -188,7 +188,7 @@ const ClaimPlace = () => {
           <p className="text-xs font-bold text-primary uppercase tracking-widest mb-2">{t("claim.intro_eyebrow")}</p>
           <h1 className="text-3xl lg:text-4xl font-black text-[#0E0E0E] leading-tight">{place.place_name}</h1>
           <p className="text-sm text-[#979797] flex items-center justify-center gap-1.5 mt-2">
-            <MapPin className="h-3.5 w-3.5" />
+            <BrandPin className="h-3.5 w-3.5" />
             {place.address || place.city}
           </p>
         </div>

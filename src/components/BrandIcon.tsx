@@ -96,3 +96,7 @@ export const USER_PLUS_ICON = "/Ikona_DodajUzytkownika.svg";
 export const BrandHelp = brand(HELP_ICON);
 export const BrandNote = brand(NOTE_ICON);
 export const BrandUserPlus = brand(USER_PLUS_ICON);
+// Pin miejsca = ta sama ikona, co zakladka "Miejsca" w dolnym pasku (prosba Nat 2026-09-18:
+// "podmien wszedzie ikonke pina") - zastepuje lucide `MapPin` w calej apce B2C.
+export const PIN_ICON = "/Ikona_Miejsca.svg";
+export const BrandPin = brand(PIN_ICON);

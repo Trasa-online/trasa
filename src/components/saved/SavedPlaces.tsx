@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Loader2, MapPin } from "lucide-react";
-import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
+import { Plus, X, Loader2 } from "lucide-react";
+import { BrandTrash, BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -141,7 +141,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       ) : places.length === 0 ? (
         <div className="flex flex-col items-center text-center gap-3 px-6 py-12">
           <div className="h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center text-orange-500">
-            <MapPin className="h-6 w-6" />
+            <BrandPin className="h-6 w-6" />
           </div>
           <div className="space-y-1">
             <p className="text-base font-black">{t("saved.empty_places")}</p>

@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation, Loader2 } from "lucide-react";
+import { Navigation, Loader2 } from "lucide-react";
 import { usePlaceShare } from "@/hooks/usePlaceShare";
 import { BrandIcon, PLUS_ICON, BrandShare, BrandCheck } from "@/components/BrandIcon";
 import { BrandBookmark } from "@/components/BrandBookmark";

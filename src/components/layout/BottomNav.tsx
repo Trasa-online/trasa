@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import CreateFlowSheet from "@/components/create/CreateFlowSheet";
-import { X, MapPin, Heart, ArrowLeft, Layers } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { X, Heart, ArrowLeft, Layers } from "lucide-react";
+import { BrandPin } from "@/components/BrandIcon";
+import type { ComponentType } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
@@ -33,7 +34,7 @@ const NavIcon = ({ src, className = "h-5 w-5" }: { src: string; className?: stri
   />
 );
 
-const ActionTile = ({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) => (
+const ActionTile = ({ icon: Icon, label, onClick }: { icon: ComponentType<{ className?: string }>; label: string; onClick: () => void }) => (
   <button
     onClick={onClick}
     className="flex flex-col items-center gap-2 w-20 active:scale-95 transition-transform"
@@ -208,17 +209,17 @@ const BottomNav = () => {
                 // Tryb uproszczony: [Stworz wyjazd (solo) | Stworz zestawienie]. Grupowa trasa =
                 // wyjazd solo + zaproszenie znajomych z widoku trasy (bez osobnej sesji).
                 <>
-                  <ActionTile icon={MapPin} label={t("create_trip")} onClick={handleCreateWyjazd} />
+                  <ActionTile icon={BrandPin} label={t("create_trip")} onClick={handleCreateWyjazd} />
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
                 </>
               ) : !planStep ? (
                 <>
                   <ActionTile icon={Layers} label={t("create_collection")} onClick={handleCreateCollection} />
-                  <ActionTile icon={MapPin} label={t("plan")} onClick={() => setPlanStep(true)} />
+                  <ActionTile icon={BrandPin} label={t("plan")} onClick={() => setPlanStep(true)} />
                 </>
               ) : (
                 <>
-                  <ActionTile icon={MapPin} label={t("plan_solo")} onClick={handleSoloPlan} />
+                  <ActionTile icon={BrandPin} label={t("plan_solo")} onClick={handleSoloPlan} />
                 </>
               )}
             </div>

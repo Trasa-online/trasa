@@ -1,8 +1,8 @@
 import { BrandSpinner } from "@/components/BrandSpinner";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, Plus, Check } from "lucide-react";
-import { BrandCalendar } from "@/components/BrandIcon";
+import { ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, Plus, Check } from "lucide-react";
+import { BrandCalendar, BrandPin } from "@/components/BrandIcon";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
@@ -567,7 +567,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           )}
           {metaPlace && (
             <div className="flex min-w-0 items-center gap-1">
-              <MapPin className="h-3 w-3 shrink-0 text-white/50" />
+              <BrandPin className="h-3 w-3 shrink-0 text-white/50" />
               <span className="text-white/60 text-xs truncate">{metaPlace}</span>
             </div>
           )}

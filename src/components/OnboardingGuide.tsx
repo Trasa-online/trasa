@@ -2,8 +2,8 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { useTranslation } from "react-i18next";
 import type { ReactNode, CSSProperties, ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, User, Plus } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { User, Plus } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { isNative } from "@/lib/platform";
 import { COACH_PENDING_KEY } from "@/components/onboarding/OnboardingFlow";
 
@@ -91,7 +91,7 @@ const STEPS: StepCfg[] = [
     ctaKey: "guide.next",
   },
   {
-    icon: MapPin, target: '[data-ob="nav-miejsca"]', route: "/miejsca",
+    icon: BrandPin, target: '[data-ob="nav-miejsca"]', route: "/miejsca",
     titleKey: "guide.places_title",
     bodyKey: "guide.places_desc",
     ctaKey: "guide.next",

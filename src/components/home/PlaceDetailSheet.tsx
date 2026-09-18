@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, MapPin, ExternalLink } from "lucide-react";
+import { Loader2, ExternalLink } from "lucide-react";
+import { BrandPin } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached, getCachedPhotoVariant } from "@/lib/placePhotos";
 import { fetchPlaceUserPhotos } from "@/lib/placeUserPhotos";
@@ -210,7 +211,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors"
             >
-              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <BrandPin className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1">{t("place.open_maps")}</span>
               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
             </a>
@@ -236,7 +237,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors"
             >
-              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <BrandPin className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1">{t("place.search_maps")}</span>
               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
             </a>

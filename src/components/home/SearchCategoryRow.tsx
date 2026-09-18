@@ -1,4 +1,5 @@
-import { Folder, FileText, MapPin, Users } from "lucide-react";
+import { Folder, FileText, Users } from "lucide-react";
+import { BrandPin } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { haptics } from "@/hooks/useHaptics";
 
@@ -43,7 +44,7 @@ export default function SearchCategoryRow({ value, onChange }: { value: SearchCa
                 <Users className="h-6 w-6 text-foreground" strokeWidth={1.8} />
               ) : (
                 // Konturowa pinezka - bez wypelnienia, spojnie z reszta ikon w wierszu.
-                <MapPin className="h-6 w-6 text-foreground" strokeWidth={1.8} />
+                <BrandPin className="h-6 w-6 text-foreground" strokeWidth={1.8} />
               )}
             </span>
             <span className="text-xs font-medium text-foreground leading-4 truncate">{t(c.labelKey)}</span>

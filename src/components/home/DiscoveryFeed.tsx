@@ -18,8 +18,8 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
-import { MapPin, X, Sparkles, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
-import { BrandCalendar, BrandTrash, BrandSearch, BrandGlobe, BrandPencil } from "@/components/BrandIcon";
+import { X, Sparkles, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { BrandCalendar, BrandTrash, BrandSearch, BrandGlobe, BrandPencil, BrandPin } from "@/components/BrandIcon";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -523,7 +523,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               <div className="flex rounded-full bg-muted p-0.5">
                 <button onClick={() => setContentView("places")}
                   className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-medium transition-colors ${contentView === "places" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <MapPin className="h-4 w-4" />{t("places")}
+                  <BrandPin className="h-4 w-4" />{t("places")}
                 </button>
                 <button onClick={() => setContentView("gallery")}
                   className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
@@ -808,7 +808,7 @@ function UserPolecajkiRow({
                   ) : <span />}
                   {col.city && (
                     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
-                      <MapPin className="h-3 w-3" />{col.city}
+                      <BrandPin className="h-3 w-3" />{col.city}
                     </span>
                   )}
                 </div>
@@ -870,7 +870,7 @@ function PolecaneRow({
                 <p className="font-bold text-sm leading-snug line-clamp-2">{entry.title}</p>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground min-w-0">
-                    <MapPin className="h-3 w-3 shrink-0" />
+                    <BrandPin className="h-3 w-3 shrink-0" />
                     <span className="truncate">{entry.city ?? "-"}</span>
                   </div>
                   {entry.kind === "route" ? (
@@ -1039,7 +1039,7 @@ function RouteCardH({ route, onClick }: { route: PolecaneRoute; onClick: () => v
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <p className="text-white font-bold text-sm leading-snug line-clamp-2 drop-shadow-sm">{route.title}</p>
           <p className="text-white/85 text-[11px] mt-1 flex items-center gap-1">
-            <MapPin className="h-3 w-3 shrink-0" />{route.city ?? "-"}
+            <BrandPin className="h-3 w-3 shrink-0" />{route.city ?? "-"}
             {route.placeCount ? <span className="opacity-70">· {route.placeCount}</span> : null}
           </p>
         </div>
@@ -1061,7 +1061,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
         {route.placeCount ? (
           <span className="absolute top-3 left-3 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 text-[11px] font-semibold text-white flex items-center gap-1">
-            <MapPin className="h-3 w-3" />{t("places_count", { count: route.placeCount })}
+            <BrandPin className="h-3 w-3" />{t("places_count", { count: route.placeCount })}
           </span>
         ) : null}
       </div>
@@ -1150,7 +1150,7 @@ function BigCard({
       <div className="mt-2.5 flex items-center gap-3 text-sm">
         {placeCount > 0 && (
           <span className="flex items-center gap-1 text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" />
+            <BrandPin className="h-3.5 w-3.5" />
             <span className="font-semibold">{t("places_count", { count: placeCount })}</span>
           </span>
         )}
@@ -2407,7 +2407,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           {p.city && (
                             <span className="flex items-center gap-0.5 min-w-0">
-                              <MapPin className="h-3 w-3 shrink-0" />
+                              <BrandPin className="h-3 w-3 shrink-0" />
                               <span className="truncate">{p.city}</span>
                             </span>
                           )}

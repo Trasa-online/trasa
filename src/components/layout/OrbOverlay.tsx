@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Send, Mic, MicOff, Camera, MapPin, Coffee, Utensils, Loader2, Plus } from "lucide-react";
-import { BrandMap, BrandCheck } from "@/components/BrandIcon";
+import { X, Send, Mic, MicOff, Camera, Coffee, Utensils, Loader2, Plus } from "lucide-react";
+import { BrandMap, BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -239,7 +239,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
     chips.push({
       label: tHome("chip_edit_plan", { city: route.city }),
       query: "",
-      icon: <MapPin className="h-3 w-3" />,
+      icon: <BrandPin className="h-3 w-3" />,
       action: () => { onClose(); navigate(`/edit-plan?route=${route.id}`); },
     });
   }

@@ -1,5 +1,5 @@
-import { ChevronDown, MapPin } from "lucide-react";
-import { BrandCheck } from "@/components/BrandIcon";
+import { ChevronDown } from "lucide-react";
+import { BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,7 @@ export default function RegionSelect({
           aria-label={t("region.pick_city")}
         >
           {/* Globus przy "Wszystkie" usuniety (2026-08-04) - ikona pinezki tylko dla konkretnego miasta. */}
-          {!isAll && <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />}
+          {!isAll && <BrandPin className="h-3.5 w-3.5 text-primary shrink-0" />}
           <span className="text-sm font-bold text-foreground truncate">{isAll ? t("region.all") : cur}</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         </button>

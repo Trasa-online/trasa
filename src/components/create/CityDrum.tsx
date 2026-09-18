@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, MapPin, Loader2 } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
@@ -171,7 +171,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
                 <button key={r.full_address} type="button"
                   onClick={() => { onCityChange(r.name); setQuery(""); setResults([]); }}
                   className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors active:bg-muted/60", selected ? "bg-secondary" : "")}>
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <BrandPin className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{r.full_address}</p>
