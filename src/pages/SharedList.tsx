@@ -10,8 +10,8 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Loader2, MoreHorizontal, Palette, Plus, Users, X } from "lucide-react";
-import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil, BrandNote, BrandPin } from "@/components/BrandIcon";
+import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Loader2, MoreHorizontal, Plus, X } from "lucide-react";
+import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil, BrandNote, BrandPin, BrandPalette, BrandUsers } from "@/components/BrandIcon";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scrollTopTapProps } from "@/lib/scrollTop";
@@ -1010,13 +1010,13 @@ export default function SharedList() {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onSelect={() => setPeopleOpen(true)} className="gap-2.5 py-2.5">
-                    <Users className="h-4 w-4" />{t("aria.list_people")}
+                    <BrandUsers className="h-4 w-4" />{t("aria.list_people")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setScopeOpen(true)} className="gap-2.5 py-2.5">
                     <BrandPin className="h-4 w-4" />{t("aria.list_scope")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setThemeOpen(true)} className="gap-2.5 py-2.5">
-                    <Palette className="h-4 w-4" />{t("aria.list_theme")}
+                    <BrandPalette className="h-4 w-4" />{t("aria.list_theme")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
                     <BrandTrash className="h-4 w-4" />{t("aria.delete_list")}

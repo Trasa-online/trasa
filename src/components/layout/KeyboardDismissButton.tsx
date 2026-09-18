@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isNative } from "@/lib/platform";
 import { haptics } from "@/hooks/useHaptics";
+import { BrandKeyboardHide } from "@/components/BrandIcon";
 
 // Plywajacy guzik "schowaj klawiature" NAD klawiatura (prosba Nat 2026-09-18). WKWebView nie ma
 // paska z "Gotowe" nad klawiatura dla pol w stronie (Capacitor go wylacza), wiec user, ktory
@@ -57,12 +58,8 @@ export default function KeyboardDismissButton() {
       data-no-drag
       className="fixed right-3 bottom-3 z-[80] flex h-11 w-11 items-center justify-center rounded-full bg-[#FDF184] text-[#5B2C06] border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.18)] active:scale-95 transition-transform animate-in fade-in zoom-in-75 duration-150"
     >
-      {/* Ikona "schowaj klawiature": klawiatura + chevron w dol (wzor systemowy, w kresce lucide). */}
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <rect x="3" y="3" width="18" height="11" rx="2" />
-        <path d="M7 7h.01M11 7h.01M15 7h.01M7 10h10" />
-        <path d="m8 18 4 3 4-3" />
-      </svg>
+      {/* Brandowa ikona "schowaj klawiature" od Nat (2026-09-18) - maska + currentColor, wiec bierze braz z guzika. */}
+      <BrandKeyboardHide className="h-6 w-6" />
     </button>
   );
 }

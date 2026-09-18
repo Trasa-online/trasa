@@ -103,3 +103,10 @@ export const BrandPin = brand(PIN_ICON);
 // Aparat jako zwykla ikona (maska + currentColor): plakietka przypomnienia o zdjeciach
 // w powiadomieniach (prosba Nat 2026-09-18 - wypelniony aparat zamiast lucide Camera).
 export const BrandCamera = brand(CAMERA_ICON);
+// Piata paczka (2026-09-18): schowaj klawiature, paleta (tlo kolekcji), uzytkownicy (osoby w kolekcji).
+export const KEYBOARD_HIDE_ICON = "/Ikona_SchowajKlawiature.svg";
+export const PALETTE_ICON = "/Ikona_Paleta.svg";
+export const USERS_ICON = "/Ikona_Uzytkownicy.svg";
+export const BrandKeyboardHide = brand(KEYBOARD_HIDE_ICON);
+export const BrandPalette = brand(PALETTE_ICON);
+export const BrandUsers = brand(USERS_ICON);
