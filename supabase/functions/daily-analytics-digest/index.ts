@@ -94,13 +94,13 @@ async function phRows(query: string): Promise<any[][]> {
 }
 
 // ── Resend (wzorzec z monitor-user-threshold) ──
-async function sendEmail(args: { resendKey: string; subject: string; html: string }): Promise<void> {
+async function sendEmail(args: { resendKey: string; subject: string; html: string; to?: string[] }): Promise<void> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${args.resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: "spontaway <noreply@spontaway.com>",
-      to: ALERT_EMAILS,
+      to: args.to ?? ALERT_EMAILS,
       subject: args.subject,
       html: args.html,
     }),
@@ -209,10 +209,15 @@ Deno.serve(async (req) => {
 
   // `{"dry_run": true}` = zbuduj raport i ODDAJ go w odpowiedzi, ale NIE wysylaj maila.
   // Bez tego kazde sprawdzenie zmiany w raporcie kosztuje cztery skrzynki zespolu.
+  // `{"test_to": "adres@..."}` = wyslij raport TYLKO na ten adres (podglad tresci u jednej
+  // osoby zamiast czterech skrzynek zespolu). Adres musi byc na liscie ALERT_EMAILS - to nie
+  // jest kanal do wysylania raportu obcym.
   let dryRun = false;
+  let testTo: string | null = null;
   try {
     const body = await req.json();
     dryRun = body?.dry_run === true;
+    if (typeof body?.test_to === "string" && ALERT_EMAILS.includes(body.test_to.toLowerCase())) testTo = body.test_to.toLowerCase();
   } catch { /* brak ciala zadania = normalny przebieg */ }
 
   try {
@@ -386,11 +391,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    await sendEmail({ resendKey, subject, html });
+    await sendEmail({ resendKey, subject: testTo ? `[TEST] ${subject}` : subject, html, to: testTo ? [testTo] : undefined });
 
     return jsonResponse({
       sent: true,
-      to: ALERT_EMAILS,
+      to: testTo ? [testTo] : ALERT_EMAILS,
       summary: {
         newAccounts, totalAccounts, newRoutes, totalRoutes, newCompleted, newCollections, totalCollections,
         phCollectionsCreated, phPlacesAddedToCollections, phCollectionAdders, activationPct, dau, wau, mau,

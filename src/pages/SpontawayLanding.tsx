@@ -471,7 +471,12 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
 function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   const nb = useNb();
   return (
-    <section className="px-4 pb-12 pt-6 lg:px-[50px] lg:pb-[80px] lg:pt-[53px]">
+    <section className="px-8 pb-12 pt-6 lg:px-[50px] lg:pb-[80px] lg:pt-[53px]">
+      {/* MOBILE: zolta karta ma 32 px marginesu z obu stron (`px-8` na sekcji), a mockup
+          telefonow wychodzi POZA nia na cala szerokosc ekranu (`-mx-[52px]` nizej = 32 px
+          sekcji + 20 px paddingu karty) - makieta Nat 2026-09-18: wezsza belka i grafika
+          wystajaca z tla daja hero przestrzennosc. ⛔ Karta NIE moze dostac `overflow-hidden`,
+          bo wtedy przycielaby telefony do swojej szerokosci. */}
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-5 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[40px] lg:py-0 lg:text-left">
         {/* Kolumna z tekstem */}
         <div className="order-1 w-full lg:w-[560px] lg:shrink-0">
@@ -505,7 +510,7 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
             szerokosci ekranu; `aria-hidden`, bo nie niosa tresci.
             ⚠️ Kazda ma INNA animacje (`-alt`, `-slow`): przy wspolnej dwie sasiadujace
             gwiazdki pulsuja rownoczesnie i caly hero zaczyna mrugac jak jeden element. */}
-        <div className="relative order-2 -mx-5 mt-6 w-[calc(100%+40px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]">
+        <div className="relative order-2 -mx-[52px] mt-6 w-[calc(100%+104px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]">
           <img
             src="/grafika_hero.png"
             alt={c.hero.heroAlt}
