@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
-import { ArrowLeft, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical, UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical } from "lucide-react";
 import { BrandCalendar, BrandTrash, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";

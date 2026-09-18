@@ -14,8 +14,8 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users } from "lucide-react";
-import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil } from "@/components/BrandIcon";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, MoreHorizontal, ChevronLeft, Users } from "lucide-react";
+import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil, BrandUserPlus, BrandNote } from "@/components/BrandIcon";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -1940,7 +1940,7 @@ export default function SharedRoute() {
       ...(myNote ? [{
         key: "note",
         label: t("route:note.edit"),
-        icon: <BrandPencil className="h-4 w-4" />,
+        icon: <BrandNote className="h-4 w-4" />,
         onClick: () => setNotePin(pin),
       }] : []),
       {
@@ -2470,7 +2470,7 @@ export default function SharedRoute() {
                   <DropdownMenuContent align="end" className="rounded-2xl w-60" onCloseAutoFocus={(e) => e.preventDefault()}>
                     {isOwner && stage !== "planning" && !choosing && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDescOpenKey((k) => k + 1); }} className="gap-2.5 py-2.5">
-                        <FileText className="h-4 w-4" />
+                        <BrandNote className="h-4 w-4" />
                         {routeDescription ? t("route:note.edit_description") : t("route:note.add_description")}
                       </DropdownMenuItem>
                     )}
@@ -2496,7 +2496,7 @@ export default function SharedRoute() {
                     {/* Zapraszanie tylko HOST: inviteUsersToRoute idzie przez host-only RPC add_member_to_session. */}
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setInviteOpen(true); }} className="gap-2.5 py-2.5">
-                        <UserPlus className="h-4 w-4" />{t("aria.invite_people")}
+                        <BrandUserPlus className="h-4 w-4" />{t("aria.invite_people")}
                       </DropdownMenuItem>
                     )}
                     {isOwner && (

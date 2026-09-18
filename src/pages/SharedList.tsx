@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Loader2, MapPin, MoreHorizontal, Palette, Plus, Users, X } from "lucide-react";
-import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil } from "@/components/BrandIcon";
+import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil, BrandNote } from "@/components/BrandIcon";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scrollTopTapProps } from "@/lib/scrollTop";
@@ -883,7 +883,7 @@ export default function SharedList() {
               {
                 key: "note",
                 label: myNote ? t("route:note.edit") : t("route:note.add"),
-                icon: <BrandPencil className="h-4 w-4" />,
+                icon: <BrandNote className="h-4 w-4" />,
                 onClick: () => setNoteItem(pin),
               },
               {

@@ -3,8 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { UserPlus, Clock, UserCheck, Loader2 } from "lucide-react";
-import { BrandCheck } from "@/components/BrandIcon";
+import { Clock, UserCheck, Loader2 } from "lucide-react";
+import { BrandCheck, BrandUserPlus } from "@/components/BrandIcon";
 import { useFriendStatus, sendFriendRequest, acceptFriendRequest, removeFriend } from "@/hooks/useFriends";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +61,7 @@ export default function FriendButton({ targetUserId, className }: { targetUserId
     );
   return (
     <button onClick={() => act(() => sendFriendRequest(targetUserId), t("friend.request_sent"))} className={cn(base, "bg-primary text-white", className)}>
-      <UserPlus className="h-3.5 w-3.5" /> {t("friend.add")}
+      <BrandUserPlus className="h-3.5 w-3.5" /> {t("friend.add")}
     </button>
   );
 }

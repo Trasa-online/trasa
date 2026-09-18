@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { QrCode, UserPlus } from "lucide-react";
-import { BrandShare } from "@/components/BrandIcon";
+import { QrCode } from "lucide-react";
+import { BrandShare, BrandUserPlus } from "@/components/BrandIcon";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useShare } from "@/hooks/useShare";
 import { haptics } from "@/hooks/useHaptics";
@@ -71,7 +71,7 @@ export default function ReferralCard({ userId }: { userId: string }) {
       <div className="mb-5 rounded-3xl bg-[#FDF184] px-5 pt-5 pb-3">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/70">
-            <UserPlus className="h-5 w-5 text-[#5B2C06]" />
+            <BrandUserPlus className="h-5 w-5 text-[#5B2C06]" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#5B2C06]/70">

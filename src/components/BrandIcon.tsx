@@ -88,3 +88,11 @@ export const BrandCheck = brand(CHECK_ICON);
 export const BrandGlobe = brand(GLOBE_ICON);
 export const BrandInfo = brand(INFO_ICON);
 export const BrandPencil = brand(PENCIL_ICON);
+
+// Czwarta paczka (2026-09-18, wieczor): pomoc, notka, dodaj uzytkownika.
+export const HELP_ICON = "/Ikona_Pomoc.svg";
+export const NOTE_ICON = "/Ikona_Notka.svg";
+export const USER_PLUS_ICON = "/Ikona_DodajUzytkownika.svg";
+export const BrandHelp = brand(HELP_ICON);
+export const BrandNote = brand(NOTE_ICON);
+export const BrandUserPlus = brand(USER_PLUS_ICON);

@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
-import { BrandChat, BrandBell } from "@/components/BrandIcon";
+import { X, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
+import { BrandChat, BrandBell, BrandUserPlus } from "@/components/BrandIcon";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -55,12 +55,12 @@ type NotifT = (key: string, opts?: Record<string, unknown>) => string;
 type Tone = "orange" | "gold" | "brown";
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; tone: Tone; label: (t: NotifT, username: string, metadata?: Record<string, string> | null) => string }> = {
-  follower:       { icon: UserPlus,      tone: "orange", label: (t, u) => t("notif.follower", { user: u }) },
+  follower:       { icon: BrandUserPlus,      tone: "orange", label: (t, u) => t("notif.follower", { user: u }) },
   new_route:      { icon: Route,         tone: "gold",   label: (t, u) => t("notif.new_route", { user: u }) },
   route_updated:  { icon: Route,         tone: "gold",   label: (t, u) => t("notif.route_updated", { user: u }) },
   route_used:     { icon: Bookmark,      tone: "brown",  label: (t, u, m) => t(m?.city ? "notif.route_used_city" : "notif.route_used", { user: u, city: m?.city }) },
   pin_visit:      { icon: MapPin,        tone: "gold",   label: (t, u) => t("notif.pin_visit", { user: u }) },
-  friend_request: { icon: UserPlus,      tone: "orange", label: (t, u) => t("notif.friend_request", { user: u }) },
+  friend_request: { icon: BrandUserPlus,      tone: "orange", label: (t, u) => t("notif.friend_request", { user: u }) },
   friend_accept:  { icon: UserCheck,     tone: "orange", label: (t, u) => t("notif.friend_accept", { user: u }) },
   visit_comment:  { icon: BrandChat, tone: "brown",  label: (t, u, m) => t(m?.place_name ? "notif.visit_comment_place" : "notif.visit_comment", { user: u, place: m?.place_name }) },
   photo_like:     { icon: Heart,         tone: "orange", label: (t, u, m) => t(m?.place_name ? "notif.photo_like_place" : "notif.photo_like", { user: u, place: m?.place_name }) },

@@ -7,8 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFriendList } from "@/lib/friends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
-import { X, Loader2, UserPlus, Clock } from "lucide-react";
-import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
+import { X, Loader2, Clock } from "lucide-react";
+import { BrandSearch, BrandCheck, BrandUserPlus } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -239,7 +239,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
             disabled={!selectedList.length || sending}
             className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><UserPlus className="h-4 w-4" /> {selectedList.length ? t("invite.cta_count", { count: selectedList.length }) : t("invite.cta")}</>}
+            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><BrandUserPlus className="h-4 w-4" /> {selectedList.length ? t("invite.cta_count", { count: selectedList.length }) : t("invite.cta")}</>}
           </button>
         </div>
       </SheetContent>

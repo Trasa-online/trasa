@@ -5,7 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Loader2, UserCheck, UserPlus } from "lucide-react";
+import { Loader2, UserCheck } from "lucide-react";
+import { BrandUserPlus } from "@/components/BrandIcon";
 
 interface FollowButtonProps {
   targetUserId: string;
@@ -94,7 +95,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
           className,
         )}
       >
-        {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : isFollowing ? <UserCheck className="h-4 w-4" strokeWidth={2.4} /> : <UserPlus className="h-4 w-4" strokeWidth={2.4} />}
+        {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : isFollowing ? <UserCheck className="h-4 w-4" strokeWidth={2.4} /> : <BrandUserPlus className="h-4 w-4" strokeWidth={2.4} />}
       </button>
     );
   }
