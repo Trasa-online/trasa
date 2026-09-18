@@ -1830,9 +1830,19 @@ export default function SharedRoute() {
   // maja - to plaska tablica adresow - wiec widac je wylacznie w "Wszystkie". Stad guzik
   // dodawania tez stoi tylko tam: w wybranym dniu obiecywalby przypisanie, ktorego nie ma gdzie
   // zapisac. Zeby zdjecie trafilo do konkretnego dnia, dodaje sie je przy miejscu z tego dnia.
+  // ⛔ Wiersz `pin_photos` NIE MA `day_index` - niesie tylko `place_name`. Do 2026-09-18 szlo tu
+  // `pinDay(pn)` na samym wierszu zdjecia, wiec `Number(undefined) || 1` dawalo KAZDEMU zdjeciu
+  // dzien 1 i przy wyjezdzie na kilka dni cala galeria ladowala w pierwszym dniu (zgloszenie Nat).
+  // Dzien zdjecia liczymy z PINU o tej samej nazwie (ten sam klucz, co `photosByPlace`).
+  const pinByPhotoKey = new Map<string, any>();
+  for (const p of pins as any[]) { const k = pinPhotoKey(p.place_name); if (!pinByPhotoKey.has(k)) pinByPhotoKey.set(k, p); }
+  const photoDay = (ph: PinPhoto): number | null => {
+    const pin = pinByPhotoKey.get(pinPhotoKey(ph.place_name));
+    return pin ? pinDay(pin) : null;
+  };
   const visiblePhotos: string[] = activeDay === null
     ? galleryPhotos
-    : galleryPhotos.filter((u) => { const pn = pinPhotoByUrl.get(u); return !!pn && pinDay(pn) === activeDay; });
+    : galleryPhotos.filter((u) => { const pn = pinPhotoByUrl.get(u); return !!pn && photoDay(pn) === activeDay; });
   // Przewijanie w podgladzie pelnoekranowym zawija sie po tym, CO WIDAC, nie po calosci.
   galleryPhotosCount.current = visiblePhotos.length;
   const pickDay = (day: number | null) => { haptics.selection(); setDayTouched(true); setSelectedDay(day); };
@@ -1922,12 +1932,15 @@ export default function SharedRoute() {
     if (!canEdit || stage === "planning") return undefined;
     const myNote = ((notesMap.get(placeNoteKey(pin.place_name)) ?? []).find((n: any) => n.user_id === user?.id)?.note ?? "").trim();
     return [
-      {
+      // "Dodaj notkę" ZDJETE z wyjazdu (prosba Nat 2026-09-18). Zostaje wylacznie "Edytuj notkę"
+      // dla miejsca, ktore notke JUZ MA - inaczej istniejaca tresc nie mialaby zadnego wejscia
+      // do poprawki ani skasowania (edytor pod wierszem ma `hideActions`).
+      ...(myNote ? [{
         key: "note",
-        label: myNote ? t("route:note.edit") : t("route:note.add"),
+        label: t("route:note.edit"),
         icon: <Pencil className="h-4 w-4" />,
         onClick: () => setNotePin(pin),
-      },
+      }] : []),
       {
         key: "photo",
         label: t("add_place_photo"),

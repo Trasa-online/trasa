@@ -9,7 +9,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "r
 import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
-import { useNativePush } from "@/hooks/useNativePush";
+import { useNativePush, consumePendingPushUrl } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
 import { useNotificationsLive } from "@/hooks/useNotificationsLive";
@@ -18,6 +18,7 @@ import i18n from "@/i18n";
 import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import PermissionPrimerSheet from "@/components/permissions/PermissionPrimerSheet";
+import KeyboardDismissButton from "@/components/layout/KeyboardDismissButton";
 import FrameGiftSheet from "@/components/profile/FrameGiftSheet";
 import { businessPanelPath } from "@/lib/businessRedirect";
 import { fetchMyVenues, pickVenue } from "@/lib/businessVenues";
@@ -473,7 +474,9 @@ function RootPage() {
   }
   // Onboarding v3 = coach-overlay na realnych ekranach (OnboardingProvider), nie osobny route.
   // Ekran startowy = Eksploracja (/eksploruj): jedyny widok odkrywania (IA 2026-09-13).
-  return <Navigate to="/eksploruj" replace />;
+  // Wyjatek: apka wystartowala z tapnietego PUSHA - wtedy ekranem startowym jest jego cel,
+  // inaczej to przekierowanie nadpisywalo nawigacje z pusha (patrz useNativePush).
+  return <Navigate to={consumePendingPushUrl() ?? "/eksploruj"} replace />;
 }
 
 function RouteTracker() {
@@ -832,6 +835,8 @@ const App = () => (
         {/* Zdalna brama minimalnej wersji (native) - patrz UpdateGate. Renderuje sie NAD
             wszystkim (z-200), tylko gdy build jest ponizej progu z app_config. */}
         {isNative && <UpdateGate />}
+        {/* Plywajacy guzik "schowaj klawiature" nad klawiatura - tylko natywka. */}
+        {isNative && <KeyboardDismissButton />}
         <OnboardingProvider>
         <MaintenanceGate>
         <WebWaitlistGate>

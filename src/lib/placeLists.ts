@@ -229,7 +229,7 @@ async function resolveDbPlaceId(googlePlaceId?: string | null): Promise<string |
   }
 }
 
-export async function addPlaceToList(listId: string, place: PlaceForList, opts?: { note?: string | null }): Promise<boolean> {
+export async function addPlaceToList(listId: string, place: PlaceForList, opts?: { note?: string | null; general?: boolean }): Promise<boolean> {
   const { data: existing } = await (supabase as any)
     .from("discovery_items").select("order_index, place_name").eq("collection_id", listId);
   const rows = (existing ?? []) as any[];
@@ -263,7 +263,10 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
   });
   if (error) throw error;
   await (supabase as any).from("discovery_collections").update({ updated_at: new Date().toISOString() }).eq("id", listId);
-  track("list_place_added", { target: "list", collection_id: listId, has_note: !!opts?.note });
+  // `general` = zapis 1-tap do prywatnej "Ogolne" (quickSavePlace). Raport dzienny liczy
+  // "miejsca dodane do KOLEKCJI" bez tej flagi - zapis do wishlisty to inny gest niz
+  // dopisanie miejsca do kuratorskiej kolekcji (2026-09-18).
+  track("list_place_added", { target: "list", collection_id: listId, has_note: !!opts?.note, general: !!opts?.general });
   // "Ktos dodal miejsce do kolekcji" - powiadomienie dla ZAPISUJACYCH i OBSERWUJACYCH autora
   // (RPC sam sprawdza wlasciciela, publicznosc kolekcji i dedupuje 5 min). Wolane TUTAJ, a nie
   // w widoku kolekcji, bo przez ten widok idzie tylko czesc dodan - najczestsza sciezka to
@@ -309,6 +312,9 @@ export async function createListWithPlace(
     .select("id")
     .single();
   if (error || !col) { console.error("[placeLists] create list failed:", error?.message ?? error); return null; }
+  // Wishlista to_visit powstaje raz na usera (ensureToVisitList) - nie liczymy jej jako
+  // "utworzona kolekcja"; do raportu ida wylacznie kuratorskie (visited).
+  if (isRecommend) track("collection_created", { collection_id: col.id, place_count: 1, is_public: isPublic, source: "single_place" });
   await addPlaceToList(col.id, { ...place, city: place.city ?? city });
   return col.id as string;
 }
@@ -365,6 +371,10 @@ export async function createListFromSavedPlaces(
       return null;
     }
   }
+  // `collection_created` = JEDNO zdarzenie na nowa kolekcje, niezaleznie od publicznosci i
+  // sciezki (kreator, "zapisz do nowej", CreateRanking) - to je czyta raport dzienny.
+  // `list_published` zostaje jako krok lejka (patrz lib/analytics.ts).
+  track("collection_created", { collection_id: listId, city: city ?? null, place_count: places.length, is_public: isPublic, source: "create_flow" });
   if (isPublic) track("list_published", { collection_id: listId, city: city ?? null, place_count: places.length, source: "create_flow" });
   // Publiczna -> powiadom admina (best-effort, nie blokuj flow). Lista jest widoczna od razu.
   if (isPublic) {
@@ -402,7 +412,7 @@ export async function quickSavePlace(
   const listId = await ensureToVisitList(userId, city, author);
   if (!listId) return { listId: null, added: false };
   // Lista "Ogolne" nie ma miasta, wiec zapisujemy je przy miejscu (kontekst zapisu).
-  const added = await addPlaceToList(listId, { ...place, city: place.city ?? city });
+  const added = await addPlaceToList(listId, { ...place, city: place.city ?? city }, { general: true });
   if (added) track("place_saved", {
     place_id: place.place_id ?? (place as { google_place_id?: string }).google_place_id ?? null,
     place_name: place.place_name,

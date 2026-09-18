@@ -2,6 +2,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
+import { isInternalAnalyticsAccount } from "@/lib/internalAccounts";
 
 const CONSENT_KEY = "trasa_cookie_consent_v2";
 
@@ -14,12 +15,6 @@ function emitConsentResolved() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(CONSENT_RESOLVED_EVENT));
 }
-
-// Internal accounts excluded from Clarity session recording
-const CLARITY_EXCLUDED_EMAILS = new Set([
-  "nat.maz98@gmail.com",
-  "tomalab97@gmail.com",
-]);
 
 export type ConsentStatus = "granted" | "denied" | null;
 
@@ -43,7 +38,7 @@ function applyClarityConsent(status: "granted" | "denied", email?: string | null
   // caly czas uzywania appki (obserwacja DOM + cykliczny upload), a produktowo i tak mierzymy
   // wszystko PostHogiem. Na native NIE uruchamiamy jej wcale.
   if (isNative) return;
-  if (email && CLARITY_EXCLUDED_EMAILS.has(email.toLowerCase())) return;
+  if (isInternalAnalyticsAccount(email)) return;
   if (typeof window !== "undefined" && typeof window._clarityInit === "function") {
     window._clarityInit();
   }
@@ -61,19 +56,20 @@ export async function initClarityOnBoot(): Promise<void> {
   }
 }
 
-function applyPosthogConsent(status: "granted" | "denied") {
+// Konto zespolu NIGDY nie wchodzi w capture - nawet po zgodzie na cookies (lib/internalAccounts).
+export function applyPosthogConsent(status: "granted" | "denied", email?: string | null) {
   if (typeof window === "undefined") return;
   const ph = (window as any).posthog;
   if (!ph) return;
-  if (status === "granted") ph.opt_in_capturing();
+  if (status === "granted" && !isInternalAnalyticsAccount(email)) ph.opt_in_capturing();
   else ph.opt_out_capturing();
 }
 
 export async function grantConsent() {
   localStorage.setItem(CONSENT_KEY, "granted");
   applyGtagConsent("granted");
-  applyPosthogConsent("granted");
   const { data: { user } } = await supabase.auth.getUser();
+  applyPosthogConsent("granted", user?.email);
   applyClarityConsent("granted", user?.email);
   void saveConsentToProfile("granted");
   emitConsentResolved();
@@ -116,7 +112,7 @@ export async function syncConsentFromProfile(): Promise<boolean> {
     localStorage.setItem(CONSENT_KEY, dbConsent);
     if (dbConsent === "granted") {
       applyGtagConsent("granted");
-      applyPosthogConsent("granted");
+      applyPosthogConsent("granted", user.email);
       applyClarityConsent("granted", user.email);
     } else {
       applyPosthogConsent("denied");

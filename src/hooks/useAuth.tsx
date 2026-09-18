@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, createContext, ReactNode, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import posthog from "posthog-js";
+import { isInternalAnalyticsAccount } from "@/lib/internalAccounts";
 import { supabase } from "@/integrations/supabase/client";
 import { applyPendingReferral } from "@/lib/referral";
 
@@ -57,12 +58,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // objac WSZYSTKIE sciezki: email, OAuth (Apple/Google), magic link i wznowienie sesji po
     // restarcie apki. Bez identify lejki licza anonimowe distinct_id zamiast userow.
     // Anonimowych (guest mode) NIE identyfikujemy - to nie sa konta.
+    // Konta zespolu (lib/internalAccounts) NIE sa identyfikowane i maja capture WYLACZONY -
+    // inaczej kazdy test zalozycieli liczyl sie w raporcie jak ruch userow (Nat 2026-09-18).
     const identifiedUserId = { current: null as string | null };
     const identifyIfNeeded = (session: Session | null) => {
       const u = session?.user;
       if (!u || (u as any).is_anonymous) return;
       if (identifiedUserId.current === u.id) return;
       identifiedUserId.current = u.id;
+      if (isInternalAnalyticsAccount(u.email)) {
+        try { posthog.opt_out_capturing(); } catch { /* SDK jeszcze nie wstal - main.tsx i tak nie wlaczy capture dla tego konta */ }
+        return;
+      }
       try { posthog.identify(u.id, { email: u.email }); }
       catch (e) { console.warn("[useAuth] posthog.identify:", e instanceof Error ? e.message : e); }
     };

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useTranslation, Trans } from "react-i18next";
 import { usePostHog } from "@posthog/react";
+import { isInternalAnalyticsAccount } from "@/lib/internalAccounts";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { isNative } from "@/lib/platform";
 import WelcomeDeck from "@/components/auth/WelcomeDeck";
@@ -210,8 +211,12 @@ const Auth = () => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      posthog.identify(data.user!.id, { email: data.user!.email });
-      posthog.capture("user_signed_in", { business_mode: businessMode });
+      // Konto zespolu: wylacz capture zamiast identify (lib/internalAccounts).
+      if (isInternalAnalyticsAccount(data.user!.email)) posthog.opt_out_capturing();
+      else {
+        posthog.identify(data.user!.id, { email: data.user!.email });
+        posthog.capture("user_signed_in", { business_mode: businessMode });
+      }
 
       // Check for business profile (covers both businessMode and regular login for biz accounts).
       // Hardcoded admins (Nat, Tomek) loguja sie konsumencko mimo posiadania biz profilu -

@@ -165,5 +165,8 @@
   },
   "splash": {
     "made_in": "STWORZONE W POLSCE"
+  },
+  "keyboard": {
+    "hide": "Schowaj klawiaturę"
   }
 }

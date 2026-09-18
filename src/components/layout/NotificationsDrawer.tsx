@@ -107,6 +107,7 @@ const ACTION_TYPES = new Set(["route_invite", "group_invite", "list_invite", "fr
 function targetOf(n: Notification): { to: string; state?: unknown } | null {
   const rid = n.route_id ?? n.metadata?.route_id ?? null;
   const cid = n.metadata?.collection_id ?? null;
+  const actorUsername = n.actor?.username ?? null;
   switch (n.type) {
     case "trip_message":
       return rid ? { to: `/route/${rid}`, state: { openChat: true } } : null;
@@ -133,7 +134,8 @@ function targetOf(n: Notification): { to: string; state?: unknown } | null {
     case "friend_request":
     case "friend_accept":
     case "follower":
-      return { to: "/moj-profil" };
+      // "X zaczal Cie obserwowac" - najbardziej naturalny cel to profil TEJ osoby, nie wlasny.
+      return actorUsername ? { to: `/profil/${actorUsername}` } : { to: "/moj-profil" };
     default:
       return null;
   }
@@ -341,13 +343,17 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
     };
     const Icon = cfg.icon;
     const username = n.actor?.username ?? t("notif.someone");
-    const actorUsername = n.actor?.username ?? null;
-    const openActor = actorUsername && n.type !== "business_thanks"
-      ? () => { track("notification_opened", { type: n.type }); go(`/profil/${actorUsername}`); }
-      : undefined;
     const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
     const thumb = thumbFor(n);
+    // CALY wiersz - awatar, zdanie i miniatura - prowadzi do JEDNEGO celu (2026-09-18).
+    // Do tego dnia awatar mial WLASNY cel (profil autora), a zdanie obok - tresc. PostHog
+    // pokazal, ze userzy tapaja w awatar z plakietka typu (najbardziej "klikalny" element
+    // wiersza) i laduja na profilu autora zamiast w wyjezdzie czy kolekcji, a przy
+    // przypomnieniu o wyjezdzie (bez autora) tapniecie w awatar nie robilo NIC - stad
+    // zgloszenie Nat "nie dziala przekierowanie z powiadomien do wyjazdu". Profil autora
+    // jest o jedno tapniecie dalej - z pigulki autora w samym wyjezdzie/kolekcji.
     const tappable = !!targetOf(n);
+    const open = tappable ? () => openNotif(n) : undefined;
 
     return (
       <div key={n.id} className="relative flex items-start gap-3 py-3 pl-5 pr-4">
@@ -355,10 +361,8 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
             bg-primary/5 ginelo pod peachy karta zaproszenia i pod kolorem kolekcji. */}
         {!n.read && <span className="absolute left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" aria-hidden />}
         <div
-          className={`relative flex-shrink-0 ${openActor ? "active:opacity-70 transition-opacity" : ""}`}
-          onClick={openActor}
-          role={openActor ? "button" : undefined}
-          aria-label={openActor ? t("notif.profile_of", { username }) : undefined}
+          className={`relative flex-shrink-0 ${open ? "active:opacity-70 transition-opacity" : ""}`}
+          onClick={open}
         >
           <img
             src={n.type === "business_thanks" && n.metadata?.logo_url
@@ -375,7 +379,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         </div>
         <div
           className={`flex-1 min-w-0 ${tappable ? "active:opacity-70 transition-opacity" : ""}`}
-          onClick={tappable ? () => openNotif(n) : undefined}
+          onClick={open}
           role={tappable ? "button" : undefined}
         >
           <p className="text-sm leading-snug text-foreground/85">{cfg.label(t, username, n.metadata)}</p>
@@ -384,11 +388,11 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         {thumb?.photo && (
           <img src={thumb.photo} alt="" loading="lazy"
             className="h-11 w-11 flex-shrink-0 rounded-xl object-cover bg-muted"
-            onClick={tappable ? () => openNotif(n) : undefined} />
+            onClick={open} />
         )}
         {!thumb?.photo && thumb?.color && (
           <span className="h-11 w-11 flex-shrink-0 rounded-xl" style={{ background: thumb.color }}
-            onClick={tappable ? () => openNotif(n) : undefined} aria-hidden />
+            onClick={open} aria-hidden />
         )}
         <button
           onClick={() => deleteOneMutation.mutate(n.id)}
