@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, UserCheck, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
-import { BrandChat, BrandBell, BrandUserPlus, BrandPin } from "@/components/BrandIcon";
+import { X, UserCheck, Route, Bookmark, CheckCircle2, XCircle, Heart, EyeOff, Users } from "lucide-react";
+import { BrandChat, BrandBell, BrandUserPlus, BrandPin, BrandCamera } from "@/components/BrandIcon";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -84,7 +84,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; tone: Tone; label: 
     t(m?.kind === "photo" ? "notif.business_thanks_photo" : "notif.business_thanks", { business: m?.business_name ?? t("notif.business_fallback") }) },
   // Tresc liczona z metadanych kompletnosci (enqueue_trip_reminders): ZDJECIA maja priorytet,
   // potem notki, a na koncu zacheta do publikacji.
-  trip_reminder:  { icon: Camera,   tone: "gold",   label: (t, _u, m) => {
+  trip_reminder:  { icon: BrandCamera,   tone: "gold",   label: (t, _u, m) => {
     const city = m?.city ? t("notif.city_suffix", { city: m.city }) : "";
     const photos = Number(m?.missing_photos ?? 0);
     const notes = Number(m?.missing_notes ?? 0);

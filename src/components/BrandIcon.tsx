@@ -100,3 +100,6 @@ export const BrandUserPlus = brand(USER_PLUS_ICON);
 // "podmien wszedzie ikonke pina") - zastepuje lucide `MapPin` w calej apce B2C.
 export const PIN_ICON = "/Ikona_Miejsca.svg";
 export const BrandPin = brand(PIN_ICON);
+// Aparat jako zwykla ikona (maska + currentColor): plakietka przypomnienia o zdjeciach
+// w powiadomieniach (prosba Nat 2026-09-18 - wypelniony aparat zamiast lucide Camera).
+export const BrandCamera = brand(CAMERA_ICON);
