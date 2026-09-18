@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, Search, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
+import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
 
 // Wspolny wybor kraju (dropdown) + miasta (drum-scroll). Wydzielony z CountryCityPicker,
 // reuse w nowym CreateFlowSheet (arkusz "Nowy wyjazd") oraz na pelnoekranowym /utworz.
@@ -131,7 +131,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
                 {TRIP_REGIONS.map((region) => (
                   <optgroup key={region} label={region}>
                     {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
-                      <option key={c.name} value={c.name}>{c.name}</option>
+                      <option key={c.name} value={c.name}>{countryLabel(c.name)}</option>
                     ))}
                   </optgroup>
                 ))}

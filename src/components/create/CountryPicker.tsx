@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Search, X } from "lucide-react";
 import { haptics } from "@/hooks/useHaptics";
-import { TRIP_COUNTRIES, TRIP_REGIONS } from "@/lib/tripCountries";
+import { TRIP_COUNTRIES, TRIP_REGIONS, countryLabel } from "@/lib/tripCountries";
 
 // Wybor KRAJOW wyjazdu/listy (2026-09-10). Zastapil drum-scroll z miastem.
 //
@@ -44,7 +44,8 @@ export default function CountryPicker({ selected, onChange }: {
   // pomaga, a puste sekcje tylko rozbijaja liste.
   const q = norm(query.trim());
   const matches = useMemo(
-    () => (q ? TRIP_COUNTRIES.filter((c) => norm(c.name).includes(q)) : []),
+    // Szukanie po nazwie polskiej I angielskiej - w angielskiej apce user wpisze "Germany".
+    () => (q ? TRIP_COUNTRIES.filter((c) => norm(c.name).includes(q) || norm(countryLabel(c.name)).includes(q)) : []),
     [q],
   );
 
@@ -57,7 +58,7 @@ export default function CountryPicker({ selected, onChange }: {
         onClick={() => toggle(name)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-2xl active:bg-secondary/60 transition-colors"
       >
-        <span className="flex-1 min-w-0 text-[15px] font-medium text-foreground truncate">{name}</span>
+        <span className="flex-1 min-w-0 text-[15px] font-medium text-foreground truncate">{countryLabel(name)}</span>
         <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${on ? "bg-primary text-white" : "border-2 border-border"}`}>
           {on && <Check className="h-3.5 w-3.5 stroke-[3]" />}
         </span>
@@ -95,7 +96,7 @@ export default function CountryPicker({ selected, onChange }: {
                 onClick={() => toggle(c)}
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary text-white pl-3 pr-2 py-1.5 text-[13px] font-semibold active:scale-95 transition-transform"
               >
-                {c}
+                {countryLabel(c)}
                 <X className="h-3.5 w-3.5" />
               </button>
             ))}

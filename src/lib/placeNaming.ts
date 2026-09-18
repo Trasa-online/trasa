@@ -1,3 +1,4 @@
+import { countryLabel } from "@/lib/tripCountries";
 // Domyslne nazwy nowej KOLEKCJI i WYJAZDU (prosba Nat 2026-09-14). Do tej pory arkusz
 // tworzenia sklejal same kraje ("Polska · Czechy") albo dawal goly fallback ("Nowa lista"),
 // wiec na profilu lezaly pozycje bez sensownego tytulu.
@@ -130,13 +131,14 @@ function buildName(
   // forma z dwukropkiem - czytelna i zawsze poprawna.
   if (!named) {
     if (countries.length > 1) {
-      const joined = countries.join(" · ");
+      const joined = countries.map(countryLabel).join(" · ");
       return fill(kind === "collection" ? s.collectionPlain : s.tripPlain, joined);
     }
     return kind === "collection" ? s.collectionFallback : s.tripFallback;
   }
   if (!s.declines) {
-    return fill(kind === "collection" ? s.collectionIn : s.tripTo, named);
+    // EN: kraj z danych jest po polsku (klucz) - na ekran idzie jego angielska nazwa.
+    return fill(kind === "collection" ? s.collectionIn : s.tripTo, countryLabel(named));
   }
   const table = kind === "collection" ? LOC_PHRASE : DIR_PHRASE;
   const declined = table[named];
