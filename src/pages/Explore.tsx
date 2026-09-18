@@ -6,8 +6,8 @@ import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { track } from "@/lib/analytics";
-import { Heart, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
-import { BrandTrash } from "@/components/BrandIcon";
+import { Heart, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -336,7 +336,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
       {/* Waska wyszukiwarka - filtruje po nazwie/opisie. */}
       <div className="pb-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <BrandSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}

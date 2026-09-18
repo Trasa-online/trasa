@@ -7,7 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isHardcodedAdmin } from "@/lib/admins";
-import { Bell, UserCircle2, Settings, BarChart3, ChevronLeft } from "lucide-react";
+import { UserCircle2, BarChart3, ChevronLeft } from "lucide-react";
+import { BrandBell } from "@/components/BrandIcon";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -144,7 +145,7 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
             className="relative h-9 w-9 flex items-center justify-center text-muted-foreground"
             aria-label="Powiadomienia"
           >
-            <Bell className="h-5 w-5" />
+            <BrandBell className="h-5 w-5" />
             {unreadCount > 0 && (
               <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
                 {unreadCount > 9 ? "9+" : unreadCount}

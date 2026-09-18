@@ -18,8 +18,8 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
-import { MapPin, X, Globe, Sparkles, Pencil, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
-import { BrandCalendar, BrandTrash } from "@/components/BrandIcon";
+import { MapPin, X, Globe, Sparkles, Pencil, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { BrandCalendar, BrandTrash, BrandSearch } from "@/components/BrandIcon";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -2424,7 +2424,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         ) : (
           <div className="py-16 text-center px-8 flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-[#fcede3] flex items-center justify-center mb-3">
-              <Search className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />
+              <BrandSearch className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />
             </div>
             <p className="text-base font-bold">{t("no_results")}</p>
             <p className="text-sm text-muted-foreground mt-1">{t("no_results_hint")}</p>

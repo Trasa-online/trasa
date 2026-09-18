@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePostHog } from "@posthog/react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Loader2, ArrowLeft, Send, Mic, MicOff, ChevronDown } from "lucide-react";
+import { Loader2, ArrowLeft, Send, Mic, MicOff, ChevronDown } from "lucide-react";
+import { BrandSettings } from "@/components/BrandIcon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import RoutePlanTimeline from "@/components/route/RoutePlanTimeline";
@@ -299,7 +300,7 @@ const DayReview = () => {
           </button>
           <button onClick={() => navigate("/")} className="text-2xl font-black tracking-tight">TRASA</button>   {/* i18n-ignore: nazwa marki */}
           <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
-            <Settings className="h-6 w-6" />
+            <BrandSettings className="h-6 w-6" />
           </button>
         </header>
         <div className="flex-1 flex items-center justify-center">
@@ -318,7 +319,7 @@ const DayReview = () => {
         </button>
         <h1 className="text-2xl font-black tracking-tight">TRASA</h1>   {/* i18n-ignore: nazwa marki */}
         <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
-          <Settings className="h-6 w-6" />
+          <BrandSettings className="h-6 w-6" />
         </button>
       </header>
 

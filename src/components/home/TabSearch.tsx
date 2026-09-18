@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, MapPin, Search, Users } from "lucide-react";
-import { BrandIcon, LIST_ICON } from "@/components/BrandIcon";
+import { ChevronLeft, ChevronRight, MapPin, Users } from "lucide-react";
+import { BrandIcon, LIST_ICON, BrandSearch } from "@/components/BrandIcon";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
 import { type SearchCat } from "@/components/home/SearchCategoryRow";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -85,7 +85,7 @@ export function TabSearchButton({ s }: { s: TabSearchState }) {
       // Ten sam okragly ksztalt, co dzwonek obok (NotificationsBell) - jeden jezyk ikon w belce.
       className="relative shrink-0 h-9 w-9 flex items-center justify-center rounded-full bg-muted/70 border border-border/50 text-foreground active:scale-95 transition-transform"
     >
-      <Search className="h-4 w-4" />
+      <BrandSearch className="h-4 w-4" />
     </button>
   );
 }

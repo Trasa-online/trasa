@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { BrandBell } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { haptics } from "@/hooks/useHaptics";
@@ -49,7 +49,7 @@ export default function NotificationsBell({ userId, className }: { userId: strin
         // 2026-09-13: kwadratowy dzwonek przy okraglej pigulce szukania wygladal jak z innego zestawu).
         className={className ?? "relative shrink-0 h-9 w-9 flex items-center justify-center rounded-full bg-muted/70 border border-border/50 text-foreground active:scale-95 transition-transform"}
       >
-        <Bell className="h-4 w-4" />
+        <BrandBell className="h-4 w-4" />
         {unread > 0 && (
           <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center leading-none">
             {unread > 9 ? "9+" : unread}

@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
-import { ArrowLeft, Search, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
-import { BrandCalendar, BrandTrash } from "@/components/BrandIcon";
+import { ArrowLeft, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
+import { BrandCalendar, BrandTrash, BrandSearch } from "@/components/BrandIcon";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { avatarSrc } from "@/lib/avatar";
@@ -764,7 +764,7 @@ export default function ComposeWyjazd() {
         {/* Wyszukiwarka */}
         <div className="px-4 pt-3">
           <div className="relative">
-            <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <BrandSearch className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setTimeout(() => setSearchFocused(false), 150)}

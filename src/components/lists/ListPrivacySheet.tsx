@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, Globe2, Lock } from "lucide-react";
+import { Check, Globe2 } from "lucide-react";
+import { BrandLock } from "@/components/BrandIcon";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -85,7 +86,7 @@ export default function ListPrivacySheet({ open, onOpenChange, listId, isPublic,
           />
           <Option
             active={!isPublic}
-            icon={<Lock className="h-[18px] w-[18px]" strokeWidth={2.2} />}
+            icon={<BrandLock className="h-[18px] w-[18px]" strokeWidth={2.2} />}
             label={t("privacy.private_label")}
             desc={t("privacy.private_desc")}
             // Ostrzezenie pokazujemy TYLKO gdy zmiana faktycznie komus dostep zabierze,

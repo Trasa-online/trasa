@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, Lock, Pipette } from "lucide-react";
+import { Check, Pipette } from "lucide-react";
+import { BrandLock } from "@/components/BrandIcon";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -176,7 +177,7 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                   )}
                 </span>
                 {locked ? (
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary"><Lock className="h-3.5 w-3.5 text-muted-foreground" /></span>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary"><BrandLock className="h-3.5 w-3.5 text-muted-foreground" /></span>
                 ) : (
                   <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${active ? "border-primary bg-primary text-white" : "border-border"}`}>
                     {active && <Check className="h-3.5 w-3.5" strokeWidth={3} />}

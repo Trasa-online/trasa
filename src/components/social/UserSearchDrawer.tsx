@@ -7,7 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useAuth } from "@/hooks/useAuth";
-import { X, Search } from "lucide-react";
+import { X } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "./FollowButton";
 import SuggestedUsers from "./SuggestedUsers";
@@ -84,7 +85,7 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex-1 flex items-center gap-2 bg-muted rounded-xl px-3 h-10">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
               type="text"

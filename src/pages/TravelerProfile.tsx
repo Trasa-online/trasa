@@ -6,8 +6,8 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, UserCircle2, ArrowRight, Bell, Search, ChevronLeft } from "lucide-react";
-import { BrandIcon, LIST_ICON, STAR_ICON, BrandShare } from "@/components/BrandIcon";
+import { UserCircle2, ArrowRight, ChevronLeft } from "lucide-react";
+import { BrandIcon, LIST_ICON, STAR_ICON, BrandShare, BrandBell, BrandSearch, BrandSettings } from "@/components/BrandIcon";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
@@ -829,19 +829,19 @@ const TravelerProfile = () => {
                 i zjadalo pion na ekranie, ktory i tak jest gesty (prosba Nat 2026-09-09).
                 Po tapnieciu rozwija sie na cala belke (prop `overlay` nizej). */}
             <button onClick={openSearch} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("common:buttons.search")}>
-              <Search className="h-5 w-5" />
+              <BrandSearch className="h-5 w-5" />
             </button>
             <button onClick={handleShareProfile} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.share_profile_aria")}>
               <BrandShare className="h-5 w-5" />
             </button>
             <button onClick={() => setNotificationsOpen(true)} className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.notifications_aria")}>
-              <Bell className="h-5 w-5" />
+              <BrandBell className="h-5 w-5" />
               {unreadNotifs > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">{unreadNotifs > 9 ? "9+" : unreadNotifs}</span>
               )}
             </button>
             <button onClick={() => navigate("/settings")} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.settings_aria")}>
-              <Settings className="h-5 w-5" />
+              <BrandSettings className="h-5 w-5" />
             </button>
           </>
         }
@@ -958,7 +958,7 @@ const TravelerProfile = () => {
               kategoria "Ludzie". Wczesniej prowadzilo na osobny ekran /search, czyli DRUGI widok
               wyszukiwania obok tego z Eksploracji (prosba Nat 2026-09-09: jedno zrodlo prawdy). */}
           <button onClick={() => { setSearchCat("people"); openSearch(); }} className="h-9 w-9 shrink-0 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform" aria-label={t("profile.find_users_aria")}>
-            <Search className="h-4 w-4" />
+            <BrandSearch className="h-4 w-4" />
           </button>
         </div>
 

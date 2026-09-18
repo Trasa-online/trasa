@@ -16,8 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Plus, Info, MoreVertical, Loader2, GripVertical } from "lucide-react";
-import { BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash } from "@/components/BrandIcon";
+import { ArrowLeft, Camera, X, Globe, Pencil, Check, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Plus, Info, MoreVertical, Loader2, GripVertical } from "lucide-react";
+import { BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandLock } from "@/components/BrandIcon";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import { buildTripStaticMapUrl } from "@/lib/staticMap";
@@ -2028,7 +2028,7 @@ const ReviewSummary = () => {
       </div>
       {/* Gwarancja prywatnosci: galeria zdjec nigdy nie jest udostepniana. */}
       <p className="text-[11px] text-muted-foreground mt-2.5 flex items-start gap-1.5">
-        <Lock className="h-3 w-3 shrink-0 mt-0.5 text-emerald-600" />
+        <BrandLock className="h-3 w-3 shrink-0 mt-0.5 text-emerald-600" />
         <span>{t("sharing.privacy_note")}</span>
       </p>
       {/* Podpis autora */}

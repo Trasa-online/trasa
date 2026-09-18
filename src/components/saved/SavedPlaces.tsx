@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, X, Loader2, MapPin } from "lucide-react";
-import { BrandTrash } from "@/components/BrandIcon";
+import { Plus, X, Loader2, MapPin } from "lucide-react";
+import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -248,7 +248,7 @@ function AddPlaceSheet({ open, onOpenChange, city, onAdded }: {
         <div className="px-5 pt-1 pb-2 shrink-0">
           <p className="text-xl font-black text-foreground mb-3">{t("saved.add_place")}</p>
           <div className="flex items-center gap-2 h-12 px-3.5 rounded-2xl border border-border bg-background">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}

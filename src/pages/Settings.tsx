@@ -13,8 +13,8 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, LifeBuoy, Info, Lock, Wrench } from "lucide-react";
-import { BrandBlock, BrandTrash } from "@/components/BrandIcon";
+import { Camera, LogOut, ChevronRight, Cookie, FileText, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, LifeBuoy, Info, Wrench } from "lucide-react";
+import { BrandBlock, BrandTrash, BrandBell, BrandLock, BrandShield } from "@/components/BrandIcon";
 import TrashSheet from "@/components/profile/TrashSheet";
 import AvatarFrameSheet, { useMyAvatarFrame } from "@/components/profile/AvatarFrameSheet";
 import AvatarFrame from "@/components/profile/AvatarFrame";
@@ -198,7 +198,7 @@ function NativePushRow() {
       disabled={busy}
       className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
     >
-      <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <BrandBell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
       <span className={`text-xs font-semibold ${status === "granted" ? "text-emerald-600" : status === "denied" ? "text-muted-foreground" : "text-primary"}`}>{label}</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -213,7 +213,7 @@ function PushToggleSection() {
   if (!isSupported) return null;
   return (
     <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px]">
-      <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <BrandBell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
       <Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />
     </div>
@@ -659,9 +659,9 @@ function SettingsHub() {
       <ProfileCard name={name} nick={nick} avatarUrl={(profile as any)?.avatar_url || ""} frame={myFrame} onClick={go("profil")} />
 
       <SettingsGroup>
-        <SettingsRow icon={<Lock className="h-4 w-4" />} label={t("hub.account")} desc={t("hub.account_desc")} onClick={go("konto")} />
-        <SettingsRow icon={<Bell className="h-4 w-4" />} label={t("hub.notifications")} desc={t("hub.notifications_desc")} onClick={go("powiadomienia")} />
-        <SettingsRow icon={<Shield className="h-4 w-4" />} label={t("hub.privacy")} desc={t("hub.privacy_desc")} onClick={go("prywatnosc")} />
+        <SettingsRow icon={<BrandLock className="h-4 w-4" />} label={t("hub.account")} desc={t("hub.account_desc")} onClick={go("konto")} />
+        <SettingsRow icon={<BrandBell className="h-4 w-4" />} label={t("hub.notifications")} desc={t("hub.notifications_desc")} onClick={go("powiadomienia")} />
+        <SettingsRow icon={<BrandShield className="h-4 w-4" />} label={t("hub.privacy")} desc={t("hub.privacy_desc")} onClick={go("prywatnosc")} />
         {/* Kosz otwiera ARKUSZ, nie podstrone - to ten sam TrashSheet, co dotad. */}
         <SettingsRow icon={<BrandTrash className="h-4 w-4" />} label={t("trash")} desc={t("hub.trash_desc")} onClick={() => setTrashOpen(true)} />
         <SettingsRow icon={<LifeBuoy className="h-4 w-4" />} label={t("hub.help")} desc={t("hub.help_desc")} onClick={go("pomoc")} />
@@ -931,7 +931,7 @@ function PrivacyScreen() {
           <NativePushRow />
           {locLabel && (
             <div className="overflow-hidden rounded-[20px] bg-muted/60">
-              <SettingsRow icon={<Shield className="h-4 w-4" />} label={t("location")} state={locLabel} onClick={() => openAppSettings()} />
+              <SettingsRow icon={<BrandShield className="h-4 w-4" />} label={t("location")} state={locLabel} onClick={() => openAppSettings()} />
             </div>
           )}
           <p className="px-3 pt-1 text-xs leading-relaxed text-muted-foreground">{t("permissions_note")}</p>

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Search, Link, MapPin, Loader2, Plus } from "lucide-react";
+import { X, Link, MapPin, Loader2, Plus } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { supabase } from "@/integrations/supabase/client";
@@ -206,7 +207,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
     resolveByPlaceId(prediction.place_id, name);
   };
 
-  const inputIcon = mode === "text" ? <Search className="h-4 w-4 text-muted-foreground shrink-0" /> : <Link className="h-4 w-4 text-muted-foreground shrink-0" />;
+  const inputIcon = mode === "text" ? <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" /> : <Link className="h-4 w-4 text-muted-foreground shrink-0" />;
 
   return (
     <div className="flex flex-col h-full px-4 py-4 gap-4">

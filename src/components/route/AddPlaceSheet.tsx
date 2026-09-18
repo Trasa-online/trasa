@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2 } from "lucide-react";
-import { BrandMap } from "@/components/BrandIcon";
+import { X, Plus, Check, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
+import { BrandMap, BrandSearch } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -330,7 +330,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
         <div className="px-5 pt-1 pb-2 shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <BrandSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("add_place.placeholder")}
               className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
             {query && (

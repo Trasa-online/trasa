@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Search, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, MapPin, Loader2 } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
@@ -149,7 +150,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
         <div>
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Wpisz miasto</p>
           <div className="relative">
-            <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <BrandSearch className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`np.${NBSP}Kuusamo`} autoFocus
               className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground border-0 pl-10 pr-4 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           </div>

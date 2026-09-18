@@ -66,3 +66,15 @@ export const BrandCalendar = brand(CALENDAR_ICON);
 export const BrandBlock = brand(BLOCK_ICON);
 export const BrandFlag = brand(FLAG_ICON);
 export const BrandTrash = brand(TRASH_ICON);
+
+// Druga paczka (2026-09-18, wieczor): lupka, ustawienia, tarcza, dzwonek, klodka.
+export const SEARCH_ICON = "/Ikona_Lupka.svg";
+export const SETTINGS_ICON = "/Ikona_Ustawienia.svg";
+export const SHIELD_ICON = "/Ikona_Tarcza.svg";
+export const BELL_ICON = "/Ikona_Dzwonek.svg";
+export const LOCK_ICON = "/Ikona_Klodka.svg";
+export const BrandSearch = brand(SEARCH_ICON);
+export const BrandSettings = brand(SETTINGS_ICON);
+export const BrandShield = brand(SHIELD_ICON);
+export const BrandBell = brand(BELL_ICON);
+export const BrandLock = brand(LOCK_ICON);

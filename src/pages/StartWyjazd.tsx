@@ -6,8 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, ArrowRight, Search, X, Plus, Loader2 } from "lucide-react";
-import { BrandTrash } from "@/components/BrandIcon";
+import { ArrowLeft, ArrowRight, X, Plus, Loader2 } from "lucide-react";
+import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
 import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { haptics } from "@/hooks/useHaptics";
@@ -179,7 +179,7 @@ export default function StartWyjazd() {
       {/* Wyszukiwarka */}
       <div className="px-4 pt-3">
         <div className="relative">
-          <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <BrandSearch className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}

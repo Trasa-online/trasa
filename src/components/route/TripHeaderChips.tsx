@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock } from "lucide-react";
-import { BrandIcon, STAR_ICON } from "@/components/BrandIcon";
+
+import { BrandIcon, STAR_ICON, BrandLock } from "@/components/BrandIcon";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 
 // Naglowek widoku wyjazdu i listy (redesign Nat 2026-09-13, makieta "Łódzki citybreak"):
@@ -72,7 +72,7 @@ export function HighlightChips({ city, placesCount, visitedCount, starredCount =
           informacja o kolekcji, a nie jak ostrzezenie. Klodka jest z lucide (nie brandowa),
           bo w zestawie `Ikona_*` nie ma jej odpowiednika. */}
       {privateLabel && (
-        <Chip icon={<Lock className="h-[15px] w-[15px] text-[#5B2C06]" strokeWidth={2.4} />}>
+        <Chip icon={<BrandLock className="h-[15px] w-[15px] text-[#5B2C06]" strokeWidth={2.4} />}>
           {privateLabel}
         </Chip>
       )}

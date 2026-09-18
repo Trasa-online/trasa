@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Search, X } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { haptics } from "@/hooks/useHaptics";
 import { TRIP_COUNTRIES, TRIP_REGIONS, countryLabel } from "@/lib/tripCountries";
 
@@ -70,7 +71,7 @@ export default function CountryPicker({ selected, onChange }: {
     <div className="flex flex-col min-h-0 flex-1">
       <div className="px-5 pb-2 shrink-0">
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <BrandSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             ref={inputRef}
             value={query}

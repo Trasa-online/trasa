@@ -7,7 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFriendList } from "@/lib/friends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
-import { Search, Check, X, Loader2, UserPlus, Clock } from "lucide-react";
+import { Check, X, Loader2, UserPlus, Clock } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -150,7 +151,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
 
         <div className="px-5 shrink-0">
           <div className="flex items-center gap-2.5 px-4 h-11 rounded-2xl bg-secondary focus-within:ring-2 focus-within:ring-orange-400/50">
-            <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
+            <BrandSearch className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
             <input
               autoFocus
               value={q}

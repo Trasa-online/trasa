@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Search, UserMinus, X } from "lucide-react";
+import { UserMinus, X } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { UserAvatar } from "@/components/profile/FramedAvatar";
@@ -155,7 +156,7 @@ export default function PeopleSheet({ open, onClose, tab, onTab, ownerId, myId, 
         </div>
 
         <div className="relative mt-3 shrink-0 px-5">
-          <Search className="pointer-events-none absolute left-9 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <BrandSearch className="pointer-events-none absolute left-9 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}

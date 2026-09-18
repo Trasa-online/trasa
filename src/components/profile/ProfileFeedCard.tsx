@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Heart, Pencil, Lock, CircleDashed, Maximize2, X } from "lucide-react";
-import { BrandTrash } from "@/components/BrandIcon";
+import { Bookmark, Heart, Pencil, CircleDashed, Maximize2, X } from "lucide-react";
+import { BrandTrash, BrandLock } from "@/components/BrandIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarSrc } from "@/lib/avatar";
 import { isAvatarFrame } from "@/lib/avatarFrames";
@@ -204,7 +204,7 @@ export function ProfileFeedCard({
           </span>
         ) : !hideStats && (isPrivate ? (
           <span className="flex items-center gap-1.5 text-sm font-medium">
-            <Lock className="h-[16px] w-[16px]" /> Prywatne
+            <BrandLock className="h-[16px] w-[16px]" /> Prywatne
           </span>
         ) : (
           <>

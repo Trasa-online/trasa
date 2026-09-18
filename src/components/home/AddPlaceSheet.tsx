@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, Plus, MapPin, X } from "lucide-react";
+import { Plus, MapPin, X } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
 
@@ -56,7 +57,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
         </SheetHeader>
 
         <div className="relative shrink-0 mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <BrandSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             ref={inputRef}
             value={query}

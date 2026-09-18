@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, Check, X, RefreshCw, Loader2, ArrowLeft } from "lucide-react";
-import { BrandTrash } from "@/components/BrandIcon";
+import { Plus, Check, X, RefreshCw, Loader2, ArrowLeft } from "lucide-react";
+import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -310,7 +310,7 @@ export default function TripProposalsSheet({
       {/* Wyszukiwarka Google Places (zawezona do miasta wyjazdu) */}
       <div className="px-5 pb-2 shrink-0">
         <div className="flex items-center gap-2 rounded-2xl bg-secondary px-3.5 h-11">
-          <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
+          <BrandSearch className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder={city ? `Szukaj miejsca w${NBSP}${city}` : t("proposals.search")}

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { ArrowLeft, Check, Plus, Bell, Loader2, MapPin } from "lucide-react";
+import { ArrowLeft, Check, Plus, Loader2, MapPin } from "lucide-react";
+import { BrandBell } from "@/components/BrandIcon";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -388,7 +389,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
-                <Bell className="h-14 w-14 text-white" strokeWidth={2} />
+                <BrandBell className="h-14 w-14 text-white" strokeWidth={2} />
               </div>
             </div>
           </>

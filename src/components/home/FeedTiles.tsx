@@ -1,4 +1,5 @@
-import { Globe2, Lock, MapPin } from "lucide-react";
+import { Globe2, MapPin } from "lucide-react";
+import { BrandLock } from "@/components/BrandIcon";
 import { BrandStar } from "@/components/BrandStar";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useTranslation } from "react-i18next";
@@ -425,7 +426,7 @@ export function ListTile({ it, size = "feed", people = "pill" }: { it: GridItem;
                 <span aria-label={it.isPublic ? t("stats.privacy_public") : t("stats.privacy_private")}>
                   {it.isPublic
                     ? <Globe2 className={feed ? "h-[15px] w-[15px]" : "h-3 w-3"} strokeWidth={2.4} />
-                    : <Lock className={feed ? "h-[15px] w-[15px]" : "h-3 w-3"} strokeWidth={2.4} />}
+                    : <BrandLock className={feed ? "h-[15px] w-[15px]" : "h-3 w-3"} strokeWidth={2.4} />}
                 </span>
               </Chip>
             )}

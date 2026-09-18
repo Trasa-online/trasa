@@ -10,8 +10,8 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Globe2, Loader2, Lock, MapPin, MoreHorizontal, Palette, Pencil, Plus, Users, X } from "lucide-react";
-import { BrandFlag, BrandShare, BrandTrash } from "@/components/BrandIcon";
+import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Globe2, Loader2, MapPin, MoreHorizontal, Palette, Pencil, Plus, Users, X } from "lucide-react";
+import { BrandFlag, BrandShare, BrandTrash, BrandLock } from "@/components/BrandIcon";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scrollTopTapProps } from "@/lib/scrollTop";
@@ -1005,7 +1005,7 @@ export default function SharedList() {
                       z definicji i nie ma czego przelaczac. */}
                   {col.list_status !== "to_visit" && (
                     <DropdownMenuItem onSelect={() => setPrivacyOpen(true)} className="gap-2.5 py-2.5">
-                      {col.is_public ? <Globe2 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                      {col.is_public ? <Globe2 className="h-4 w-4" /> : <BrandLock className="h-4 w-4" />}
                       {t("aria.list_privacy")}
                     </DropdownMenuItem>
                   )}

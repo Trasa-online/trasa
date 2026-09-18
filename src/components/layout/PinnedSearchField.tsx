@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 
 // Przypięte pole wyszukiwania w górnej belce (2026-09-06, po testach z userami).
 // Wcześniej wyszukiwarka kryła się pod lupą - user musiał wiedzieć, że tam jest.
@@ -42,7 +43,7 @@ const PinnedSearchField = forwardRef<HTMLInputElement, Props>(function PinnedSea
         aria-label={rest["aria-label"] ?? ph}
         className={`${shell} text-left active:scale-[0.98] active:bg-muted`}
       >
-        <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
         <span className="flex-1 min-w-0 truncate text-[15px] text-muted-foreground/70">{ph}</span>
       </button>
     );
@@ -50,7 +51,7 @@ const PinnedSearchField = forwardRef<HTMLInputElement, Props>(function PinnedSea
 
   return (
     <div className={`${shell} focus-within:border-orange-400/60 focus-within:bg-background`}>
-      <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+      <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
       <input
         ref={ref}
         value={value}

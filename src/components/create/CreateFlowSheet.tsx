@@ -3,8 +3,8 @@ import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Search, Loader2 } from "lucide-react";
-import { BrandCalendar } from "@/components/BrandIcon";
+import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Loader2 } from "lucide-react";
+import { BrandCalendar, BrandSearch } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -474,7 +474,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             {/* Wyszukiwarka Google Places INLINE - klik = wyniki tutaj (a NIE nawigacja do starego edytora). */}
             <div className="px-5 pt-1 pb-2 shrink-0">
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <BrandSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input ref={listSearchRef} value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder={t("search_place")}
                   className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
                 {listQuery && (

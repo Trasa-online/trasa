@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
-import { BrandChat } from "@/components/BrandIcon";
+import { X, UserPlus, UserCheck, MapPin, Route, Bookmark, CheckCircle2, XCircle, Heart, Camera, EyeOff, Users } from "lucide-react";
+import { BrandChat, BrandBell } from "@/components/BrandIcon";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -338,7 +338,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
 
   const renderRow = (n: Notification) => {
     const cfg = TYPE_CONFIG[n.type] ?? {
-      icon: Bell,
+      icon: BrandBell,
       tone: "brown" as Tone,
       label: (tt: NotifT, u: string) => tt("notif.fallback", { user: u }),
     };
@@ -514,7 +514,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
           ) : !hasAny ? (
             <div className="flex flex-col items-center px-8 pt-10 text-center">
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#FCEDE3]">
-                <Bell className="h-10 w-10 text-primary" fill="currentColor" />
+                <BrandBell className="h-10 w-10 text-primary" fill="currentColor" />
               </div>
               <p className="mt-6 text-lg font-bold leading-snug text-foreground">{t("notif.empty_title")}</p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t("notif.empty_desc")}</p>
