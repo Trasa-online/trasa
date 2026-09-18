@@ -1,4 +1,5 @@
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { UNLOCKED_CITIES } from "@/components/plan-wizard/CityPicker";
@@ -38,13 +39,13 @@ export default function CitySelect({
         {allowAll && (
           <DropdownMenuItem onClick={() => onCityChange(ALL_CITIES)} className="gap-2 rounded-xl cursor-pointer">
             <span className={cn("flex-1", cur === ALL_CITIES && "font-bold")}>{allLabel}</span>
-            {cur === ALL_CITIES && <Check className="h-4 w-4 text-primary shrink-0" />}
+            {cur === ALL_CITIES && <BrandCheck className="h-4 w-4 text-primary shrink-0" />}
           </DropdownMenuItem>
         )}
         {UNLOCKED_CITIES.map((c) => (
           <DropdownMenuItem key={c} onClick={() => onCityChange(c)} className="gap-2 rounded-xl cursor-pointer">
             <span className={cn("flex-1", c === cur && "font-bold")}>{c}</span>
-            {c === cur && <Check className="h-4 w-4 text-primary shrink-0" />}
+            {c === cur && <BrandCheck className="h-4 w-4 text-primary shrink-0" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -1,4 +1,5 @@
-import { ChevronDown, Check, MapPin } from "lucide-react";
+import { ChevronDown, MapPin } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,7 @@ export default function RegionSelect({
           className="gap-2 rounded-xl cursor-pointer pl-3"
         >
           <span className={cn("flex-1", isAll && "font-bold")}>{t("region.all")}</span>
-          {isAll && <Check className="h-4 w-4 text-primary shrink-0" />}
+          {isAll && <BrandCheck className="h-4 w-4 text-primary shrink-0" />}
         </DropdownMenuItem>
 
         {cities.length > 0 && <DropdownMenuSeparator />}
@@ -55,7 +56,7 @@ export default function RegionSelect({
               className="gap-2 rounded-xl cursor-pointer pl-3"
             >
               <span className={cn("flex-1", selected && "font-bold")}>{c}</span>
-              {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+              {selected && <BrandCheck className="h-4 w-4 text-primary shrink-0" />}
             </DropdownMenuItem>
           );
         })}

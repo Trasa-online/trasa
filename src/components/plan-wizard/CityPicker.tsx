@@ -2,8 +2,8 @@ import { useRef, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Check } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { ChevronDown } from "lucide-react";
+import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
@@ -201,7 +201,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
                   >
                     <span className="text-lg leading-none">{country.flag}</span>
                     <span className="flex-1">{countryLabel(country.name)}</span>
-                    {country.code === countryCode && <Check className="h-4 w-4 text-primary" />}
+                    {country.code === countryCode && <BrandCheck className="h-4 w-4 text-primary" />}
                   </button>
                 ) : (
                   <div

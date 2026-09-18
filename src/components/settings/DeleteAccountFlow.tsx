@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usernameKey } from "@/lib/usernameRules";
@@ -120,7 +121,7 @@ export default function DeleteAccountFlow() {
               className={`mt-2 w-full rounded-2xl border bg-background px-4 py-3.5 text-[15px] outline-none ${matches ? "border-primary" : "border-border/60"}`}
             />
             <p className={`mt-2 flex items-center gap-1.5 text-xs ${matches ? "text-emerald-600" : "text-muted-foreground"}`}>
-              {matches && <Check className="h-3.5 w-3.5" />}
+              {matches && <BrandCheck className="h-3.5 w-3.5" />}
               {matches ? t("delete.type_ok") : t("delete.type_hint")}
             </p>
 

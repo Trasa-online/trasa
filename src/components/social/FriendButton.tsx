@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { UserPlus, Check, Clock, UserCheck, Loader2 } from "lucide-react";
+import { UserPlus, Clock, UserCheck, Loader2 } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { useFriendStatus, sendFriendRequest, acceptFriendRequest, removeFriend } from "@/hooks/useFriends";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +50,7 @@ export default function FriendButton({ targetUserId, className }: { targetUserId
   if (status === "pending_in")
     return (
       <button onClick={() => act(() => acceptFriendRequest(targetUserId), t("friend.added"))} className={cn(base, "bg-primary text-white", className)}>
-        <Check className="h-3.5 w-3.5" /> {t("friend.accept")}
+        <BrandCheck className="h-3.5 w-3.5" /> {t("friend.accept")}
       </button>
     );
   if (status === "pending_out")

@@ -13,8 +13,8 @@ import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, LogOut, ChevronRight, Cookie, FileText, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, LifeBuoy, Info, Wrench } from "lucide-react";
-import { BrandBlock, BrandTrash, BrandBell, BrandLock, BrandShield } from "@/components/BrandIcon";
+import { Camera, LogOut, ChevronRight, Cookie, FileText, KeyRound, AlertCircle, X, ArrowLeft, Link as LinkIcon, Mail, Languages, RotateCcw, Instagram, MessagesSquare, LifeBuoy, Wrench } from "lucide-react";
+import { BrandBlock, BrandTrash, BrandBell, BrandLock, BrandShield, BrandInfo } from "@/components/BrandIcon";
 import TrashSheet from "@/components/profile/TrashSheet";
 import AvatarFrameSheet, { useMyAvatarFrame } from "@/components/profile/AvatarFrameSheet";
 import AvatarFrame from "@/components/profile/AvatarFrame";
@@ -665,7 +665,7 @@ function SettingsHub() {
         {/* Kosz otwiera ARKUSZ, nie podstrone - to ten sam TrashSheet, co dotad. */}
         <SettingsRow icon={<BrandTrash className="h-4 w-4" />} label={t("trash")} desc={t("hub.trash_desc")} onClick={() => setTrashOpen(true)} />
         <SettingsRow icon={<LifeBuoy className="h-4 w-4" />} label={t("hub.help")} desc={t("hub.help_desc")} onClick={go("pomoc")} />
-        <SettingsRow icon={<Info className="h-4 w-4" />} label={t("hub.about")} desc={t("hub.about_desc")} onClick={go("o-aplikacji")} />
+        <SettingsRow icon={<BrandInfo className="h-4 w-4" />} label={t("hub.about")} desc={t("hub.about_desc")} onClick={go("o-aplikacji")} />
         {/* Pozycje administracyjne maja WLASNY wiersz, a nie trzy luzne na koncu listy -
             inaczej dol ekranu wygladal inaczej zaleznie od konta. */}
         {admin && <SettingsRow icon={<Wrench className="h-4 w-4" />} label={t("hub.team")} desc={t("hub.team_desc")} badge="admin" onClick={go("zespol")} />}

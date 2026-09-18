@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag, verdictOf } from "@/lib/routeTags";
-import { Check, CheckCheck, MoreHorizontal, Plus } from "lucide-react";
-import { BrandIcon, CAMERA_ICON, STAR_ICON, BrandTrash } from "@/components/BrandIcon";
+import { CheckCheck, MoreHorizontal, Plus } from "lucide-react";
+import { BrandIcon, CAMERA_ICON, STAR_ICON, BrandTrash, BrandCheck } from "@/components/BrandIcon";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -295,7 +295,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               <span className={`absolute top-1 left-1 h-6 w-6 rounded-full flex items-center justify-center border-2 ${
                 selection!.selected ? "bg-primary border-primary text-white" : "bg-white/85 border-white"
               }`}>
-                {selection!.selected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                {selection!.selected && <BrandCheck className="h-3.5 w-3.5 stroke-[3]" />}
               </span>
             )}
           </button>
@@ -523,7 +523,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 <DropdownMenuContent align="end" className="rounded-2xl w-60">
                   {onToggleVisited && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedVisit.current = true; onToggleVisited(); }} className="gap-2.5 py-2.5">
-                      <Check className={`h-4 w-4 ${iVisited ? "text-primary" : "text-muted-foreground"}`} strokeWidth={3} />
+                      <BrandCheck className={`h-4 w-4 ${iVisited ? "text-primary" : "text-muted-foreground"}`} strokeWidth={3} />
                       {iVisited ? t("row.mark_not_visited") : t("row.mark_visited")}
                     </DropdownMenuItem>
                   )}

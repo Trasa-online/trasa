@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, Globe2 } from "lucide-react";
-import { BrandLock } from "@/components/BrandIcon";
+
+import { BrandLock, BrandCheck, BrandGlobe } from "@/components/BrandIcon";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -79,7 +79,7 @@ export default function ListPrivacySheet({ open, onOpenChange, listId, isPublic,
         <div className="mt-4 flex flex-col gap-2 px-4">
           <Option
             active={isPublic}
-            icon={<Globe2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}
+            icon={<BrandGlobe className="h-[18px] w-[18px]" strokeWidth={2.2} />}
             label={t("privacy.public_label")}
             desc={t("privacy.public_desc")}
             onSelect={() => void choose(true)}
@@ -121,7 +121,7 @@ function Option({ active, icon, label, desc, warn, onSelect }: {
         <span className="mt-0.5 block text-[13px] leading-snug text-muted-foreground">{desc}</span>
         {warn ? <span className="mt-1.5 block text-[13px] font-semibold leading-snug text-foreground">{warn}</span> : null}
       </span>
-      {active && <Check className="mt-1.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} />}
+      {active && <BrandCheck className="mt-1.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} />}
     </button>
   );
 }

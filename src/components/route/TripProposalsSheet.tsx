@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Check, X, RefreshCw, Loader2, ArrowLeft } from "lucide-react";
-import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
+import { Plus, X, RefreshCw, Loader2, ArrowLeft } from "lucide-react";
+import { BrandTrash, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -197,7 +197,7 @@ export default function TripProposalsSheet({
         </button>
         <button onClick={() => addToPool(opts.place)} disabled={added} aria-label={added ? t("already_badge") : t("proposals.add")}
           className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${added ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-          {added ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+          {added ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>
       </div>
     );
@@ -231,14 +231,14 @@ export default function TripProposalsSheet({
           // Tryb "Wybierz miejsca": checkbox zaznaczenia (host wybiera co wejdzie do trasy).
           <button onClick={() => toggleChosen(prop.id)} aria-label={chosen.has(prop.id) ? "Odznacz" : "Zaznacz"}
             className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(prop.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>
-            {chosen.has(prop.id) && <Check className="h-4 w-4 stroke-[3]" />}
+            {chosen.has(prop.id) && <BrandCheck className="h-4 w-4 stroke-[3]" />}
           </button>
         ) : busy ? (
           <span className="h-8 w-8 flex items-center justify-center shrink-0"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></span>
         ) : inTrip ? (
           // Miejsce jest juz w trasie - info + (host) mozliwosc uprzatniecia duplikatu propozycji.
           <span className="shrink-0 inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-600 bg-emerald-50 rounded-full px-2 py-1">
-            <Check className="h-3.5 w-3.5 stroke-[3]" /> W trasie
+            <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> W trasie
           </span>
         ) : isOwner ? (
           <span className="flex items-center gap-1.5 shrink-0">
@@ -382,13 +382,13 @@ export default function TripProposalsSheet({
               <button onClick={() => { setChoosing(false); setChosen(new Set()); }} className="px-4 h-12 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("common:buttons.cancel")}</button>
               <button onClick={confirmChoose} disabled={choosingBusy || chosen.size === 0}
                 className={`flex-1 h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-transform ${choosingBusy || chosen.size === 0 ? "bg-primary/40 text-white/80" : "bg-primary text-primary-foreground active:scale-[0.98]"}`}>
-                {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
+                {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandCheck className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
               </button>
             </div>
           ) : (
             <button onClick={() => { if (!proposals.length) { toast(t("proposals.empty_first")); return; } haptics.light(); setChoosing(true); }}
               className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-              <Check className="h-4 w-4 stroke-[3]" /> {t("proposals.choose")}
+              <BrandCheck className="h-4 w-4 stroke-[3]" /> {t("proposals.choose")}
             </button>
           )}
         </div>

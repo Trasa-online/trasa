@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Check, ArrowLeft, MapPin } from "lucide-react";
+import { Loader2, ArrowLeft, MapPin } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -142,7 +143,7 @@ const ClaimPlace = () => {
     return (
       <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6 gap-5">
         <div className="h-14 w-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center">
-          <Check className="h-7 w-7 text-green-600" strokeWidth={3} />
+          <BrandCheck className="h-7 w-7 text-green-600" strokeWidth={3} />
         </div>
         <div className="text-center max-w-sm">
           <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{t("claim.thanks_title")}</h1>

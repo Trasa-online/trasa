@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, X } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { X } from "lucide-react";
+import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { haptics } from "@/hooks/useHaptics";
 import { TRIP_COUNTRIES, TRIP_REGIONS, countryLabel } from "@/lib/tripCountries";
 
@@ -61,7 +61,7 @@ export default function CountryPicker({ selected, onChange }: {
       >
         <span className="flex-1 min-w-0 text-[15px] font-medium text-foreground truncate">{countryLabel(name)}</span>
         <span className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${on ? "bg-primary text-white" : "border-2 border-border"}`}>
-          {on && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+          {on && <BrandCheck className="h-3.5 w-3.5 stroke-[3]" />}
         </span>
       </button>
     );

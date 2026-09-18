@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { X, Check, Loader2 } from "lucide-react";
-import { BrandFlag } from "@/components/BrandIcon";
+import { X, Loader2 } from "lucide-react";
+import { BrandFlag, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -93,7 +93,7 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
                 >
                   <span className="text-lg">{r.emoji}</span>
                   <span className="text-sm font-semibold text-foreground">{t(r.labelKey)}</span>
-                  {reason === r.id && <Check className="h-4 w-4 text-primary ml-auto shrink-0" strokeWidth={3} />}
+                  {reason === r.id && <BrandCheck className="h-4 w-4 text-primary ml-auto shrink-0" strokeWidth={3} />}
                 </button>
               ))}
             </div>
@@ -110,7 +110,7 @@ export default function ReportPlaceLink({ placeId, placeName }: { placeId: strin
               disabled={!reason || submitting || done}
               className="w-full mt-3 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
             >
-              {done ? <Check className="h-5 w-5" strokeWidth={3} /> : submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : t("submit")}
+              {done ? <BrandCheck className="h-5 w-5" strokeWidth={3} /> : submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : t("submit")}
             </button>
           </div>
         </SheetContent>

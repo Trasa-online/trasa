@@ -10,9 +10,9 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation, Check, Loader2 } from "lucide-react";
+import { MapPin, Navigation, Loader2 } from "lucide-react";
 import { usePlaceShare } from "@/hooks/usePlaceShare";
-import { BrandIcon, PLUS_ICON, BrandShare } from "@/components/BrandIcon";
+import { BrandIcon, PLUS_ICON, BrandShare, BrandCheck } from "@/components/BrandIcon";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { haptics } from "@/hooks/useHaptics";
 import { useDistanceReference, setGpsReference } from "@/lib/distanceReference";
@@ -556,7 +556,7 @@ const PlaceSwiperDetail = ({
                   className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${added ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
                   {added ? t("added_place") : t("add_short")}
-                  {added ? <Check className="h-4 w-4" strokeWidth={2.6} /> : <BrandIcon src={PLUS_ICON} className="h-[18px] w-[18px]" />}
+                  {added ? <BrandCheck className="h-4 w-4" strokeWidth={2.6} /> : <BrandIcon src={PLUS_ICON} className="h-[18px] w-[18px]" />}
                 </button>
               )}
               {/* Udostepnij = zolte kolko z brazowa ikona (jak przy "Zapisz ten wyjazd"). Tylko zalogowani -

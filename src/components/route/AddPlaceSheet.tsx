@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { X, Plus, Check, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
-import { BrandMap, BrandSearch } from "@/components/BrandIcon";
+import { X, Plus, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
+import { BrandMap, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -297,11 +297,11 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
         <GoogleGlyph className="h-[18px] w-[18px]" />
       </button>
       {opts.added ? (
-        <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
+        <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><BrandCheck className="h-3.5 w-3.5 stroke-[3]" /></span>
       ) : (
         <button onClick={opts.onToggle} aria-label={opts.selected ? t("add_place.remove") : t("add_place.add_to_route")}
           className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-          {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+          {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>
       )}
     </div>

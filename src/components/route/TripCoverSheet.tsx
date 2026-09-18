@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, Plus, Check } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import StoredImage from "@/components/StoredImage";
 import { haptics } from "@/hooks/useHaptics";
@@ -103,7 +104,7 @@ export default function TripCoverSheet({
                   <StoredImage url={url} size={300} className="h-full w-full object-cover" />
                   {on && (
                     <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary shadow-sm">
-                      <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                      <BrandCheck className="h-3.5 w-3.5 text-white" strokeWidth={3} />
                     </span>
                   )}
                 </button>

@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, Loader2, Bookmark, ListChecks } from "lucide-react";
-import { BrandShare } from "@/components/BrandIcon";
+import { Plus, Loader2, Bookmark, ListChecks } from "lucide-react";
+import { BrandShare, BrandCheck } from "@/components/BrandIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -200,7 +200,7 @@ export default function SavePlaceSheet({
             <span className="block text-base font-bold text-foreground truncate leading-tight">{l.title}</span>
           </span>
           <span className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", inList ? "text-orange-500" : "text-foreground")}>
-            {busyId === l.id ? <Loader2 className="h-5 w-5 animate-spin" /> : inList ? <Check className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-6 w-6" strokeWidth={2} />}
+            {busyId === l.id ? <Loader2 className="h-5 w-5 animate-spin" /> : inList ? <BrandCheck className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-6 w-6" strokeWidth={2} />}
           </span>
         </button>
       </div>
@@ -261,7 +261,7 @@ export default function SavePlaceSheet({
                 <p className="text-xs text-muted-foreground leading-tight">{t("save.all_saved_hint")}</p>
               </div>
               <span className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-orange-500">
-                <Check className="h-5 w-5" strokeWidth={2.5} />
+                <BrandCheck className="h-5 w-5" strokeWidth={2.5} />
               </span>
             </div>
             {displayLists.map(renderRow)}

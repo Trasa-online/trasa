@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, Pipette } from "lucide-react";
-import { BrandLock } from "@/components/BrandIcon";
+import { Pipette } from "lucide-react";
+import { BrandLock, BrandCheck } from "@/components/BrandIcon";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -180,7 +180,7 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary"><BrandLock className="h-3.5 w-3.5 text-muted-foreground" /></span>
                 ) : (
                   <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${active ? "border-primary bg-primary text-white" : "border-border"}`}>
-                    {active && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                    {active && <BrandCheck className="h-3.5 w-3.5" strokeWidth={3} />}
                   </span>
                 )}
               </button>
@@ -208,7 +208,7 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                 className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-transform active:scale-90 ${active ? "border-foreground" : "border-transparent"}`}
                 style={{ backgroundColor: hex }}
               >
-                {active && <Check className="h-4 w-4 text-white drop-shadow" strokeWidth={3} />}
+                {active && <BrandCheck className="h-4 w-4 text-white drop-shadow" strokeWidth={3} />}
               </button>
             );
           })}

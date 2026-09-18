@@ -14,8 +14,8 @@ import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Pencil, Plus, Loader2, GripVertical, Check, Camera, ThumbsUp, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users, Globe2 } from "lucide-react";
-import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash } from "@/components/BrandIcon";
+import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, UserPlus, MoreHorizontal, FileText, ChevronLeft, Users } from "lucide-react";
+import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil } from "@/components/BrandIcon";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -1940,7 +1940,7 @@ export default function SharedRoute() {
       ...(myNote ? [{
         key: "note",
         label: t("route:note.edit"),
-        icon: <Pencil className="h-4 w-4" />,
+        icon: <BrandPencil className="h-4 w-4" />,
         onClick: () => setNotePin(pin),
       }] : []),
       {
@@ -2475,7 +2475,7 @@ export default function SharedRoute() {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onSelect={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }} disabled={savingName} className="gap-2.5 py-2.5">
-                      <Pencil className="h-4 w-4" />{t("aria.rename_trip")}
+                      <BrandPencil className="h-4 w-4" />{t("aria.rename_trip")}
                     </DropdownMenuItem>
                     {/* Daty wyjazdu (zakres = podzial na dni) - tylko wlasciciel, jak dotad. */}
                     {isOwner && (
@@ -2727,7 +2727,7 @@ export default function SharedRoute() {
                       if (c === 0) return null;
                       return <span className="shrink-0 inline-flex items-center rounded-full bg-white text-foreground px-2.5 py-0.5 text-[12px] font-bold">{t("votes", { count: c })}</span>;
                     })()}
-                    <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <Check className="h-4 w-4 stroke-[3]" />}</span>
+                    <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <BrandCheck className="h-4 w-4 stroke-[3]" />}</span>
                   </button>
                 ))}
               </div>
@@ -3275,7 +3275,7 @@ export default function SharedRoute() {
                 aria-label={priv ? t("photo_audience.make_public") : t("photo_audience.make_friends")}
                 className="absolute right-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
                 style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
-                {priv ? <Users className="h-4 w-4 text-white" /> : <Globe2 className="h-4 w-4 text-white" />}
+                {priv ? <Users className="h-4 w-4 text-white" /> : <BrandGlobe className="h-4 w-4 text-white" />}
                 <span className="text-white text-[13px] font-semibold">
                   {priv ? t("photo_audience.friends") : t("photo_audience.public")}
                 </span>
@@ -3314,7 +3314,7 @@ export default function SharedRoute() {
                 <button onClick={() => setChoosing(false)} className="px-4 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("common:buttons.cancel")}</button>
                 <button onClick={confirmChoose} disabled={choosingBusy || chosen.size === 0}
                   className={`flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-transform ${choosingBusy || chosen.size === 0 ? "bg-primary/40 text-white/80" : "bg-primary text-white active:scale-[0.98]"}`}>
-                  {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
+                  {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandCheck className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
                 </button>
               </div>
             ) : (
@@ -3323,7 +3323,7 @@ export default function SharedRoute() {
               reorderMode ? (
                 <button onClick={() => { haptics.success(); setReorderMode(false); }}
                   className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                  <Check className="h-4 w-4 stroke-[3]" />{t("common:buttons.done")}</button>
+                  <BrandCheck className="h-4 w-4 stroke-[3]" />{t("common:buttons.done")}</button>
               ) : (
               <div className="flex items-center gap-2">
                 {/* Dolny pasek zostaje dla akcji ETAPU (wybor miejsc / publikacja). "Dodaj
@@ -3343,7 +3343,7 @@ export default function SharedRoute() {
                 {isOwner && stage === "planning" && pins.length > 0 && (
                   <button onClick={startChoosing}
                     className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                    <Check className="h-4 w-4 stroke-[3]" />{t("choose_places")}</button>
+                    <BrandCheck className="h-4 w-4 stroke-[3]" />{t("choose_places")}</button>
                 )}
                 {/* PUBLIKACJA jednym guzikiem. Opis, tagi i zdjecia powstaja juz w tym widoku -
                     stepper "podsumowania" zostal usuniety z flow.

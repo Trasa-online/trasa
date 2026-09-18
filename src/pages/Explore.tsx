@@ -6,8 +6,8 @@ import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { track } from "@/lib/analytics";
-import { Heart, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
-import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
+import { Heart, ArrowRight, ArrowLeft, ListChecks, ChevronDown, ChevronRight, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { BrandTrash, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -421,7 +421,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                     "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm",
                     checked ? "bg-primary border-primary" : "bg-black/40 border-white/90 backdrop-blur-sm",
                   )}>
-                    {checked && <Check className="h-5 w-5 text-white" strokeWidth={3} />}
+                    {checked && <BrandCheck className="h-5 w-5 text-white" strokeWidth={3} />}
                   </span>
                 </button>
               )}

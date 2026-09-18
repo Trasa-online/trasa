@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { ArrowLeft, Check, Plus, Loader2, MapPin } from "lucide-react";
-import { BrandBell } from "@/components/BrandIcon";
+import { ArrowLeft, Plus, Loader2, MapPin } from "lucide-react";
+import { BrandBell, BrandCheck } from "@/components/BrandIcon";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -299,7 +299,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
                     className="flex-1 bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
                   {uStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
+                  {uStatus === "ok" && <BrandCheck className="h-5 w-5 text-green-600" />}
                 </div>
                 <div className="h-6 mt-2 px-1 text-sm">
                   {uStatus === "ok" && <span className="text-green-600 font-medium">{t("profile.username_available")}</span>}

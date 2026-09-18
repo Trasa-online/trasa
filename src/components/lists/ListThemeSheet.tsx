@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, Pipette } from "lucide-react";
+import { Pipette } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +88,7 @@ export default function ListThemeSheet({ open, onOpenChange, listId, current, ti
       <span className="mt-0.5 text-[10px] font-medium opacity-80" style={{ color: ink }}>{label}</span>
       {isActive && (
         <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-foreground shadow-md">
-          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+          <BrandCheck className="h-3.5 w-3.5" strokeWidth={3} />
         </span>
       )}
       <span className="sr-only">{bg}</span>

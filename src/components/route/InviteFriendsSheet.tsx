@@ -7,8 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFriendList } from "@/lib/friends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
-import { Check, X, Loader2, UserPlus, Clock } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { X, Loader2, UserPlus, Clock } from "lucide-react";
+import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -219,11 +219,11 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
                     </div>
                     {already ? (
                       <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                        <Check className="h-3.5 w-3.5" strokeWidth={3} /> {t("invite.added")}
+                        <BrandCheck className="h-3.5 w-3.5" strokeWidth={3} /> {t("invite.added")}
                       </span>
                     ) : (
                       <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", on ? "bg-primary border-primary" : "border-muted-foreground/30")}>
-                        {on && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                        {on && <BrandCheck className="h-4 w-4 text-white" strokeWidth={3} />}
                       </span>
                     )}
                   </button>

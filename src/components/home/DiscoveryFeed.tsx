@@ -18,8 +18,8 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
-import { MapPin, X, Globe, Sparkles, Pencil, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
-import { BrandCalendar, BrandTrash, BrandSearch } from "@/components/BrandIcon";
+import { MapPin, X, Sparkles, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { BrandCalendar, BrandTrash, BrandSearch, BrandGlobe, BrandPencil } from "@/components/BrandIcon";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -462,7 +462,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
             <div className="flex items-center gap-2">
               {isOwner && (
                 <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label={t("aria.edit")} className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
-                  <Pencil className="h-4 w-4" />
+                  <BrandPencil className="h-4 w-4" />
                 </button>
               )}
               {isOwner && (
@@ -875,7 +875,7 @@ function PolecaneRow({
                   </div>
                   {entry.kind === "route" ? (
                     <span className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
-                      <Globe className="h-3 w-3" />
+                      <BrandGlobe className="h-3 w-3" />
                       {t("route")}
                     </span>
                   ) : (

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bookmark, Heart, Pencil, CircleDashed, Maximize2, X } from "lucide-react";
-import { BrandTrash, BrandLock } from "@/components/BrandIcon";
+import { Bookmark, Heart, CircleDashed, Maximize2, X } from "lucide-react";
+import { BrandTrash, BrandLock, BrandPencil } from "@/components/BrandIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarSrc } from "@/lib/avatar";
 import { isAvatarFrame } from "@/lib/avatarFrames";
@@ -235,7 +235,7 @@ export function ProfileFeedCard({
             <div className="flex-1" />
             {onEdit && (
               <button onClick={onEdit} aria-label={t("common:buttons.edit")} className="h-8 w-8 flex items-center justify-center rounded-full active:bg-muted/60 transition-colors">
-                <Pencil className="h-[17px] w-[17px]" />
+                <BrandPencil className="h-[17px] w-[17px]" />
               </button>
             )}
             {onDelete && (

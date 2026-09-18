@@ -1,4 +1,5 @@
-import { Phone, Globe } from "lucide-react";
+import { Phone } from "lucide-react";
+import { BrandGlobe } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import posthog from "posthog-js";
@@ -48,7 +49,7 @@ const BusinessActionButtons = ({ phone, website, placeId }: BusinessActionButton
             }
           }}
         >
-          <Globe className="h-5 w-5" />
+          <BrandGlobe className="h-5 w-5" />
           <span className="text-xs">{t("actions.website")}</span>
         </Button>
       )}

@@ -16,8 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, fetchPhotoHashes, sha256OfFile, upsertPhotoHash } from "@/lib/placePhotoSocial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Pencil, Check, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Plus, Info, MoreVertical, Loader2, GripVertical } from "lucide-react";
-import { BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandLock } from "@/components/BrandIcon";
+import { ArrowLeft, Camera, X, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Plus, MoreVertical, Loader2, GripVertical } from "lucide-react";
+import { BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandLock, BrandCheck, BrandGlobe, BrandInfo, BrandPencil } from "@/components/BrandIcon";
 import { Reorder, useDragControls } from "framer-motion";
 import RouteMap from "@/components/RouteMap";
 import { buildTripStaticMapUrl } from "@/lib/staticMap";
@@ -133,7 +133,7 @@ function SortableReviewRow({ pin, idx, categoryLabel, onOpen, onRemove, noteValu
                 return (
                   <button key={tg} type="button" onClick={() => onToggleTag(tg)}
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold transition-colors active:scale-[0.97] border ${on ? "bg-[#FDF184] border-[#FDCD84] text-foreground" : "bg-white text-foreground border-border/60"}`}>
-                    {localizeTag(tg)}{on ? <Check className="h-3 w-3 text-foreground" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
+                    {localizeTag(tg)}{on ? <BrandCheck className="h-3 w-3 text-foreground" /> : <Plus className="h-3 w-3 text-muted-foreground/50" />}
                   </button>
                 );
               })}
@@ -1813,7 +1813,7 @@ const ReviewSummary = () => {
                       <StoredImage url={src} size={110} className="w-full h-full object-cover" />
                       {isOn && (
                         <span className="absolute inset-0 bg-primary/40 flex items-center justify-center">
-                          <span className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center"><Check className="h-4 w-4" strokeWidth={3} /></span>
+                          <span className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center"><BrandCheck className="h-4 w-4" strokeWidth={3} /></span>
                         </span>
                       )}
                     </button>
@@ -1857,7 +1857,7 @@ const ReviewSummary = () => {
                 <button onClick={() => { if (viewerUrl !== heroPhoto) setCover(viewerUrl); setViewerMenuOpen(false); }} disabled={viewerUrl === heroPhoto} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-50">
                   <BrandGallery className="h-4 w-4 shrink-0" />
                   {viewerUrl === heroPhoto ? t("viewer.is_cover") : t("viewer.set_cover")}
-                  {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
+                  {viewerUrl === heroPhoto && <BrandCheck className="h-4 w-4 text-green-600 ml-auto" />}
                 </button>
                 {galleryPhotos.find((g) => g.url === viewerUrl)?.mine && (
                   <button onClick={() => { const gi = galleryPhotos.find((g) => g.url === viewerUrl); if (gi?.isGroup) removeGroupPhoto(viewerUrl); else removePhoto(viewerUrl, gi?.owner ?? routeId!); setViewerMenuOpen(false); }} className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40">
@@ -2057,7 +2057,7 @@ const ReviewSummary = () => {
             <div key={s.n} className={`flex items-center ${idx < steps.length - 1 ? "flex-1" : ""}`}>
               <button onClick={() => setStep(s.n)} className="flex items-center gap-1.5 shrink-0 active:scale-95 transition-transform">
                 <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${step === s.n ? "bg-primary text-white" : step > s.n ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"}`}>
-                  {step > s.n ? <Check className="h-3.5 w-3.5" strokeWidth={2.6} /> : s.n}
+                  {step > s.n ? <BrandCheck className="h-3.5 w-3.5" strokeWidth={2.6} /> : s.n}
                 </span>
                 <span className={`text-xs font-semibold ${step === s.n ? "text-foreground" : "text-muted-foreground"}`}>{s.label}</span>
               </button>
@@ -2071,7 +2071,7 @@ const ReviewSummary = () => {
 
   const renderStepInfo = () => (
     <div className="mb-3 flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
-      <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+      <BrandInfo className="h-4 w-4 text-primary shrink-0 mt-0.5" />
       <p className="text-xs text-orange-800 leading-relaxed">{t(`step_info.${step}`)}</p>
     </div>
   );
@@ -2183,7 +2183,7 @@ const ReviewSummary = () => {
               />
               <button onClick={saveName} disabled={savingName} aria-label={t("a11y.save_name")}
                 className="h-9 w-9 shrink-0 rounded-lg bg-white/90 text-primary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
-                <Check className="h-4 w-4" strokeWidth={3} />
+                <BrandCheck className="h-4 w-4" strokeWidth={3} />
               </button>
             </div>
           ) : (
@@ -2193,7 +2193,7 @@ const ReviewSummary = () => {
                 className={`flex items-center gap-1.5 mt-0.5 text-white/80 text-base font-medium ${isOwner ? "active:opacity-70" : "cursor-default"}`}
               >
                 <span>{displayName}</span>
-                {isOwner && <Pencil className="h-3.5 w-3.5 text-white/60 shrink-0" />}
+                {isOwner && <BrandPencil className="h-3.5 w-3.5 text-white/60 shrink-0" />}
               </button>
             )
           )}
@@ -2315,7 +2315,7 @@ const ReviewSummary = () => {
                 </button>
                 <button onClick={() => { setEditingStepper(true); setStep(2); }} aria-label={t("a11y.edit_entry")}
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
-                  <Pencil className="h-4 w-4 text-foreground" />
+                  <BrandPencil className="h-4 w-4 text-foreground" />
                 </button>
               </div>
 
@@ -2331,7 +2331,7 @@ const ReviewSummary = () => {
                           onClick={() => { setEditingStepper(true); setStep(2); }}
                           className="w-full mb-4 py-3 rounded-2xl bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                         >
-                          <Pencil className="h-4 w-4" />{t("cta.edit_trip")}</button>
+                          <BrandPencil className="h-4 w-4" />{t("cta.edit_trip")}</button>
                       )}
                       {/* Opis trasy (read) */}
                       {suggestion?.trim() && (
@@ -2461,7 +2461,7 @@ const ReviewSummary = () => {
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <Globe className="h-5 w-5 text-primary" />
+                <BrandGlobe className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("prompt.title")}</p>

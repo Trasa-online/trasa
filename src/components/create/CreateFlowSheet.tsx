@@ -3,8 +3,8 @@ import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Check, CalendarPlus, History, Loader2 } from "lucide-react";
-import { BrandCalendar, BrandSearch } from "@/components/BrandIcon";
+import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, CalendarPlus, History, Loader2 } from "lucide-react";
+import { BrandCalendar, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -203,7 +203,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       </button>
       <button onClick={opts.onToggle} aria-label={opts.selected ? t("aria.remove_from_list") : t("aria.add_to_list")}
         className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-        {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+        {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
       </button>
     </div>
   );

@@ -1,5 +1,5 @@
-import { ChevronDown, Check } from "lucide-react";
-import { BrandLock } from "@/components/BrandIcon";
+import { ChevronDown } from "lucide-react";
+import { BrandLock, BrandCheck } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { COUNTRIES } from "@/components/plan-wizard/CityPicker";
@@ -37,7 +37,7 @@ export default function CountrySelect() {
               {soon ? (
                 <span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground"><BrandLock className="h-3 w-3" />{t("country.soon")}</span>
               ) : c.code === active.code ? (
-                <Check className="h-4 w-4 text-primary shrink-0" />
+                <BrandCheck className="h-4 w-4 text-primary shrink-0" />
               ) : null}
             </DropdownMenuItem>
           );

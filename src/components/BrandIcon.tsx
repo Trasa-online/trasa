@@ -78,3 +78,13 @@ export const BrandSettings = brand(SETTINGS_ICON);
 export const BrandShield = brand(SHIELD_ICON);
 export const BrandBell = brand(BELL_ICON);
 export const BrandLock = brand(LOCK_ICON);
+
+// Trzecia paczka (2026-09-18, wieczor): ptaszek, globus, informacja, olowek.
+export const CHECK_ICON = "/Ikona_Check.svg";
+export const GLOBE_ICON = "/Ikona_Globus.svg";
+export const INFO_ICON = "/Ikona_Info.svg";
+export const PENCIL_ICON = "/Ikona_Olowek.svg";
+export const BrandCheck = brand(CHECK_ICON);
+export const BrandGlobe = brand(GLOBE_ICON);
+export const BrandInfo = brand(INFO_ICON);
+export const BrandPencil = brand(PENCIL_ICON);

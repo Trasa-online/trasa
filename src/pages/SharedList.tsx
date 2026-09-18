@@ -10,8 +10,8 @@ import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Globe2, Loader2, MapPin, MoreHorizontal, Palette, Pencil, Plus, Users, X } from "lucide-react";
-import { BrandFlag, BrandShare, BrandTrash, BrandLock } from "@/components/BrandIcon";
+import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Loader2, MapPin, MoreHorizontal, Palette, Plus, Users, X } from "lucide-react";
+import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil } from "@/components/BrandIcon";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
 import { scrollTopTapProps } from "@/lib/scrollTop";
@@ -883,7 +883,7 @@ export default function SharedList() {
               {
                 key: "note",
                 label: myNote ? t("route:note.edit") : t("route:note.add"),
-                icon: <Pencil className="h-4 w-4" />,
+                icon: <BrandPencil className="h-4 w-4" />,
                 onClick: () => setNoteItem(pin),
               },
               {
@@ -996,7 +996,7 @@ export default function SharedList() {
                     disabled={savingName}
                     className="gap-2.5 py-2.5"
                   >
-                    <Pencil className="h-4 w-4" />{t("aria.rename_list")}
+                    <BrandPencil className="h-4 w-4" />{t("aria.rename_list")}
                   </DropdownMenuItem>
                   {/* Prywatnosc stoi OBOK "Osoby w kolekcji", bo obie pozycje odpowiadaja na to
                       samo pytanie: kto ma do tego dostep. Ikona niesie stan AKTUALNY, zeby nie
@@ -1005,7 +1005,7 @@ export default function SharedList() {
                       z definicji i nie ma czego przelaczac. */}
                   {col.list_status !== "to_visit" && (
                     <DropdownMenuItem onSelect={() => setPrivacyOpen(true)} className="gap-2.5 py-2.5">
-                      {col.is_public ? <Globe2 className="h-4 w-4" /> : <BrandLock className="h-4 w-4" />}
+                      {col.is_public ? <BrandGlobe className="h-4 w-4" /> : <BrandLock className="h-4 w-4" />}
                       {t("aria.list_privacy")}
                     </DropdownMenuItem>
                   )}

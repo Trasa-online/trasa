@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
-import { ArrowLeft, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
-import { BrandCalendar, BrandTrash, BrandSearch } from "@/components/BrandIcon";
+import { ArrowLeft, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical, UserPlus } from "lucide-react";
+import { BrandCalendar, BrandTrash, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { avatarSrc } from "@/lib/avatar";
@@ -159,7 +159,7 @@ function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
         aria-label={selected ? t("aria.exclude") : t("aria.add_to_route")}
         className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${selected ? "bg-primary text-white" : "border-2 border-border text-transparent"}`}
       >
-        <Check className="h-4 w-4" strokeWidth={3} />
+        <BrandCheck className="h-4 w-4" strokeWidth={3} />
       </button>
       <button
         onClick={onRemove}
@@ -853,7 +853,7 @@ export default function ComposeWyjazd() {
                     {/* Toggle "w trasie" (lewy-gorny), kosz (prawy-gorny). */}
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleInTrip(it.key); }} aria-label={isInTrip(it.key) ? t("aria.exclude") : t("aria.add_to_route")}
                       className={`absolute top-2 left-2 h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${isInTrip(it.key) ? "bg-primary text-white" : "bg-white/85 border border-black/10 text-transparent"}`}>
-                      <Check className="h-4 w-4" strokeWidth={3} />
+                      <BrandCheck className="h-4 w-4" strokeWidth={3} />
                     </span>
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); setConfirmRemove({ key: it.key, name: it.place_name }); }} aria-label={t("aria.delete_place")}
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
@@ -953,7 +953,7 @@ export default function ComposeWyjazd() {
           <button onClick={() => confirm(nav.mode !== "future")} disabled={creating}
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : (nav.mode === "future"
-              ? <>{t("compose.save_trip")} <Check className="h-4 w-4" /></>
+              ? <>{t("compose.save_trip")} <BrandCheck className="h-4 w-4" /></>
               : <>{t("go_suggestions")}<ArrowRight className="h-4 w-4" /></>)}
           </button>
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Send, Mic, MicOff, Camera, MapPin, Coffee, Utensils, Loader2, Plus, Check } from "lucide-react";
-import { BrandMap } from "@/components/BrandIcon";
+import { X, Send, Mic, MicOff, Camera, MapPin, Coffee, Utensils, Loader2, Plus } from "lucide-react";
+import { BrandMap, BrandCheck } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -379,7 +379,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
                                 : "bg-foreground/5 hover:bg-foreground/10 text-foreground"
                             )}
                           >
-                            {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                            {added ? <BrandCheck className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                           </button>
                         )}
                       </div>

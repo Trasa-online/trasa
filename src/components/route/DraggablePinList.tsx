@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { X, GripVertical, Plus, Camera, Check, Pencil, ChevronDown, ChevronUp } from "lucide-react";
+import { X, GripVertical, Plus, Camera, ChevronDown, ChevronUp } from "lucide-react";
+import { BrandCheck, BrandPencil } from "@/components/BrandIcon";
 import { NoteType, NOTE_TYPES, NOTE_TYPE_KEYS, getNoteTypeConfig } from "@/lib/noteTypes";
 interface PinNote {
   id?: string;
@@ -308,7 +309,7 @@ const DraggablePinList = ({
             onClick={() => isEditing ? confirmEditNote() : confirmAddNote(pinIndex)}
             disabled={!noteText.trim() && !noteImage}
           >
-            <Check className="h-3.5 w-3.5 mr-1" />
+            <BrandCheck className="h-3.5 w-3.5 mr-1" />
             {isEditing ? t("note_form.save") : t("note_form.add")}
           </Button>
         </div>
@@ -350,7 +351,7 @@ const DraggablePinList = ({
               onClick={() => startEditingNote(pinIndex, noteIndex, note)}
               className="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded"
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <BrandPencil className="h-3.5 w-3.5" />
             </button>
             <button
               type="button"
@@ -511,7 +512,7 @@ const DraggablePinList = ({
                             setEditingNameIndex(null);
                           }}
                         >
-                          <Check className="h-3.5 w-3.5" />
+                          <BrandCheck className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -535,7 +536,7 @@ const DraggablePinList = ({
                             }}
                             className="flex-shrink-0 text-muted-foreground hover:text-foreground p-0.5"
                           >
-                            <Pencil className="h-3 w-3" />
+                            <BrandPencil className="h-3 w-3" />
                           </button>
                         )}
                       </div>

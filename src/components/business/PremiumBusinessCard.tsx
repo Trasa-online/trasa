@@ -30,7 +30,8 @@ import type { PlaceUserNote } from "@/lib/placeNotes";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
-import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Heart, ImagePlus } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, FileText, Instagram, Facebook, MapPin, Heart, ImagePlus } from "lucide-react";
+import { BrandGlobe } from "@/components/BrandIcon";
 import type { LikeState } from "@/lib/placePhotoSocial";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
@@ -1052,7 +1053,7 @@ function ContactButtonsSection({ data }: SectionProps) {
           rel="noopener noreferrer"
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
         >
-          <Globe className="h-4 w-4" />
+          <BrandGlobe className="h-4 w-4" />
           {t("website")}
         </a>
       )}

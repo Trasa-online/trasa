@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -582,7 +583,7 @@ const PlanWizard = () => {
                                             isSelected ? "bg-primary border-primary" : "border-border/60 bg-background"
                                           )}
                                         >
-                                          {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                                          {isSelected && <BrandCheck className="h-3.5 w-3.5 text-white" />}
                                         </div>
                                       </button>
                                     );
@@ -686,7 +687,7 @@ const PlanWizard = () => {
                   title={!hasStartRef ? t("sort_nearest_disabled_hint") : ""}
                 >
                   {t("sort_nearest")}
-                  {sortMode === "nearest" && <Check className="inline h-3.5 w-3.5 ml-1" />}
+                  {sortMode === "nearest" && <BrandCheck className="inline h-3.5 w-3.5 ml-1" />}
                 </button>
               </div>
             </div>
@@ -761,7 +762,7 @@ const PlanWizard = () => {
                           <CategoryIcon category={sub.id} className="h-4 w-4 shrink-0" />
                           <span>{sub.label}</span>
                           {active
-                            ? <Check className="h-3.5 w-3.5 ml-0.5 text-primary" />
+                            ? <BrandCheck className="h-3.5 w-3.5 ml-0.5 text-primary" />
                             : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                         </button>
                       );

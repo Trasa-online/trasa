@@ -3,8 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Compass, Heart, Loader2, Check, MapPin, ChevronLeft } from "lucide-react";
-import { BrandSearch } from "@/components/BrandIcon";
+import { ArrowLeft, Compass, Heart, Loader2, MapPin, ChevronLeft } from "lucide-react";
+import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { expandCity } from "@/lib/cities";
@@ -295,7 +295,7 @@ const AddPlaceToTripInner = () => {
                 : "border-border bg-transparent"
           }`}
         >
-          {inTrip ? <Check className="h-4 w-4 text-muted-foreground" /> : checked ? <Check className="h-4 w-4" /> : null}
+          {inTrip ? <BrandCheck className="h-4 w-4 text-muted-foreground" /> : checked ? <BrandCheck className="h-4 w-4" /> : null}
         </div>
       </button>
     );
