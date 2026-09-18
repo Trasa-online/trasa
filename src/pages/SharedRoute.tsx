@@ -38,6 +38,7 @@ import { fetchPinPhotos, addPinPhoto, deletePinPhotoReturning, deletePinPhotosFo
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
+import TranslatableText from "@/components/TranslatableText";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import PlaceNoteSheet from "@/components/route/PlaceNoteSheet";
@@ -2610,7 +2611,7 @@ export default function SharedRoute() {
             <p className="text-[17px] font-bold leading-snug text-foreground mt-3">„{route.ai_highlight}"</p>
           )}
           {routeDescription && !descEditing && (
-            <p className="text-[15px] text-foreground/80 leading-relaxed mt-3">{routeDescription}</p>
+            <TranslatableText text={routeDescription} className="text-[15px] text-foreground/80 leading-relaxed mt-3" />
           )}
           {/* Tagi CALEJ TRASY usuniete (prosba Nat 2026-08-31) - widok wyjazdu ma byc czysty.
               Zostaja tylko werdykty przy KONKRETNYCH miejscach (pins.tags). */}

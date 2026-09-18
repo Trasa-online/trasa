@@ -171,5 +171,15 @@
   },
   "keyboard": {
     "hide": "Schowaj klawiaturę"
+  },
+  "translate": {
+    "button": "Przetłumacz",
+    "loading": "Tłumaczę…",
+    "translated": "Przetłumaczono",
+    "original_shown": "Oryginał",
+    "show_original": "Pokaż oryginał",
+    "show_translation": "Pokaż tłumaczenie",
+    "failed": "Nie udało się przetłumaczyć",
+    "limit": "Limit tłumaczeń na dziś wyczerpany"
   }
 }

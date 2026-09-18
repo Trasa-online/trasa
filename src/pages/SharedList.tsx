@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import TranslatableText from "@/components/TranslatableText";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -1083,7 +1084,7 @@ export default function SharedList() {
             visitedCount={(items as any[]).filter((it) => (isOwner ? visitedKeys : authorVisitedKeys).has(visitKeyOf(it))).length}
             starredCount={(items as any[]).filter((it) => it.is_top).length}
             privateLabel={!col.is_public && col.list_status !== "to_visit" ? t("privacy.chip") : null} />
-          {col.description && <p className="text-[15px] text-foreground/80 leading-relaxed mt-3">{col.description}</p>}
+          {col.description && <TranslatableText text={col.description} className="text-[15px] text-foreground/80 leading-relaxed mt-3" />}
         </div>
 
         {/* Jeden widok: miejsca. Zakladka Galeria usunieta (decyzja Nat 2026-09-01). */}

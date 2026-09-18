@@ -38,6 +38,7 @@ import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
+import TranslatableText from "@/components/TranslatableText";
 import { useQuery } from "@tanstack/react-query";
 import { instagramUrl, facebookUrl } from "@/lib/social";
 import type {
@@ -1277,7 +1278,7 @@ const PremiumBusinessCard = ({
                   <div className="space-y-3">
                     {userNotes.map((n) => (
                       <div key={n.key} className="bg-muted/50 rounded-2xl px-3.5 py-3">
-                        <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
+                        <TranslatableText text={n.note} className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words" />
                         <div className="flex items-center gap-2 mt-2">
                           <img src={avatarSrc(n.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-secondary" />
                           <span className="text-[12px] font-semibold text-muted-foreground truncate">{n.username ?? "Użytkownik"}</span>

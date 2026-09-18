@@ -61,3 +61,6 @@ verify_jwt = true
 # wiec bez JWT (walidacja + limit czestotliwosci w srodku funkcji).
 [functions.business-inquiry]
 verify_jwt = false
+
+[functions.translate-text]
+verify_jwt = true
