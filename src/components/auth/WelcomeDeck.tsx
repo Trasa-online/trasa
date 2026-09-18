@@ -1,26 +1,37 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 import { listTheme } from "@/lib/listThemes";
-import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { resolveStored } from "@/components/PlacePhoto";
+import { scopeLabel } from "@/lib/tripScope";
+import { buildTripStaticMapUrl } from "@/lib/staticMap";
+import { TripTile, ListTile, LIST_TILES, type GridItem, type GridPlace } from "@/components/home/FeedTiles";
 
-// Talia okladek u gory ekranu powitalnego (propozycja Nat 2026-09-14): karty 3:4 - okladki
-// MIEJSC (zdjecia userow z place_photos) przeplatane kafelkami KOLEKCJI (kolorowe tlo z palety
-// + mini-siatka miejsc + tytul, jak w Eksploracji). Oba zrodla maja publiczny odczyt, wiec
-// dzialaja przed logowaniem. Co ~2,4 s wierzchnia karta wysuwa sie w bok i CHOWA POD spod
-// talii (bez zanikania - to tasowanie, nie przenikanie), a reszta przesuwa sie do przodu.
+// Talia u gory ekranu powitalnego (propozycja Nat 2026-09-14, przebudowa 2026-09-18): karty
+// 9:16 z PRAWDZIWYMI kafelkami z Eksploracji - `TripTile` (okladka, pigulka autora z nakladka
+// awatara, mini-mapa, tytul, chipy: miejsca / miasto / dni) i `ListTile` (kolor przewodni
+// kolekcji, autor z @nickiem, chipy, tytul, mini-siatka miejsc). To ten sam komponent, ktory
+// rysuje feed, wiec kazda zmiana kafelka w apce od razu jest tez tutaj. Do 18.09 talia miala
+// wlasne, uproszczone karty (zdjecie miejsca + nazwa / kolor + 3 miniatury), bez miasta,
+// autora i nakladek - Nat: "brakuje stylowania takiego jak w apce".
+//
+// Kafelek renderuje sie w swojej naturalnej szerokosci (`TILE_W`, wariant `grid`) i jest
+// SKALOWANY transformem do szerokosci karty - dzieki temu typografia i odstepy sa dokladnie
+// te z Eksploracji, tylko mniejsze. Wszystkie zrodla maja publiczny odczyt (RLS), wiec
+// dzialaja przed logowaniem: opublikowane wyjazdy z okladka, publiczne kolekcje, profile.
+//
+// Co ~2,4 s wierzchnia karta wysuwa sie w bok i CHOWA POD spod talii (bez zanikania - to
+// tasowanie, nie przenikanie), a reszta przesuwa sie do przodu.
 
-type PlaceCard = { kind: "place"; key: string; name: string; city: string | null; photo: string };
-type ListCard = { kind: "list"; key: string; title: string; city: string | null; bg: string; ink: string; photos: (string | null)[]; icons: string[] };
-type Card = PlaceCard | ListCard;
+type Card = { key: string; item: GridItem };
 
 const DECK = 5;                 // ile kart widac w talii
 const SHUFFLE_MS = 2400;
 const FLY_MS = 900;
 const CARD_W = 176;
-const CARD_H = 234;
+const CARD_H = Math.round(CARD_W * 16 / 9);   // 313 - proporcja okladki wyjazdu
+const TILE_W = 224;             // naturalna szerokosc kafelka `grid` przed skalowaniem
+const SCALE = CARD_W / TILE_W;
 // Pozycja karty w talii wg indeksu od wierzchu: lekki wachlarz, kazda kolejna troche mniejsza i nizej.
 const SLOT = [
   { rotate: -4, x: 0, y: 0, scale: 1 },
@@ -35,28 +46,101 @@ function shuffle<T>(arr: T[]): T[] {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-// Przeplot: miejsce, kolekcja, miejsce... - obie tresci maja byc widoczne od razu.
+// Przeplot: wyjazd, kolekcja, wyjazd... - obie tresci maja byc widoczne od razu.
 function interleave<T>(a: T[], b: T[]): T[] {
   const out: T[] = [];
   for (let i = 0; i < Math.max(a.length, b.length); i++) { if (a[i]) out.push(a[i]); if (b[i]) out.push(b[i]); }
   return out;
 }
 
-function DeckPhoto({ src, alt, size = 360 }: { src: string; alt: string; size?: number }) {
-  const img = useImageWithFallback(src, size);
-  if (!img.src || img.failed) return <div className="h-full w-full bg-[#fcede3]" />;
-  return <img src={img.src} alt={alt} onError={img.onError} draggable={false} className="h-full w-full object-cover" />;
-}
+type Profile = { id: string; username: string | null; first_name: string | null; avatar_url: string | null; avatar_frame: string | null; avatar_frame_color: string | null };
 
-function ListMini({ photo, icon }: { photo: string | null; icon: string }) {
-  const img = useImageWithFallback(photo, 160);
-  return (
-    <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-[#fcede3]">
-      {photo && img.src && !img.failed
-        ? <img src={img.src} alt="" onError={img.onError} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
-        : <img src={icon} alt="" draggable={false} className="absolute left-1/2 top-1/2 w-[46%] -translate-x-1/2 -translate-y-1/2 opacity-90" />}
-    </div>
-  );
+async function loadCards(): Promise<Card[]> {
+  const [routesRes, colsRes] = await Promise.all([
+    (supabase as any).from("routes")
+      .select("id, title, city, countries, user_id, start_date, end_date, day_number, list_cover_url, share_anonymous")
+      .eq("status", "published").eq("is_shared", true).not("list_cover_url", "is", null)
+      .order("published_at", { ascending: false }).limit(12),
+    (supabase as any).from("discovery_collections")
+      .select("id, title, city, countries, theme, user_id")
+      .eq("is_public", true).eq("list_status", "visited").order("created_at", { ascending: false }).limit(12),
+  ]);
+  const routes = ((routesRes.data ?? []) as any[]).filter((r) => r.title && r.list_cover_url);
+  const cols = ((colsRes.data ?? []) as any[]).filter((c) => c.title);
+
+  const [pinsRes, itemsRes, profilesRes] = await Promise.all([
+    routes.length
+      ? (supabase as any).from("pins").select("route_id, place_name, latitude, longitude").in("route_id", routes.map((r) => r.id))
+      : Promise.resolve({ data: [] }),
+    cols.length
+      ? (supabase as any).from("discovery_items").select("collection_id, place_name, category, photo_url, images, order_index")
+          .in("collection_id", cols.map((c) => c.id)).order("order_index", { ascending: true }).limit(400)
+      : Promise.resolve({ data: [] }),
+    (() => {
+      const ids = [...new Set([...routes.map((r) => r.user_id), ...cols.map((c) => c.user_id)].filter(Boolean))];
+      return ids.length
+        ? (supabase as any).from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color").in("id", ids)
+        : Promise.resolve({ data: [] });
+    })(),
+  ]);
+  const profiles = new Map<string, Profile>();
+  for (const p of (profilesRes.data ?? []) as Profile[]) profiles.set(p.id, p);
+
+  const pinsByRoute = new Map<string, any[]>();
+  for (const p of (pinsRes.data ?? []) as any[]) { const a = pinsByRoute.get(p.route_id) ?? []; a.push(p); pinsByRoute.set(p.route_id, a); }
+  const itemsByCol = new Map<string, any[]>();
+  for (const it of (itemsRes.data ?? []) as any[]) { const a = itemsByCol.get(it.collection_id) ?? []; a.push(it); itemsByCol.set(it.collection_id, a); }
+
+  const trips: Card[] = routes
+    .map((r) => {
+      const pins = pinsByRoute.get(r.id) ?? [];
+      const prof = r.share_anonymous ? null : profiles.get(r.user_id);
+      // Dni jak w feedzie: z zakresu dat, a bez dat - z `day_number` (gdy > 1).
+      const days = r.start_date
+        ? Math.max(1, Math.round((new Date(r.end_date ?? r.start_date).getTime() - new Date(r.start_date).getTime()) / 86_400_000) + 1)
+        : (Number(r.day_number) > 1 ? Number(r.day_number) : null);
+      const item: GridItem = {
+        kind: "trip", id: r.id, title: r.title,
+        cover: resolveStored(r.list_cover_url),
+        where: r.city || scopeLabel(r),
+        authorName: prof?.username ? `@${prof.username}` : (prof?.first_name ?? ""),
+        authorAvatar: prof?.avatar_url ?? null, authorId: prof?.id ?? null,
+        authorFrame: prof?.avatar_frame ?? null, authorFrameColor: prof?.avatar_frame_color ?? null,
+        showAuthor: !!prof,
+        at: 0, placesCount: pins.length, days,
+        mapUrl: buildTripStaticMapUrl(pins, "200x200"), pins,
+        theme: null, places: [],
+      };
+      return { key: `t-${r.id}`, item };
+    })
+    .filter((c) => c.item.placesCount > 0);
+
+  const lists: Card[] = cols
+    .map((c) => {
+      const its = itemsByCol.get(c.id) ?? [];
+      const prof = profiles.get(c.user_id);
+      const places: GridPlace[] = its.slice(0, LIST_TILES).map((it) => ({
+        name: it.place_name ?? "", category: it.category ?? null,
+        photo: resolveStored((Array.isArray(it.images) && it.images[0]) || it.photo_url || null),
+      }));
+      const item: GridItem = {
+        kind: "list", id: c.id, title: c.title,
+        cover: places.find((p) => p.photo)?.photo ?? null,
+        where: c.city || scopeLabel(c),
+        authorName: prof?.first_name || prof?.username || "",
+        authorHandle: prof?.username ? `@${prof.username}` : null,
+        authorAvatar: prof?.avatar_url ?? null, authorId: prof?.id ?? null,
+        authorFrame: prof?.avatar_frame ?? null, authorFrameColor: prof?.avatar_frame_color ?? null,
+        showAuthor: !!prof,
+        at: 0, placesCount: its.length, days: null, mapUrl: null,
+        theme: listTheme(c.theme, c.id), places,
+      };
+      return { key: `l-${c.id}`, item };
+    })
+    // Kolekcja bez zdjec to sama siatka ikon - w talii ma byc cos do ogladania.
+    .filter((c) => c.item.placesCount >= 3 && c.item.places.some((p) => p.photo));
+
+  return interleave(shuffle(trips).slice(0, 5), shuffle(lists).slice(0, 4));
 }
 
 export default function WelcomeDeck({ className = "" }: { className?: string }) {
@@ -68,45 +152,9 @@ export default function WelcomeDeck({ className = "" }: { className?: string }) 
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const [photosRes, colsRes] = await Promise.all([
-        (supabase as any).from("place_photos").select("place_key, place_name, city, photo_url").order("created_at", { ascending: false }).limit(60),
-        (supabase as any).from("discovery_collections").select("id, title, city, theme").eq("is_public", true).eq("list_status", "visited").order("created_at", { ascending: false }).limit(12),
-      ]);
-      if (cancelled) return;
-      // Jedno zdjecie na miejsce, losowa kolejnosc.
-      const seen = new Set<string>();
-      const places: PlaceCard[] = [];
-      for (const r of (photosRes.data ?? []) as any[]) {
-        const key = String(r.place_key ?? r.place_name ?? "");
-        if (!r.photo_url || !r.place_name || seen.has(key)) continue;
-        seen.add(key);
-        places.push({ kind: "place", key: `p-${key}`, name: r.place_name, city: r.city ?? null, photo: r.photo_url });
-      }
-      // Kolekcje: 3 pierwsze miejsca na mini-siatke (zdjecie usera albo ikona kategorii).
-      const cols = ((colsRes.data ?? []) as any[]).filter((c) => c.title);
-      let lists: ListCard[] = [];
-      if (cols.length) {
-        const { data: items } = await (supabase as any)
-          .from("discovery_items").select("collection_id, photo_url, images, category, order_index")
-          .in("collection_id", cols.map((c) => c.id)).order("order_index", { ascending: true }).limit(240);
-        if (cancelled) return;
-        const byCol = new Map<string, any[]>();
-        for (const it of (items ?? []) as any[]) { const arr = byCol.get(it.collection_id) ?? []; if (arr.length < 3) arr.push(it); byCol.set(it.collection_id, arr); }
-        lists = cols
-          .map((c) => {
-            const its = byCol.get(c.id) ?? [];
-            const th = listTheme(c.theme, c.id);
-            return {
-              kind: "list" as const, key: `l-${c.id}`, title: c.title, city: c.city ?? null, bg: th.bg, ink: th.ink,
-              photos: its.map((it) => resolveStored((Array.isArray(it.images) && it.images[0]) || it.photo_url || null)),
-              icons: its.map((it) => categoryIconSrc(it.category ?? null)),
-            };
-          })
-          .filter((l) => l.photos.length >= 2);
-      }
-      setCards(interleave<Card>(shuffle(places).slice(0, 5), shuffle(lists).slice(0, 4)));
-    })();
+    loadCards()
+      .then((c) => { if (!cancelled) setCards(c); })
+      .catch((e) => console.warn("[WelcomeDeck] load failed:", e instanceof Error ? e.message : e));
     return () => { cancelled = true; };
   }, []);
 
@@ -127,20 +175,23 @@ export default function WelcomeDeck({ className = "" }: { className?: string }) 
     return () => { clearInterval(id); if (phaseTimer.current) clearTimeout(phaseTimer.current); };
   }, [cards.length]);
 
-  if (!cards.length) return <div className={`h-[280px] ${className}`} aria-hidden />;
+  const deckH = CARD_H + 40;
+  if (!cards.length) return <div style={{ height: deckH }} className={className} aria-hidden />;
 
   return (
-    <div className={`relative h-[280px] w-full ${className}`} aria-hidden>
+    <div className={`relative w-full ${className}`} style={{ height: deckH }} aria-hidden>
       {cards.map((card, i) => {
         const slot = SLOT[Math.min(i, DECK - 1)];
         const isFlying = flying?.key === card.key && i === cards.length - 1;
         // Karta w locie zostaje NA WIERZCHU, dopoki nie wysunie sie z talii; potem idzie pod spod.
         const z = isFlying && flying?.phase === "out" ? 40 : 20 - i;
+        const it = card.item;
         return (
           <motion.div
             key={card.key}
-            className="absolute left-1/2 top-3 overflow-hidden rounded-[22px] shadow-[0_12px_32px_-12px_rgba(91,44,6,0.45)]"
-            style={{ width: CARD_W, height: CARD_H, marginLeft: -CARD_W / 2, zIndex: z, transformOrigin: "50% 100%", backgroundColor: card.kind === "list" ? card.bg : "#fcede3" }}
+            // `pointer-events-none`: kafelek ma wlasne guziki (mini-mapa) - w talii nic nie jest klikalne.
+            className="pointer-events-none absolute left-1/2 top-3 overflow-hidden rounded-[22px] shadow-[0_12px_32px_-12px_rgba(91,44,6,0.45)]"
+            style={{ width: CARD_W, height: CARD_H, marginLeft: -CARD_W / 2, zIndex: z, transformOrigin: "50% 100%", backgroundColor: it.theme?.bg ?? "#fcede3" }}
             initial={false}
             animate={isFlying
               // Wysuniecie w prawo z lekkim obrotem i powrot juz pod talia - bez zanikania.
@@ -151,23 +202,17 @@ export default function WelcomeDeck({ className = "" }: { className?: string }) 
               : { type: "spring", stiffness: 260, damping: 26 }}
             onAnimationComplete={() => { if (isFlying) setFlying(null); }}
           >
-            {card.kind === "place" ? (
-              <>
-                <DeckPhoto src={card.photo} alt={card.name} />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/25 to-transparent px-3 pb-3 pt-10">
-                  <p className="line-clamp-2 text-[13px] font-bold leading-tight text-white">{card.name}</p>
-                  {card.city && <p className="mt-0.5 truncate text-[11px] font-medium text-white/80">{card.city}</p>}
-                </div>
-              </>
+            {/* Kafelek w naturalnej szerokosci, przeskalowany do karty. Wyjazd ma 9:16, wiec
+                wypelnia karte co do piksela; kolekcja jest nizsza, wiec stoi WYSRODKOWANA
+                w pionie na swoim kolorze (tlo karty = kolor przewodni kolekcji, granicy nie
+                widac) - przy gorze zostawala pusta dolna polowa i karta wygladala na urwana. */}
+            {it.kind === "trip" ? (
+              <div style={{ width: TILE_W, transform: `scale(${SCALE})`, transformOrigin: "0 0" }}>
+                <TripTile it={it} size="grid" />
+              </div>
             ) : (
-              <div className="flex h-full flex-col p-3">
-                <div className="grid grid-cols-3 gap-1.5">
-                  {card.photos.slice(0, 3).map((ph, k) => <ListMini key={k} photo={ph} icon={card.icons[k] ?? categoryIconSrc(null)} />)}
-                </div>
-                <div className="mt-auto">
-                  <p className="line-clamp-2 text-[14px] font-bold leading-tight" style={{ color: card.ink }}>{card.title}</p>
-                  {card.city && <p className="mt-0.5 truncate text-[11px] font-medium" style={{ color: card.ink, opacity: 0.8 }}>{card.city}</p>}
-                </div>
+              <div className="absolute left-1/2 top-1/2" style={{ width: TILE_W, transform: `translate(-50%, -50%) scale(${SCALE})` }}>
+                <ListTile it={it} size="grid" />
               </div>
             )}
           </motion.div>

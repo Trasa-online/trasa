@@ -160,7 +160,10 @@
       "denied": {
         "title": "Lokalizacja jest wyłączona",
         "desc": "Włącz ją w ustawieniach telefonu: Ustawienia → Spontaway → Lokalizacja."
-      }
+      },
+      "status_on": "Włączona",
+      "status_off": "Wyłączona",
+      "status_ask": "Jeszcze nie pytaliśmy"
     }
   },
   "splash": {

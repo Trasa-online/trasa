@@ -14,7 +14,7 @@
 //   - Waitlista: ile osob czeka, kto doszedl w ciagu doby, ile juz ma konto
 //
 // Źródła: Supabase (konta/wyjazdy/kolekcje) + PostHog (zdarzenia/aktywni). Wysyłka: Resend.
-// Cron: codziennie 07:00 UTC (~9:00 Europe/Warsaw) via pg_cron + pg_net.
+// Cron: codziennie 05:00 UTC (7:00 Europe/Warsaw latem, 6:00 zima) via pg_cron + pg_net (migracja 20260918b).
 // Wzorce: monitor-user-threshold (Resend) + admin-analytics (HogQL).
 // =====================================================================
 
@@ -355,6 +355,10 @@ Deno.serve(async (req) => {
         </tr></table>
 
         <h2 style="font-size:14px;color:#0E0E0E;margin:18px 4px 8px;">Aktywacja i retencja</h2>
+        <p style="font-size:12px;color:#979797;margin:0 4px 8px;line-height:1.5;">
+          <b style="color:#0E0E0E;">Aktywacja</b> = odsetek wszystkich kont, które założyły choć jeden wyjazd (czy user zrobił w apce coś więcej niż rejestracja).
+          <b style="color:#0E0E0E;">DAU / WAU / MAU</b> = ile RÓŻNYCH osób otworzyło apkę dziś / w ostatnich 7 dniach / w ostatnich 30 dniach (daily, weekly, monthly active users). Jedna osoba liczy się raz, niezależnie od liczby wejść.
+        </p>
         <table style="width:100%;border-collapse:separate;border-spacing:8px 0;"><tr>
           ${card("Aktywacja", `${activationPct}%`, `${activatedSet.size}/${totalAccounts} z ≥1 wyjazdem`)}
           ${card("DAU", String(dau), "aktywni dziś")}
@@ -377,7 +381,7 @@ Deno.serve(async (req) => {
           ${eventsRows || `<tr><td style="padding:12px;color:#979797;font-size:13px;">Brak zdarzeń w tym oknie.</td></tr>`}
         </table>
 
-        <p style="font-size:11px;color:#cfcfcf;margin:24px 4px 8px;">Konta, wyjazdy i kolekcje: Supabase (źródło prawdy). DAU/WAU/MAU i zdarzenia: PostHog. Konta zespołu (${INTERNAL_EMAILS.join(", ")}) są wyłączone ze wszystkich liczb. Raport automatyczny, codziennie ~9:00.</p>
+        <p style="font-size:11px;color:#cfcfcf;margin:24px 4px 8px;">Konta, wyjazdy i kolekcje: Supabase (źródło prawdy). DAU/WAU/MAU i zdarzenia: PostHog. Konta zespołu (${INTERNAL_EMAILS.join(", ")}) są wyłączone ze wszystkich liczb. Raport automatyczny, codziennie ~7:00.</p>
       </div>`;
 
     if (dryRun) {

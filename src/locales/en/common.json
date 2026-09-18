@@ -160,7 +160,10 @@
       "denied": {
         "title": "Location is off",
         "desc": "Turn it on in your phone settings: Settings → Spontaway → Location."
-      }
+      },
+      "status_on": "On",
+      "status_off": "Off",
+      "status_ask": "Not asked yet"
     }
   },
   "splash": {

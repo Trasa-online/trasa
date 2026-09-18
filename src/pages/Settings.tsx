@@ -117,13 +117,13 @@ function LinkedAccountsSection() {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">{t("linked_accounts")}</h3>
+      <h3 className="px-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("linked_accounts")}</h3>
 
       {identities.map((identity) => {
         const provider = identity.provider as Provider;
         const canUnlink = identities.length > 1;
         return (
-          <div key={identity.id} className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
+          <div key={identity.id} className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px]">
             <ProviderIcon provider={provider} />
             <div className="flex-1 min-w-0">
               <span className="text-sm font-medium block">{providerLabel(provider)}</span>
@@ -147,7 +147,7 @@ function LinkedAccountsSection() {
         <button
           onClick={() => handleLink("google")}
           disabled={linking !== null}
-          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left disabled:opacity-60"
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left disabled:opacity-60"
         >
           <ProviderIcon provider="google" />
           <span className="text-sm font-medium flex-1">{linking === "google" ? t("linking") : t("link_google")}</span>
@@ -159,7 +159,7 @@ function LinkedAccountsSection() {
         <button
           onClick={() => handleLink("apple")}
           disabled={linking !== null}
-          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left disabled:opacity-60"
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left disabled:opacity-60"
         >
           <ProviderIcon provider="apple" />
           <span className="text-sm font-medium flex-1">{linking === "apple" ? t("linking") : t("link_apple")}</span>
@@ -173,6 +173,10 @@ function LinkedAccountsSection() {
 // Natywka: wiersz ze stanem zgody systemowej. "Wlacz" = systemowy alert (albo arkusz
 // "Otworz Ustawienia", gdy zgoda byla odrzucona); przy zgodzie iOS nie da sie jej cofnac z apki,
 // wiec tap prowadzi do Ustawien telefonu. Web/PWA ma osobny przelacznik (VAPID) ponizej.
+// ⚠️ Wszystkie wiersze i karty w Ustawieniach maja JEDNA skore: szary fill `bg-muted/60`
+// z promieniem 20 px, jak `SettingsRow`/`SettingsGroup` w SettingsUI. Do 2026-09-18 starsze
+// sekcje (zgoda na analityke, push, "Zglos blad", spolecznosc) mialy biale tlo z szarym obrysem
+// z czasow sprzed hubu - Nat zauwazyla dwa style na jednym ekranie. Nowy wiersz = szary fill.
 function NativePushRow() {
   const { t } = useTranslation("settings");
   const { t: tc } = useTranslation("common");
@@ -191,7 +195,7 @@ function NativePushRow() {
       type="button"
       onClick={onTap}
       disabled={busy}
-      className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+      className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
     >
       <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
@@ -207,7 +211,7 @@ function PushToggleSection() {
   if (isNative) return <NativePushRow />;
   if (!isSupported) return null;
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
+    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px]">
       <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
       <Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />
@@ -232,7 +236,7 @@ function CookieConsentSection() {
   };
 
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
+    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px]">
       <Cookie className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <div className="flex-1">
         <span className="text-sm font-medium">{t("cookies_analytics")}</span>
@@ -265,7 +269,7 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
     return (
       <button
         onClick={() => setConfirm(true)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
       >
         <Trash2 className="h-4 w-4 text-destructive flex-shrink-0" />
         <span className="text-sm font-medium text-destructive flex-1">{t("delete_account")}</span>
@@ -337,7 +341,7 @@ function ChangePasswordSection() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
       >
         <KeyRound className="h-4 w-4 text-muted-foreground flex-shrink-0" />
         <span className="text-sm font-medium flex-1">{t("change_password")}</span>
@@ -347,7 +351,7 @@ function ChangePasswordSection() {
   }
 
   return (
-    <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
+    <div className="bg-muted/60 rounded-[20px] p-4 space-y-3">
       <p className="text-sm font-semibold">{t("change_password")}</p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <Input
@@ -410,16 +414,16 @@ function SocialContactSection() {
   const rows = [
     { icon: Instagram, label: "Instagram", sub: "@spontaway", onClick: () => openExternal("https://instagram.com/spontaway") },
     { icon: MessagesSquare, label: "Discord", sub: t("community.join"), onClick: () => openExternal("https://discord.gg/6nY6bYdYX") },
-    { icon: Mail, label: "Napisz do nas", sub: "trasa.app@gmail.com", onClick: () => { window.location.href = "mailto:trasa.app@gmail.com"; } },
+    { icon: Mail, label: "Napisz do nas", sub: "support@spontaway.com", onClick: () => { window.location.href = "mailto:support@spontaway.com"; } },
   ];
   return (
     <div className="space-y-2">
-      <h3 className="text-xs uppercase tracking-wide text-muted-foreground px-1 mb-1">{t("community.title")}</h3>
+      <h3 className="px-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("community.title")}</h3>
       {rows.map((r) => (
         <button
           key={r.label}
           onClick={r.onClick}
-          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
         >
           <r.icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -480,7 +484,7 @@ function BugReportSection({ userId }: { userId: string }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
       >
         <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
         <span className="text-sm font-medium flex-1">{t("report_bug")}</span>
@@ -491,7 +495,7 @@ function BugReportSection({ userId }: { userId: string }) {
 
   if (done) {
     return (
-      <div className="bg-card border border-border/40 rounded-2xl p-5 flex flex-col items-center gap-2 text-center">
+      <div className="bg-muted/60 rounded-[20px] p-5 flex flex-col items-center gap-2 text-center">
         <div className="text-3xl">🙏</div>
         <p className="text-sm font-bold">{t("bug_thanks_title")}</p>
         <p className="text-xs text-muted-foreground leading-relaxed">{t("bug_thanks_desc")}</p>
@@ -501,7 +505,7 @@ function BugReportSection({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
+    <div className="bg-muted/60 rounded-[20px] p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{t("report_bug")}</p>
         <button onClick={reset} className="p-1 text-muted-foreground/60 hover:text-muted-foreground">
@@ -562,7 +566,7 @@ function LanguageSection() {
   const { t, i18n } = useTranslation("settings");
   const current = (i18n.language || "pl").toLowerCase().startsWith("en") ? "en" : "pl";
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
+    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px]">
       <Languages className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{t("language")}</span>
       <div className="flex gap-1 bg-muted rounded-full p-0.5">
