@@ -58,6 +58,7 @@ const COPY = {
       ctaSecondary: "Pobierz aplikację",
       storeNote: "Aplikacja dostępna wkrótce również w Google Play!",
       heroAlt: "Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska",
+      heroImg: "/grafika_hero.png",
     },
     features: [
       { title: "Odkrywaj najlepsze\nmiejsca i wydarzenia", body: "Zobacz gdzie i jak najlepiej spędzić czas.", cta: "Zacznij odkrywać", img: "/mockup_odkrywaj.png", alt: "Karty miejsc i wydarzeń w aplikacji Spontaway" },
@@ -130,12 +131,14 @@ const COPY = {
       ctaPrimary: "Start exploring",
       ctaSecondary: "Get the app",
       storeNote: "Coming soon to Google Play as well!",
-      heroAlt: "The Spontaway app: a route around Lodz and a profile with a trip to Gdansk",
+      heroAlt: "The Spontaway app: a May trip around the Tricity and a profile with collections",
+      // Grafiki WYLACZNIE dla wersji angielskiej (Nat 2026-09-18): ekrany apki po angielsku.
+      heroImg: "/grafika_hero_en.png",
     },
     features: [
-      { title: "Discover the best\nplaces and events", body: "See where and how to spend your time best.", cta: "Start exploring", img: "/mockup_odkrywaj.png", alt: "Place and event cards in the Spontaway app" },
+      { title: "Discover the best\nplaces and events", body: "See where and how to spend your time best.", cta: "Start exploring", img: "/mockup_odkrywaj_en.png", alt: "Place and event cards in the Spontaway app" },
       { title: "Build your own\nthemed collections", body: "Places you have been to, or the ones you still want to see.\nSave them and share your take with others.", cta: "Create your first list", img: "/kolekcje_grafika.png", alt: "A place list in the Spontaway app" },
-      { title: "Share what you brought\nback from a trip", body: "Plan your trips and turn them into recaps that help other travellers.", cta: "Add your first trip", img: "/dziel_sie.png", alt: "Trip planning and trip recap in the Spontaway app" },
+      { title: "Share what you brought\nback from a trip", body: "Plan your trips and turn them into recaps that help other travellers.", cta: "Add your first trip", img: "/dziel_sie_en.png", alt: "Trip planning and trip recap in the Spontaway app" },
     ],
     stats: { heading: "SPONTAWAY IS", countries: "Countries", cities: "Cities", possibilities: "Possibilities" },
     business: {
@@ -512,7 +515,7 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
             gwiazdki pulsuja rownoczesnie i caly hero zaczyna mrugac jak jeden element. */}
         <div className="relative order-2 -mx-[52px] mt-6 w-[calc(100%+104px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]">
           <img
-            src="/grafika_hero.png"
+            src={c.hero.heroImg}
             alt={c.hero.heroAlt}
             width={963}
             height={1032}
