@@ -25,6 +25,7 @@ const TITLES: Record<string, string> = {
   list_liked: "live.list_liked",
   list_saved: "live.list_saved",
   list_updated: "live.list_updated",
+  list_starred: "live.list_starred",
   route_used: "live.route_used",
   trip_reminder: "live.trip_reminder",
   trip_places_reminder: "live.trip_places",
@@ -39,7 +40,7 @@ const urlFor = (n: any): string => {
   // Zawsze widok wyjazdu - tam sie uzupelnia zdjecia/notki/opis i publikuje (2026-08-30).
   if (n?.type === "trip_reminder") return `/route/${n.route_id}`;
   if (n?.type === "group_invite") return `/sesja/${n?.metadata?.join_code ?? ""}`;
-  if (n?.type === "list_liked" || n?.type === "list_saved" || n?.type === "list_updated") return `/lista/${n?.metadata?.collection_id ?? ""}`;
+  if (n?.type === "list_liked" || n?.type === "list_saved" || n?.type === "list_updated" || n?.type === "list_starred") return `/lista/${n?.metadata?.collection_id ?? ""}`;
   if (n?.route_id) return `/route/${n.route_id}`;
   return "/moj-profil";
 };

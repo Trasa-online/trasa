@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { X, UserCheck, Route, Bookmark, CheckCircle2, XCircle, Heart, EyeOff, Users } from "lucide-react";
-import { BrandChat, BrandBell, BrandUserPlus, BrandPin, BrandCamera } from "@/components/BrandIcon";
+import { BrandChat, BrandBell, BrandUserPlus, BrandPin, BrandCamera, BrandIcon, STAR_ICON } from "@/components/BrandIcon";
+
+const BrandStarIcon = ({ className }: { className?: string }) => <BrandIcon src={STAR_ICON} className={className} />;
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -80,6 +82,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; tone: Tone; label: 
   list_saved:     { icon: Bookmark, tone: "brown",  label: (t, u, m) => t(m?.title ? "notif.list_saved_title" : "notif.list_saved", { user: u, title: m?.title }) },
   list_updated:   { icon: BrandPin,   tone: "gold",   label: (t, u, m) => t(m?.title ? "notif.list_updated_title" : "notif.list_updated", { user: u, title: m?.title }) },
   list_invite:    { icon: Users,    tone: "orange", label: (t, u, m) => t(m?.title ? "notif.list_invite_title" : "notif.list_invite", { user: u, title: m?.title }) },
+  // Gwiazdka od wspoltworcy w mojej kolekcji (2026-09-20) - reakcja, wiec pomarancz.
+  list_starred:   { icon: BrandStarIcon, tone: "orange", label: (t, u, m) => t(m?.place_name ? "notif.list_starred_place" : "notif.list_starred", { user: u, place: m?.place_name, title: m?.title }) },
   business_thanks: { icon: Heart, tone: "orange", label: (t, _u, m) =>
     t(m?.kind === "photo" ? "notif.business_thanks_photo" : "notif.business_thanks", { business: m?.business_name ?? t("notif.business_fallback") }) },
   // Tresc liczona z metadanych kompletnosci (enqueue_trip_reminders): ZDJECIA maja priorytet,
@@ -124,6 +128,7 @@ function targetOf(n: Notification): { to: string; state?: unknown } | null {
     case "new_route":
       return rid ? { to: `/route/${rid}` } : { to: "/moj-profil?tab=wyjazdy" };
     case "list_invite":
+    case "list_starred":
     case "list_updated":
     case "list_liked":
     case "list_saved":

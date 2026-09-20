@@ -130,7 +130,9 @@
     "open_invite": "Open",
     "dismiss": "Not now",
     "empty_cta": "See your collections",
-    "remove": "Delete notification"
+    "remove": "Delete notification",
+    "list_starred": "{{user}} starred a place in your collection “{{title}}”",
+    "list_starred_place": "{{user}} starred “{{place}}” in your collection “{{title}}”"
   },
   "live": {
     "friend_request": "New friend request 👋",
@@ -148,7 +150,8 @@
     "trip_reminder": "Finish your trip 📸",
     "trip_message": "New message 💬",
     "route_ready": "Trip is ready 🗺️",
-    "group_invite": "Session invite 🗺️"
+    "group_invite": "Session invite 🗺️",
+    "list_starred": "A star in your collection ⭐"
   },
   "done_desc": "We will review this within 24 hours. If it breaks the rules we will remove it and act on the author.",
   "pick_reason": "Pick a reason. We review reports within 24 hours.",
