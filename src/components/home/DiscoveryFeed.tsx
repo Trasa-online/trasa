@@ -17,7 +17,9 @@ import { fetchBlockedIds } from "@/lib/blockedUsers";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Pencil, Trash2, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, Search, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2, Calendar as CalendarIcon } from "lucide-react";
+import { deleteWithUndo } from "@/lib/trash";
+import { X, Sparkles, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
+import { BrandCalendar, BrandTrash, BrandSearch, BrandGlobe, BrandPencil, BrandPin } from "@/components/BrandIcon";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -51,7 +53,6 @@ import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
 import { track } from "@/lib/analytics";
-import { deferDelete } from "@/lib/deferDelete";
 
 type DiscoveryItem = {
   id: string;
@@ -293,15 +294,8 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
     setDeleting(true);
     const refresh = () => queryClient.invalidateQueries({ queryKey: ["explore-rankings"] });
     onClose();
-    deferDelete({
-      message: t("toast.collection_deleted"),
-      commit: async () => {
-        await (supabase as any).from("discovery_items").delete().eq("collection_id", col.id);
-        await (supabase as any).from("discovery_collections").delete().eq("id", col.id);
-        refresh();
-      },
-      onUndo: () => { setDeleting(false); refresh(); },
-    });
+    // Do KOSZA OD RAZU + "Cofnij" (2026-09-15).
+    void deleteWithUndo("list", col.id, { message: t("toast.collection_deleted") }).then(refresh);
   };
 
   // Piny do mapy-podgladu (RouteMap = Google, dziala natywnie; leaflet w iframe srcDoc
@@ -468,12 +462,12 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
             <div className="flex items-center gap-2">
               {isOwner && (
                 <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} aria-label={t("aria.edit")} className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
-                  <Pencil className="h-4 w-4" />
+                  <BrandPencil className="h-4 w-4" />
                 </button>
               )}
               {isOwner && (
                 <button onClick={handleDelete} disabled={deleting} aria-label={t("aria.delete")} className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform disabled:opacity-50">
-                  <Trash2 className="h-4 w-4" />
+                  <BrandTrash className="h-4 w-4" />
                 </button>
               )}
               <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-black/30 backdrop-blur text-white active:scale-90 transition-transform">
@@ -529,7 +523,7 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               <div className="flex rounded-full bg-muted p-0.5">
                 <button onClick={() => setContentView("places")}
                   className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-medium transition-colors ${contentView === "places" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <MapPin className="h-4 w-4" />{t("places")}
+                  <BrandPin className="h-4 w-4" />{t("places")}
                 </button>
                 <button onClick={() => setContentView("gallery")}
                   className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-medium transition-colors ${contentView === "gallery" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
@@ -814,7 +808,7 @@ function UserPolecajkiRow({
                   ) : <span />}
                   {col.city && (
                     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
-                      <MapPin className="h-3 w-3" />{col.city}
+                      <BrandPin className="h-3 w-3" />{col.city}
                     </span>
                   )}
                 </div>
@@ -876,12 +870,12 @@ function PolecaneRow({
                 <p className="font-bold text-sm leading-snug line-clamp-2">{entry.title}</p>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground min-w-0">
-                    <MapPin className="h-3 w-3 shrink-0" />
+                    <BrandPin className="h-3 w-3 shrink-0" />
                     <span className="truncate">{entry.city ?? "-"}</span>
                   </div>
                   {entry.kind === "route" ? (
                     <span className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
-                      <Globe className="h-3 w-3" />
+                      <BrandGlobe className="h-3 w-3" />
                       {t("route")}
                     </span>
                   ) : (
@@ -1045,7 +1039,7 @@ function RouteCardH({ route, onClick }: { route: PolecaneRoute; onClick: () => v
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <p className="text-white font-bold text-sm leading-snug line-clamp-2 drop-shadow-sm">{route.title}</p>
           <p className="text-white/85 text-[11px] mt-1 flex items-center gap-1">
-            <MapPin className="h-3 w-3 shrink-0" />{route.city ?? "-"}
+            <BrandPin className="h-3 w-3 shrink-0" />{route.city ?? "-"}
             {route.placeCount ? <span className="opacity-70">· {route.placeCount}</span> : null}
           </p>
         </div>
@@ -1067,7 +1061,7 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
         {route.placeCount ? (
           <span className="absolute top-3 left-3 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 text-[11px] font-semibold text-white flex items-center gap-1">
-            <MapPin className="h-3 w-3" />{t("places_count", { count: route.placeCount })}
+            <BrandPin className="h-3 w-3" />{t("places_count", { count: route.placeCount })}
           </span>
         ) : null}
       </div>
@@ -1156,7 +1150,7 @@ function BigCard({
       <div className="mt-2.5 flex items-center gap-3 text-sm">
         {placeCount > 0 && (
           <span className="flex items-center gap-1 text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" />
+            <BrandPin className="h-3.5 w-3.5" />
             <span className="font-semibold">{t("places_count", { count: placeCount })}</span>
           </span>
         )}
@@ -1332,8 +1326,10 @@ const SHOW_SEARCH_SHORTCUTS = false;
 function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave, plannedDate }: {
   id: string; photo: string | null; title: string; city?: string | null;
   placeCount: number; pins: LatLng[]; onOpen: () => void; onUnsave: () => void;
-  // Data, na kiedy user planuje te trase (saved_routes.planned_date). Wybiera ja przy zapisie,
-  // wiec musi ja tu zobaczyc - inaczej ten wybor nie ma zadnego skutku.
+  // Data, na kiedy user planuje te trase (saved_routes.planned_date). ⚠️ NOWE zapisy jej nie
+  // maja: od 2026-09-16 zakladka zapisuje wyjazd natychmiast, bez pytania o date (arkusz
+  // z kalendarzem byl zbednym krokiem przed czynnoscia jednego tapniecia). Pokazujemy wiec
+  // wylacznie daty ustawione WCZESNIEJ - stad `plannedDate` bywa puste i to nie jest blad.
   plannedDate?: string | null;
 }) {
   const { t } = useTranslation("homefeed");
@@ -1371,7 +1367,7 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave,
         {city && <p className="mt-1 text-sm text-muted-foreground truncate">{city}</p>}
         {plannedDate && (
           <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
-            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            <BrandCalendar className="h-3.5 w-3.5 text-muted-foreground" />
             {new Date(plannedDate).toLocaleDateString(i18n.language === "en" ? "en-GB" : "pl-PL", { day: "numeric", month: "long" })}
           </p>
         )}
@@ -1517,7 +1513,7 @@ function SavedCollectionCard({ col, savedAt, onOpen, onDelete }: { col: Discover
         </div>
       </button>
       <button onClick={onDelete} aria-label={t("aria.remove_saved")} className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 active:scale-90 transition-colors shrink-0">
-        <Trash2 className="h-4 w-4" />
+        <BrandTrash className="h-4 w-4" />
       </button>
     </div>
   );
@@ -1610,7 +1606,9 @@ export function SavedCollections({ hideEmptyState }: { hideEmptyState?: boolean 
 // 2026-09-11 - 2026-09-13; flaga zostaje na przyszlosc, dzis nikt jej nie podaje).
 // Bez niej komponent pokazuje tresci od wszystkich - to jest EKSPLORACJA (Explore.tsx, IA
 // 2026-09-13: jedyny widok odkrywania, kafelki z FeedTiles w jednej kolumnie ze snapem).
-export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false, followingOnly = false }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean; followingOnly?: boolean } = {}) {
+export default function DiscoveryFeed({ city = "Warszawa", active = true, searchQuery = "", searchOpen = false, searchCategory = "all", searchOnly = false, followingOnly = false, searchCity }: { city?: string; active?: boolean; searchQuery?: string; searchOpen?: boolean; searchCategory?: "all" | "lists" | "trips" | "places" | "people"; searchOnly?: boolean; followingOnly?: boolean;
+  /** Miasto wybrane w pasku zasiegu wyszukiwarki (zakladka Miejsca) - zaweza WYNIKI. */
+  searchCity?: string } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
   // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
@@ -1770,11 +1768,11 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     } catch { /* localStorage niedostepny */ }
   };
   // FILTRY EKSPLORACJI USUNIETE 2026-09-10 (decyzja Nat). Guzik filtrow i jego arkusz
-  // zniknely; eksploracja jest globalna, a zawezanie robi sie wyszukiwarka. Te
-  // trzy wartosci zostaja jako PUSTE stale, bo zapytanie wyszukiwarki nizej sklada sie z nich -
-  // wyzerowane po prostu nic nie odsiewaja. To swiadomie mniejsza zmiana niz przepisywanie
-  // calego zapytania: mniej ryzyka, ze przy okazji zepsujemy szukanie.
-  const cityFilter: string[] = [];
+  // zniknely; eksploracja jest globalna, a zawezanie robi sie wyszukiwarka.
+  // `cityFilter` zostal WSKRZESZONY 2026-09-15, ale wylacznie jako wejscie z paska zasiegu
+  // wyszukiwarki (kraj + miasto w zakladce Miejsca) - nie wraca zaden arkusz filtrow.
+  // Motyw i kategoria zostaja puste: nic nie odsiewaja, a zapytanie nizej sklada sie z nich.
+  const cityFilter: string[] = searchCity ? [searchCity] : [];
   const themeFilter: string[] = [];
   const categoryFilter: string[] = [];
   // Zakladka wynikow wyszukiwania: najlepsze (wszystko) / miejsca / zestawienia.
@@ -2028,8 +2026,11 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
     enabled: isSearchActive,
     staleTime: 30_000,
     queryFn: async () => {
-      // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe).
-      const cities = cityFilter.length ? [...new Set(cityFilter.flatMap(expandCity))] : null;
+      // Wiele miast -> suma expandCity dla kazdego wybranego (dedupe). Do rozwiniecia
+      // DOKLADAMY sama wybrana nazwe: "Trójmiasto" to meta-miasto, ktore `expandCity` zamienia
+      // na Gdansk/Gdynia/Sopot - bez tego piec wizytowek oznaczonych literalnie "Trójmiasto"
+      // bylo nieosiagalne z paska zasiegu (2026-09-15).
+      const cities = cityFilter.length ? [...new Set(cityFilter.flatMap((c) => [...expandCity(c), c]))] : null;
       const like = `%${escapeLike(q)}%`;
       const routeCols = "id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous, cover_url, list_cover_url, review_photos, group_session_id, tags";
 
@@ -2172,7 +2173,9 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         places = await attachCovers(placeRows ?? []);
       } else if (!q && cat === "all") {
         // Podglad: 5 miejsc ZE ZDJECIAMI, kazde z innego miasta (prosba Nat 2026-08-31).
-        places = await fetchCoveredPlaces(5, true);
+        // Przy wybranym miescie deduplikacja po miescie dalaby JEDNO miejsce, wiec ja zdejmujemy
+        // i pokazujemy pelniejszy przeglad tego miasta.
+        places = cities ? await fetchCoveredPlaces(24, false) : await fetchCoveredPlaces(5, true);
       } else if (!q && cat === "places") {
         // Zakladka Miejsca: najpierw losowe miejsca Z OKLADKAMI, potem dopiero te z ikona
         // kategorii na peachy tle (fallback).
@@ -2404,7 +2407,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           {p.city && (
                             <span className="flex items-center gap-0.5 min-w-0">
-                              <MapPin className="h-3 w-3 shrink-0" />
+                              <BrandPin className="h-3 w-3 shrink-0" />
                               <span className="truncate">{p.city}</span>
                             </span>
                           )}
@@ -2421,7 +2424,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         ) : (
           <div className="py-16 text-center px-8 flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-[#fcede3] flex items-center justify-center mb-3">
-              <Search className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />
+              <BrandSearch className="h-8 w-8 text-[#ef9d78]" strokeWidth={2} />
             </div>
             <p className="text-base font-bold">{t("no_results")}</p>
             <p className="text-sm text-muted-foreground mt-1">{t("no_results_hint")}</p>
@@ -2521,7 +2524,9 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 kind: "list", id: col.id, title: col.title,
                 cover: places.find((x) => x.photo)?.photo ?? null,
                 where: col.city || scopeLabel(col),
-                authorName: col.author_username ? `@${col.author_username}` : (col.author_name ?? ""),
+                // Nazwa i @nick OBOK siebie (prosba Nat 2026-09-15) - wyjazdy zostaja przy samym nicku.
+                authorName: col.author_name ?? "",
+                authorHandle: col.author_username ? `@${col.author_username}` : null,
                 authorAvatar: col.author_avatar ?? null, authorId: col.user_id ?? null,
                 authorFrame: col.author_frame ?? null, authorFrameColor: col.author_frame_color ?? null,
                 showAuthor: !!(col.author_username || col.author_name),

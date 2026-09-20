@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, Map } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { BrandMap } from "@/components/BrandIcon";
 import { Button } from "@/components/ui/button";
 import PlaceDetailSheet from "./PlaceDetailSheet";
 import RouteMap from "@/components/RouteMap";
@@ -78,7 +79,7 @@ const TripDayView = ({ pins, dayLabel, dateLabel, date, onStartReview }: TripDay
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-background/60 border border-border/60 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
           >
-            <Map className="h-3.5 w-3.5" />
+            <BrandMap className="h-3.5 w-3.5" />
             {t("day_view.open_maps", { count: pinsWithCoords.length, unit: t("points", { count: pinsWithCoords.length }) })}
           </a>
         </div>

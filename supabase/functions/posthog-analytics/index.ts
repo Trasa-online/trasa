@@ -54,6 +54,18 @@ Deno.serve(async (req) => {
 
     const safeDays = Math.min(Math.max(Number(range_days) || 30, 1), 365);
     const since = new Date(Date.now() - safeDays * 86_400_000).toISOString().slice(0, 10);
+    // Okres POPRZEDNI o tej samej dlugosci - bez niego liczba w panelu lokalu nic nie znaczy:
+    // "1247 wyswietlen" to duzo czy malo? Dopiero "+18% wobec poprzednich 30 dni" cos mowi.
+    const prevSince = new Date(Date.now() - 2 * safeDays * 86_400_000).toISOString().slice(0, 10);
+
+    // `place_saved` = zapisanie miejsca przez uzytkownika (wpada do jego kolekcji).
+    // To jedyne zdarzenie zapisu, ktore niesie place_id - `list_place_added` ma tylko
+    // collection_id, wiec nie da sie go przypisac do lokalu.
+    const countIn = (event: string, from: string, to?: string) =>
+      phQuery(
+        `SELECT count() AS c FROM events WHERE event = '${event}' AND properties.place_id = '${place_id}'` +
+        ` AND toDate(timestamp) >= '${from}'` + (to ? ` AND toDate(timestamp) < '${to}'` : ""),
+      );
 
     const queries: Promise<any>[] = [
       phQuery(`SELECT count() AS c FROM events WHERE event = 'place_viewed' AND properties.place_id = '${place_id}' AND toDate(timestamp) >= '${since}'`),
@@ -61,6 +73,16 @@ Deno.serve(async (req) => {
       phQuery(`SELECT count() AS c FROM events WHERE event = 'place_website_clicked' AND properties.place_id = '${place_id}' AND toDate(timestamp) >= '${since}'`),
       phQuery(`SELECT count() AS c FROM events WHERE event = 'place_phone_clicked' AND properties.place_id = '${place_id}' AND toDate(timestamp) >= '${since}'`),
       phQuery(`SELECT toDate(timestamp) AS day, countIf(event = 'place_viewed') AS views, countIf(event = 'place_added_to_route') AS routes, countIf(event = 'place_website_clicked' OR event = 'place_phone_clicked') AS clicks FROM events WHERE properties.place_id = '${place_id}' AND toDate(timestamp) >= '${since}' GROUP BY day ORDER BY day ASC`),
+      countIn("place_saved", since),
+      // Otwarcia menu i wyswietlenia wydarzenia - zdarzenia dodane 15.09.2026 razem
+      // z sekcjami Menu i Wydarzenia w panelu lokalu.
+      countIn("place_menu_opened", since),
+      countIn("place_event_viewed", since),
+      countIn("place_viewed", prevSince, since),
+      countIn("place_added_to_route", prevSince, since),
+      countIn("place_website_clicked", prevSince, since),
+      countIn("place_phone_clicked", prevSince, since),
+      countIn("place_saved", prevSince, since),
     ];
 
     if (include_recent) {
@@ -70,12 +92,26 @@ Deno.serve(async (req) => {
     }
 
     const results = await Promise.all(queries);
-    const [viewsRes, routesRes, clicksWebRes, clicksPhoneRes, dailyRes, recentRes] = results;
+    const [
+      viewsRes, routesRes, clicksWebRes, clicksPhoneRes, dailyRes,
+      savesRes, menuRes, eventViewsRes, prevViewsRes, prevRoutesRes, prevWebRes, prevPhoneRes, prevSavesRes,
+      recentRes,
+    ] = results;
 
     const views = viewsRes?.results?.[0]?.[0] ?? 0;
     const onRoutes = routesRes?.results?.[0]?.[0] ?? 0;
     const websiteClicks = clicksWebRes?.results?.[0]?.[0] ?? 0;
     const phoneClicks = clicksPhoneRes?.results?.[0]?.[0] ?? 0;
+    const saves = savesRes?.results?.[0]?.[0] ?? 0;
+    const menuOpens = menuRes?.results?.[0]?.[0] ?? 0;
+    const eventViews = eventViewsRes?.results?.[0]?.[0] ?? 0;
+
+    const previous = {
+      views: prevViewsRes?.results?.[0]?.[0] ?? 0,
+      onRoutes: prevRoutesRes?.results?.[0]?.[0] ?? 0,
+      clicks: (prevWebRes?.results?.[0]?.[0] ?? 0) + (prevPhoneRes?.results?.[0]?.[0] ?? 0),
+      saves: prevSavesRes?.results?.[0]?.[0] ?? 0,
+    };
 
     const chartData = (dailyRes?.results ?? []).map((row: any[]) => ({
       date: row[0],
@@ -91,7 +127,7 @@ Deno.serve(async (req) => {
         }))
       : undefined;
 
-    return new Response(JSON.stringify({ views, onRoutes, websiteClicks, phoneClicks, chartData, recentEvents }), {
+    return new Response(JSON.stringify({ views, onRoutes, websiteClicks, phoneClicks, saves, menuOpens, eventViews, previous, rangeDays: safeDays, chartData, recentEvents }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

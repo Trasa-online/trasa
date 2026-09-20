@@ -4,6 +4,19 @@ project_id = "chxphfcpehxshvijqtlf"
 [functions.register-business]
 verify_jwt = false
 
+# Wpisane JAWNIE (2026-09-15), bo `supabase functions deploy --no-verify-jwt` ZAPAMIETUJE ten
+# przelacznik po stronie platformy i ponowny deploy BEZ flagi go nie cofa. Jedno nieuwazne
+# wdrozenie z flaga zdjelo autoryzacje z `send-business-welcome` (wola ja zalogowany lokal po
+# aktywacji konta) - bez tego kazdy z samym anon key moglby wysylac maile z naszej domeny.
+# Trzymamy stan w repo, zeby deploy nie zalezal od tego, co ktos wpisal ostatnio w terminalu.
+[functions.send-business-welcome]
+verify_jwt = true
+
+# Publiczne z zalozenia: "nie pamietam hasla" wola sie bez sesji. Ochrona = limit per IP
+# w samej funkcji.
+[functions.send-business-password-reset]
+verify_jwt = false
+
 [functions.admin-analytics]
 verify_jwt = true
 
@@ -40,6 +53,18 @@ verify_jwt = false
 [functions.daily-analytics-digest]
 verify_jwt = false
 
+# Rachunek Google z BigQuery do panelu ops: cron (x-trigger-secret) / service_role / admin - gate w funkcji.
+[functions.google-billing-sync]
+verify_jwt = false
+
 # Mail o premierze do waitlisty: admin-only (gate w funkcji), JWT wymagany.
 [functions.send-launch-email]
+verify_jwt = true
+
+# Zapytanie o oferte od lokalu z landingu B2C: formularz stoi na otwartej stronie,
+# wiec bez JWT (walidacja + limit czestotliwosci w srodku funkcji).
+[functions.business-inquiry]
+verify_jwt = false
+
+[functions.translate-text]
 verify_jwt = true

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Flag, Check, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { BrandFlag, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -74,7 +75,7 @@ export default function ReportContentSheet({ targetType, targetId, trigger, clas
     <>
       {trigger ? trigger(start) : (
         <button onClick={start} className={`inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground active:opacity-60 transition-opacity ${className ?? ""}`}>
-          <Flag className="h-3.5 w-3.5" />{t("submit")}</button>
+          <BrandFlag className="h-3.5 w-3.5" />{t("submit")}</button>
       )}
 
       <Sheet open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
@@ -83,7 +84,7 @@ export default function ReportContentSheet({ targetType, targetId, trigger, clas
           {done ? (
             <div className="py-6 text-center">
               <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-[#fcede3] flex items-center justify-center">
-                <Check className="h-6 w-6 text-[#ef9d78]" strokeWidth={2.5} />
+                <BrandCheck className="h-6 w-6 text-[#ef9d78]" strokeWidth={2.5} />
               </div>
               <p className="text-base font-bold text-foreground">{t("done_title")}</p>
               <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">

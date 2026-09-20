@@ -2,7 +2,8 @@ import { useRef, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Check, Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
@@ -200,7 +201,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
                   >
                     <span className="text-lg leading-none">{country.flag}</span>
                     <span className="flex-1">{countryLabel(country.name)}</span>
-                    {country.code === countryCode && <Check className="h-4 w-4 text-primary" />}
+                    {country.code === countryCode && <BrandCheck className="h-4 w-4 text-primary" />}
                   </button>
                 ) : (
                   <div
@@ -221,7 +222,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       {/* Wyszukiwarka miast */}
       <div className="px-5 pt-2 shrink-0">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <BrandSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={search}

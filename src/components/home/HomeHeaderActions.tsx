@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Bell, Bookmark, Shield, Search } from "lucide-react";
+import { Bookmark } from "lucide-react";
+import { BrandBell, BrandSearch } from "@/components/BrandIcon";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -86,7 +87,7 @@ const HomeHeaderActions = ({
               className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
               aria-label={t("header.notifications")}
             >
-              <Bell className="h-[18px] w-[18px]" />
+              <BrandBell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none ring-2 ring-background">
                   {unreadCount > 9 ? "9+" : unreadCount}
@@ -102,7 +103,7 @@ const HomeHeaderActions = ({
             aria-label={t("header.search_friends")}
             title={t("header.search_friends")}
           >
-            <Search className="h-[18px] w-[18px]" />
+            <BrandSearch className="h-[18px] w-[18px]" />
           </button>
         )}
         {!isGuest && showSaved && (

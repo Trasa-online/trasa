@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Search, X, Loader2, MapPin } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
+import { BrandTrash, BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -57,7 +58,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       toast.success(t("saved.removed", { name: p.place_name }), {
         duration: 5000,
         action: {
-          label: "Cofnij",
+          label: t("common:buttons.undo"),
           onClick: async () => {
             try {
               // Cofnij usuniecie = przywracamy WLASNY wpis, wiec notka wraca razem z nim.
@@ -115,7 +116,7 @@ export function SavedPlaces({ city }: { city?: string }) {
         aria-label={t("saved.delete_place")}
         className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 transition-colors"
       >
-        <Trash2 className="h-[18px] w-[18px]" />
+        <BrandTrash className="h-[18px] w-[18px]" />
       </button>
     </div>
   );
@@ -140,7 +141,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       ) : places.length === 0 ? (
         <div className="flex flex-col items-center text-center gap-3 px-6 py-12">
           <div className="h-14 w-14 rounded-2xl bg-[#fcede3] flex items-center justify-center text-orange-500">
-            <MapPin className="h-6 w-6" />
+            <BrandPin className="h-6 w-6" />
           </div>
           <div className="space-y-1">
             <p className="text-base font-black">{t("saved.empty_places")}</p>
@@ -247,7 +248,7 @@ function AddPlaceSheet({ open, onOpenChange, city, onAdded }: {
         <div className="px-5 pt-1 pb-2 shrink-0">
           <p className="text-xl font-black text-foreground mb-3">{t("saved.add_place")}</p>
           <div className="flex items-center gap-2 h-12 px-3.5 rounded-2xl border border-border bg-background">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}

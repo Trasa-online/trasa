@@ -1,19 +1,22 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { checkPlaceLimit } from "@/lib/placeLimits";
 import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { isPortraitCover } from "@/lib/coverFormat";
 import { useTranslation } from "react-i18next";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { fetchRouteLike, toggleRouteLike, type LikeState } from "@/lib/likes";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteWithUndo } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
 import { notify } from "@/lib/notify";
 import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { MapPin, ArrowLeft, Sparkles, ChevronDown, Bookmark, Calendar as CalendarIcon, Image as ImageIcon, Maximize2, X, Building2, Pencil, Trash2, Heart, Share2, Plus, Map as MapIcon, Loader2, GripVertical, Check, Flag, Camera, ThumbsUp, MessageCircle, UserPlus, MoreHorizontal, FileText, ChevronLeft } from "lucide-react";
+import { ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, MoreHorizontal, ChevronLeft, Users } from "lucide-react";
+import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil, BrandUserPlus, BrandNote, BrandPin } from "@/components/BrandIcon";
 import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -32,20 +35,23 @@ import { fetchRouteNotesWithAuthors, notesByPlace, placeNoteKey } from "@/lib/pl
 import { detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
 import StoredImage from "@/components/StoredImage";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
+import { fetchFriendPhotos, setTripPhotoAudience, photoStorageKey, type FriendPhoto } from "@/lib/tripPhotoAudience";
 import { fetchPinPhotos, addPinPhoto, deletePinPhotoReturning, deletePinPhotosForPlace, restorePinPhotos, photosByPlace, pinPhotoKey, type PinPhoto } from "@/lib/pinPhotos";
 import { fetchPlaceVotes, toggleVote, placeVoteKey } from "@/lib/placeVotes";
 import { fetchUnreadChatCount } from "@/lib/chatReads";
 import PlaceNotes from "@/components/route/PlaceNotes";
+import TranslatableText from "@/components/TranslatableText";
 import PhotoViewer from "@/components/route/PhotoViewer";
 import PlaceNoteEditor from "@/components/route/PlaceNoteEditor";
 import PlaceNoteSheet from "@/components/route/PlaceNoteSheet";
 import { ShareCardTrip } from "@/components/share/ShareCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
-import { fetchRouteCoversFor, setMyRouteCover, setMyRouteNote, fetchRouteMemberNotes } from "@/lib/routeMemberCover";
+import { fetchRouteCoversFor, setMyRouteCover, fetchRouteMemberNotes } from "@/lib/routeMemberCover";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import { scrollTopTapProps } from "@/lib/scrollTop";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import TripFabStack, { type TripFab } from "@/components/route/TripFabStack";
 import TripChatSheet from "@/components/route/TripChatSheet";
@@ -69,8 +75,16 @@ import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { avatarSrc } from "@/lib/avatar";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
-import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
+import { ParticipantsRow } from "@/components/route/ParticipantsRow";
+import PeopleSheet from "@/components/route/PeopleSheet";
+import { BrandBookmark } from "@/components/BrandBookmark";
+import { BrandHeart } from "@/components/BrandHeart";
+import { BrandStar } from "@/components/BrandStar";
+import { fetchPhotoStars, togglePhotoStar, photoStarsKey, emptyPhotoStars, STAR_BUDGET } from "@/lib/photoStars";
 import TripLikeButton from "@/components/route/TripLikeButton";
+import TripLikesSheet from "@/components/route/TripLikesSheet";
+import TripCoverSheet from "@/components/route/TripCoverSheet";
+import { routeLikersKey } from "@/lib/routeLikers";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
 import { resolvePlaceDbId } from "@/lib/placeLists";
@@ -231,8 +245,11 @@ export default function SharedRoute() {
   );
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);                   // gosc: zapis CALEGO wyjazdu
-  const [showDateSheet, setShowDateSheet] = useState(false);
-  const [datesSheetOpen, setDatesSheetOpen] = useState(false);   // wlasciciel: zakres dat wyjazdu
+  const [datesSheetOpen, setDatesSheetOpen] = useState(false);
+  const [daysSheetOpen, setDaysSheetOpen] = useState(false);
+  const [askRemoveDay, setAskRemoveDay] = useState<number | null>(null);
+  const [askShorten, setAskShorten] = useState<{ to: number; moving: number } | null>(null);
+  const [dayDraft, setDayDraft] = useState(1);   // wlasciciel: zakres dat wyjazdu
   const [planMapOpen, setPlanMapOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null); // fullscreen podglad zdjecia galerii
   // Podglad zdjec DODANYCH DO MIEJSCA (klik w miniaturke w wierszu) - osobny od galerii wyjazdu.
@@ -274,13 +291,34 @@ export default function SharedRoute() {
   // Postep wgrywania zdjec galerii ("3 z 8"). Przy paczce z iPhone'a czekanie liczy sie
   // w dziesiatkach sekund i bez licznika wyglada jak zawieszenie (zgloszenie Nat 2026-09-09).
   const [photoProgress, setPhotoProgress] = useState<{ done: number; total: number } | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
+  // Wejscie z powiadomienia o wiadomosci ma od razu OTWORZYC czat (prosba Nat 2026-09-15) -
+  // guzik nazywa sie "Otworz czat", wiec samo pokazanie wyjazdu nie zalatwia sprawy.
+  // Stan czytamy przy montowaniu; arkusz czatu i tak czeka na `canEdit`, wiec otworzy sie,
+  // gdy dojedzie czlonkostwo.
+  const locationState = useLocation();
+  const chatFromNotification = !!(locationState.state as any)?.openChat;
+  const [chatOpen, setChatOpen] = useState(chatFromNotification);
+  const [allPeopleOpen, setAllPeopleOpen] = useState(false);
+  // Flaga zyje w historii, wiec bez tego powrot "wstecz" na ten wyjazd otwieralby czat
+  // drugi raz. Zuzywamy ja RAZ i podmieniamy wpis historii (bez nowego).
+  useEffect(() => {
+    if (chatFromNotification) navigate(locationState.pathname + locationState.search, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // User pisze notke -> chowamy czat i dolne CTA (zaslanialy pole i klawiature).
   const [noteEditing, setNoteEditing] = useState(false);
   // Etap W TRAKCIE = miejsce, w ktorym powstaje CALE wspomnienie: opis wyjazdu i notki
   // miejsc. Stepper "podsumowania" zostal usuniety z flow (prosba Nat 2026-08-30) - publikacja to
   // jeden guzik "Opublikuj" na dole.
   const [publishing, setPublishing] = useState(false);
+  // Arkusz okladki: "publish" = krok przed publikacja, "adjust" = zmiana po publikacji.
+  const [coverSheet, setCoverSheet] = useState<null | "publish" | "adjust">(null);
+  const [likesOpen, setLikesOpen] = useState(false);
+  // Podwojne tapniecie w zdjecie = polubienie + duze serce w miejscu palca (prosba Nat
+  // 2026-09-17, wzor z Instagrama). Czas i miejsce ostatniego tapniecia trzymamy w REFIE,
+  // nie w stanie - przerysowanie na kazde tapniecie zgubiloby klatke animacji.
+  const lastPhotoTap = useRef<{ t: number; x: number; y: number } | null>(null);
+  const [likeBurst, setLikeBurst] = useState<{ id: number; x: number; y: number } | null>(null);
   // Tryb "Zmień kolejność miejsc" - dopiero on pokazuje uchwyty drag&drop i skraca wiersze
   // do miniaturek (prosba Nat 2026-08-30).
   const [reorderMode, setReorderMode] = useState(false);
@@ -574,14 +612,19 @@ export default function SharedRoute() {
   // Zapis = JEDEN wiersz w saved_routes (dokladnie to samo, co bookmark na karcie w eksploracji)
   // plus opcjonalna data, ktora nalezy do ZAPISUJACEGO, nie do trasy. Zadnej kopii pinow i zadnej
   // zmiany ekranu - ma byc odczuwalne jak zakladka, nie jak przejscie gdzie indziej.
-  const saveToMine = async (tripDate?: Date) => {
+  // ZAPIS JEST NATYCHMIASTOWY (prosba Nat 2026-09-16). Wczesniej tapniecie zakladki otwieralo
+  // kalendarz "Kiedy planujesz ten wyjazd?" i dopiero on zapisywal - a zakladka to gest jednego
+  // tapniecia, jak polubienie. Pytanie o date w tym miejscu bylo dodatkowym krokiem przed
+  // czynnoscia, ktora user uwazal za zakonczona; kto arkusz zamknal, ten nie zapisal nic.
+  // ⛔ `planned_date` NIE jest juz wysylane - dzieki temu `upsert` nie kasuje daty, ktora
+  // ktos ustawil, zanim arkusz znikl. Stare wartosci dalej pokazuje kafelek w "Zapisane".
+  const saveToMine = async () => {
     if (!user) { navigate("/auth"); return; }
     if (!route || saving) return;
     setSaving(true);
-    setShowDateSheet(false);
     try {
       const { error } = await (supabase as any).from("saved_routes").upsert(
-        { user_id: user.id, route_id: id, planned_date: tripDate ? format(tripDate, "yyyy-MM-dd") : null },
+        { user_id: user.id, route_id: id },
         { onConflict: "user_id,route_id" },
       );
       if (error) throw error;
@@ -676,6 +719,14 @@ export default function SharedRoute() {
   });
   const photosMap = photosByPlace(pinPhotoRows as PinPhoto[]);
 
+  // Zdjecia galerii widoczne TYLKO DLA ZNAJOMYCH (osobna tabela - patrz src/lib/tripPhotoAudience.ts).
+  // Kto nie ma prawa, dostaje pusta liste z RLS, nie blad - wiec nie ma tu zadnej bramki w kliencie.
+  const { data: friendPhotoRows = [] } = useQuery({
+    queryKey: ["shared-route-friend-photos", id],
+    queryFn: () => fetchFriendPhotos(id!),
+    enabled: !!id,
+  });
+
   // Glosowanie na miejsca (etap propozycji) - liczba glosow + czy JA glosowalem.
   const { data: votesMap = new Map() } = useQuery({
     queryKey: ["shared-route-votes", id, user?.id],
@@ -730,6 +781,43 @@ export default function SharedRoute() {
     if (liked !== next.liked) setLikeOverrides((o) => ({ ...o, [url]: cur }));
   };
 
+  // WYROZNIENIA ZDJEC - gwiazdka binarna z BUDZETEM 3 na wyjazd (patrz src/lib/photoStars.ts).
+  // ⚠️ `photo_ref` to KLUCZ PLIKU (`photoStorageKey`), a nie caly adres jak przy sercu.
+  // Przy polubieniu duplikat nic nie kosztuje, a tu wyczerpuje budzet - ten sam plik
+  // zapisany raz przez api.spontaway.com, a raz przez <ref>.supabase.co zjadlby dwie z trzech
+  // gwiazdek. Rozbieznosc z `photo_likes` jest wiec swiadoma, nie przeoczona.
+  const { data: photoStars = emptyPhotoStars() } = useQuery({
+    queryKey: photoStarsKey(id, user?.id),
+    enabled: !!id,
+    queryFn: () => fetchPhotoStars(id!, user?.id ?? null),
+    staleTime: 60_000,
+  });
+  // ⚠️ Podwojne tapniecie ZAWSZE POLUBIA, nigdy nie cofa (wzor z Instagrama): cofniecie
+  // polubienia przez przypadkowy podwojny tap byloby strata, ktorej user nie zauwazy.
+  // Serce wyskakuje tez wtedy, gdy zdjecie bylo juz polubione - gest ma dawac odpowiedz.
+  const likePhotoAt = async (url: string, x: number, y: number) => {
+    if (!user?.id) { toast.error(t("toast.login_to_like")); return; }
+    const burstId = Date.now();
+    setLikeBurst({ id: burstId, x, y });
+    window.setTimeout(() => setLikeBurst((b) => (b && b.id === burstId ? null : b)), 900);
+    if (likeStateOf(url).liked) { haptics.light(); return; }
+    await togglePhotoLikeUi(url);
+  };
+
+  // Rozpoznanie podwojnego tapniecia. Prog 40 px, bo palec nie trafia dwa razy w ten sam
+  // piksel, a bez niego dwa tapniecia w PRZECIWNE rogi zdjecia liczylyby sie jako jedno.
+  const onPhotoTap = (url: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const now = Date.now();
+    const prev = lastPhotoTap.current;
+    if (prev && now - prev.t < 300 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 40) {
+      lastPhotoTap.current = null;
+      void likePhotoAt(url, e.clientX, e.clientY);
+      return;
+    }
+    lastPhotoTap.current = { t: now, x: e.clientX, y: e.clientY };
+  };
+
   // Wlasna okladka wyjazdu (route_member_covers) - kazdy uczestnik widzi swoja, wybor jednej
   // osoby nie zmienia widoku pozostalych. Okladka hosta (list_cover_url) zostaje ta, ktora
   // reprezentuje wyjazd w EKSPLORACJI (prosba Nat 2026-08-31).
@@ -747,12 +835,6 @@ export default function SharedRoute() {
     enabled: !!id,
     queryFn: () => fetchRouteMemberNotes(id!),
   });
-  const myTripNote = (memberNotes as any[]).find((n) => n.user_id === user?.id)?.note ?? "";
-  const saveMyTripNote = async (value: string) => {
-    if (!user || !id) return;
-    await setMyRouteNote(id, user.id, value);
-    queryClient.invalidateQueries({ queryKey: ["route-member-notes", id] });
-  };
 
 
 
@@ -760,9 +842,13 @@ export default function SharedRoute() {
   // z wyjazdem do eksploracji. Edytowany tym samym guzikiem, ktory stoi POD wyswietlonym
   // opisem, wiec guzik i tresc to jedno i to samo pole (zgloszenie Nat 2026-09-09: guzik mowil
   // "Dodaj opis", chociaz opis byl - bo siedzial na innym polu niz to widoczne wyzej).
+  // Od 2026-09-20 pisze go KAZDY uczestnik (Nat: "Add note usunac i dodac opcje dodaj opis") -
+  // przez SECDEF `set_trip_description`, bo `routes` ma UPDATE tylko dla wlasciciela, a pelna
+  // polityka dla czlonkow dalaby im tez status, daty i okladke (migracja 20260920e).
   const saveTripDescription = async (value: string) => {
     if (!id) return;
-    await (supabase as any).from("routes").update({ review_narrative: value.trim() || null }).eq("id", id);
+    const { error } = await (supabase as any).rpc("set_trip_description", { p_route: id, p_description: value.trim() || null });
+    if (error) { console.error("[SharedRoute] description:", error.message); toast.error(t("toast.desc_failed")); }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
   };
 
@@ -773,28 +859,30 @@ export default function SharedRoute() {
   // Miniature eksploracji domykamy automatycznie (losowe zdjecie usera), bo bramka feedu jej
   // wymaga - user nie musi juz niczego wybierac. Toast z "Cofnij" (publikacja jest odwracalna
   // przez 6 s, potem juz nie - dlatego bez dodatkowego dialogu).
-  const handlePublish = async () => {
+  // ⚠️ PUBLIKACJA ZAWSZE PRZECHODZI PRZEZ WYBOR OKLADKI (prosba Nat 2026-09-17), takze gdy
+  // okladka jest juz ustawiona: user ma miec pewnosc, ze jego wyjazd wejdzie do eksploracji
+  // z kadrem, ktory sam widzial. Wczesniej brak okladki BLOKOWAL guzik toastem "wybierz
+  // okladke" i odsylal do zakladki Galeria - czyli sciana zamiast kroku w drodze.
+  const handlePublish = () => {
     if (!id || publishing) return;
     if (!(pins as any[]).length) { toast.error(t("toast.need_place")); return; }
-    // Okladka eksploracji jest teraz WARUNKIEM publikacji (prosba Nat 2026-08-30) - wczesniej
-    // losowalismy ja po cichu, wiec wyjazd trafial do feedu z przypadkowym zdjeciem.
-    if (!(route as any)?.list_cover_url) {
-      haptics.warning();
-      toast.error(t("toast.pick_cover"), {
-        description: t("toast.pick_cover_desc"),
-        action: { label: "Galeria", onClick: () => setPlanTab("galeria") },
-      });
-      return;
-    }
+    setCoverSheet("publish");
+  };
+
+  const doPublish = async (coverUrl: string) => {
+    if (!id || publishing) return;
     setPublishing(true);
     try {
+      // Okladke zapisujemy PRZED publikacja - bramka feedu jej wymaga, a gdyby publikacja
+      // przeszla, a zapis okladki nie, wyjazd wyladowalby w eksploracji bez miniatury.
+      await handleSetCover(coverUrl, true);
       await publishTrip([id]);
       // Zdjecia dodane przy miejscach (pin_photos) staja sie czescia galerii MIEJSC dopiero teraz -
       // publikacja jest momentem, w ktorym tresc wyjazdu staje sie publiczna (RPC security definer,
       // bo przenosi tez zdjecia innych uczestnikow; zgloszenie Nat 2026-08-30).
       const { data: synced } = await (supabase as any).rpc("sync_route_place_photos", { p_route_id: id });
       if (typeof synced === "number" && synced > 0) console.info(`[SharedRoute] place photos synced: ${synced}`);
-      const cover = (route as any)?.list_cover_url as string | null;
+      const cover = coverUrl;
       track("trip_published", { route_id: id, city: route.city ?? null, place_count: (pins as any[]).length, has_cover: !!cover });
       haptics.success();
       // Opublikowany wyjazd zbiera polubienia i zapisy - miekkie pytanie o push, gdy toast
@@ -807,7 +895,7 @@ export default function SharedRoute() {
       queryClient.invalidateQueries({ queryKey: ["trip-shortcut"] });
       toast.success(cover ? t("toast.published_with_cover") : t("toast.published_no_cover"), {
         action: {
-          label: "Cofnij",
+          label: t("common:buttons.undo"),
           onClick: async () => {
             await (supabase as any).from("routes").update({ status: "draft", trip_type: "ongoing" }).eq("id", id);
             queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
@@ -820,7 +908,53 @@ export default function SharedRoute() {
       console.error("[SharedRoute] publish failed:", e instanceof Error ? e.message : e);
       haptics.error();
       toast.error(t("toast.publish_failed"));
-    } finally { setPublishing(false); }
+    } finally { setPublishing(false); setCoverSheet(null); }
+  };
+
+  // Wgranie zdjecia POD OKLADKE. `toGallery` decyduje, czy laduje tez w galerii wyjazdu:
+  // przy publikacji tak (to pierwsze zdjecie wyjazdu, nalezy do wspomnienia), przy zmianie
+  // okladki NIE - wtedy jest to kadr zrobiony pod kafelek, a nie wspomnienie (prosba Nat).
+  const uploadCoverPhoto = async (file: File, toGallery: boolean): Promise<string | null> => {
+    if (!user || !id) return null;
+    try {
+      const path = `${user.id}/${route.id}/cover_${Date.now()}_${Math.floor(Math.random() * 1e6)}.jpg`;
+      const { error } = await uploadWithThumb("route-images", path, file);
+      if (error) { console.error("[SharedRoute] cover upload:", error.message); toast.error(t("toast.photos_add_failed")); return null; }
+      const url = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
+      const verdict = await moderateImageUrl(url, "trip_gallery", { route_id: route.id });
+      if (verdict === "rejected") {
+        await (supabase as any).storage.from("route-images").remove([path, `${path}.thumb`]);
+        toast.error(MODERATION_REJECTED_MESSAGE);
+        return null;
+      }
+      const portrait = await isPortraitCover(url);
+      if (toGallery) {
+        // Zdjecie zostaje w galerii nawet gdy nie nadaje sie na okladke - jako zdjecie
+        // wyjazdu jest w porzadku, tylko kafelek by je przycial.
+        await (supabase as any).rpc("append_route_photos", { p_route_id: route.id, p_urls: [url] });
+        queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+      }
+      if (!portrait) {
+        haptics.error();
+        toast.error(t("toast.cover_portrait_only"));
+        if (!toGallery) await (supabase as any).storage.from("route-images").remove([path, `${path}.thumb`]);
+        return null;
+      }
+      return url;
+    } catch (e: any) {
+      console.error("[SharedRoute] cover upload failed:", e?.message ?? e);
+      toast.error(t("toast.photos_add_failed"));
+      return null;
+    }
+  };
+
+  // Zaznaczenie zdjecia w arkuszu okladki. Odrzucamy panoramy - kafelek w eksploracji
+  // kadruje do 9:16 i gubi w nich polowe tresci.
+  const canPickCover = async (url: string): Promise<boolean> => {
+    if (await isPortraitCover(url)) return true;
+    haptics.error();
+    toast.error(t("toast.cover_portrait_only"));
+    return false;
   };
 
   // Etap W TRAKCIE: zapis wlasnej notki (pin_ratings). PlaceNoteEditor sam debounce'uje -> zapis
@@ -951,6 +1085,38 @@ export default function SharedRoute() {
   // "Group members can ... pins of shared route"). Nazwa/publikacja/usuniecie trasy zostaja owner-only.
   const canEdit = isOwner || isGroupMember;
 
+  // Wyroznia TYLKO GOSC - autor i uczestnik nie przyznaja wyroznien wlasnemu wyjazdowi
+  // (ta sama zasada, co przy sercu; egzekwuje ja trigger `guard_photo_star`).
+  const canStar = !!user && !canEdit;
+  const starsUsed = photoStars.mine.size;
+  const starRefOf = (url: string) => photoStorageKey(url);
+  const isStarred = (url: string) => photoStars.mine.has(starRefOf(url));
+  const starCountOf = (url: string) => photoStars.counts.get(starRefOf(url)) ?? 0;
+
+  const toggleStarUi = async (url: string) => {
+    if (!user?.id || !id) { toast.error(t("toast.login_to_like")); return; }
+    const starred = isStarred(url);
+    // Budzet sprawdzamy TEZ tutaj, zeby nie wysylac zapytania skazanego na blad i zeby
+    // komunikat mowil, ile zostalo, zanim user tapnie czwarty raz.
+    if (!starred && starsUsed >= STAR_BUDGET) {
+      haptics.warning();
+      toast.error(t("stars.budget_spent", { count: STAR_BUDGET }));
+      return;
+    }
+    haptics.light();
+    const res = await togglePhotoStar(id, starRefOf(url), user.id, starred);
+    if (res === "budget") { haptics.warning(); toast.error(t("stars.budget_spent", { count: STAR_BUDGET })); return; }
+    if (res === "not_allowed") { haptics.error(); toast.error(t("stars.not_allowed")); return; }
+    if (res === "error") { haptics.error(); toast.error(t("stars.failed")); return; }
+    queryClient.invalidateQueries({ queryKey: photoStarsKey(id, user.id) });
+    if (res === "added") {
+      haptics.success();
+      const left = STAR_BUDGET - (starsUsed + 1);
+      toast.success(left > 0 ? t("stars.added_left", { count: left }) : t("stars.added_last"));
+    }
+  };
+
+
   // ── Wybor MIEJSC z cudzego wyjazdu (2026-09-10) ───────────────────────────────
   // Zastapilo "Zapisz tą trasę". Cudzy plan rzadko pasuje w calosci; to, co realnie
   // zabiera sie z cudzego wyjazdu, to dwa-trzy miejsca. Wejscie przez przytrzymanie
@@ -1018,6 +1184,7 @@ export default function SharedRoute() {
           pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,
         }));
       if (!rows.length) { haptics.error(); toast.info(t("toast.pick_all_present")); return; }
+      if (!checkPlaceLimit("trip_places", (existing ?? []).length, rows.length)) { haptics.error(); return; }
       const { error } = await (supabase as any).from("pins").insert(rows);
       if (error) throw error;
       haptics.success();
@@ -1151,6 +1318,98 @@ export default function SharedRoute() {
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
     toast.success(numDays > 1 ? t("toast.dates_saved_multi", { count: numDays }) : t("toast.date_saved"));
   };
+  // LICZBA DNI BEZ DAT (zgloszenie testerki 2026-09-16). Zrodlem jest `routes.day_number`,
+  // uzywane tylko wtedy, gdy wyjazd nie ma zakresu dat - przy datach liczbe dni wyznacza
+  // zakres i dwa zrodla prawdy rozjechalyby sie przy pierwszej zmianie terminu.
+  const saveDayCount = async (n: number) => {
+    if (!id) return;
+    const next = Math.min(MAX_TRIP_DAYS, Math.max(1, n));
+    // ⚠️ Skracasz wyjazd - miejsca z dni, ktorych juz nie ma, wracaja na ostatni istniejacy
+    // dzien. Bez tego zostalyby w bazie z `day_index` poza zakresem: filtr dnia by ich nie
+    // zlapal, chip "Wszystkie" owszem, i miejsce znikaloby zaleznie od tego, co user tapnal.
+    const orphans = (pins as any[]).filter((pn) => (Number(pn.day_index) || 1) > next);
+    if (orphans.length) {
+      await (supabase as any).from("pins").update({ day_index: next }).in("id", orphans.map((pn) => pn.id));
+    }
+    // Z DATAMI liczba dni = dlugosc zakresu, wiec przesuwamy koniec. Bez dat zapisujemy
+    // `day_number`. ⛔ Nie zapisuj obu naraz - rozjada sie przy pierwszej zmianie terminu.
+    let error: any = null;
+    if (tripStart) {
+      const end = new Date(tripStart.getTime() + (next - 1) * 86400000);
+      const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      ({ error } = await (supabase as any).from("routes").update({ end_date: iso(end) }).eq("id", id));
+    } else {
+      ({ error } = await (supabase as any).from("routes").update({ day_number: next }).eq("id", id));
+    }
+    if (error) { toast.error(t("toast.dates_failed")); return; }
+    setDaysSheetOpen(false);
+    haptics.success();
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    toast.success(t("toast.days_saved", { count: next }));
+  };
+
+  // SKROCENIE WYJAZDU PYTA, ZANIM PRZESUNIE MIEJSCA (pytanie Nat 2026-09-17: "jesli user
+  // niechcacy zmieni 3 dni na 2, a w trzecim mial zdjecia, notatki i wyroznienia, to utraci
+  // to?"). Nie utraci: zdjecia (`pin_photos`), notatki (`pin_ratings`) i gwiazdka
+  // (`pins.is_top`) wisza na PINIE, a pin tylko zmienia `day_index` - nic nie jest kasowane.
+  // ⚠️ Ale do 17.09 nie bylo o tym ANI SLOWA: krokomierz zapisywal od razu, wiec user widzial
+  // wylacznie to, ze dzien 3 zniknal razem z jego trescia. Brak straty, ktorego nie widac,
+  // jest dla uzytkownika nie do odroznienia od straty. Dlatego pytamy - i mowimy wprost,
+  // ile miejsc sie przesunie i ze ida z calym dorobkiem.
+  const requestDayCount = (n: number) => {
+    const next = Math.min(MAX_TRIP_DAYS, Math.max(1, n));
+    const moving = (pins as any[]).filter((pn) => pinDay(pn) > next).length;
+    if (moving > 0) { setAskShorten({ to: next, moving }); return; }
+    void saveDayCount(next);
+  };
+
+  // USUNIECIE POJEDYNCZEGO DNIA (zgloszenie testerki: "chcialabym miec mozliwosc usuniecia dnia,
+  // jesli np. nigdzie nie bylam, bo zachorowalam"). Dziala dla KAZDEGO dnia, takze z miejscami
+  // (pytanie Nat 2026-09-17: "w jaki sposob user moze usunac tylko pojedynczy dzien?").
+  //
+  // Do 17.09 guzik stal wylacznie w stanie zero dnia, wiec dzien z choc jednym miejscem nie
+  // mial ZADNEGO wejscia - a krokomierz "Dostosuj ilosc dni" tu nie pomaga, bo on skraca
+  // wyjazd OD KONCA: komu wypadl dzien 2, ten skasowalby nim dzien 5. Teraz miejsca z
+  // usuwanego dnia schodza na dzien SASIEDNI zamiast ginac - zdjecia, notatki i gwiazdki
+  // jada z nimi, bo wisza na pinie.
+  // ⚠️ Wyjazd skraca sie o jeden dzien, a kolejne dni przesuwaja sie w gore. Przy wyjezdzie
+  // z DATAMI znaczy to takze, ze konczy sie dzien wczesniej (`end_date` - 1) - copy w arkuszu
+  // mowi to wprost, bo inaczej byla by to niespodzianka.
+  const removeDay = async (day: number) => {
+    if (!id || dayCount <= 1) return;
+    // Dzien 1 nie ma poprzednika, wiec jego miejsca ZOSTAJA na dniu 1, a dotychczasowy
+    // dzien 2 dosuwa sie do nich. Dla kazdego innego dnia miejsca schodza o jeden w dol.
+    // Cel liczymy ze STARYCH numerow, zanim cokolwiek zapiszemy.
+    const moves = new Map<number, string[]>();
+    for (const pn of pins as any[]) {
+      const d = pinDay(pn);
+      if (d < day) continue;
+      const target = d === day ? Math.max(1, day - 1) : d - 1;
+      if (target === d) continue;
+      if (!moves.has(target)) moves.set(target, []);
+      moves.get(target)!.push(pn.id);
+    }
+    // Jedno zapytanie na dzien docelowy, nie jedno na pin: dzien z dwudziestoma miejscami
+    // to byloby dwadziescia osobnych zapisow i widoczne mruganie listy.
+    for (const [target, ids] of moves) {
+      await (supabase as any).from("pins").update({ day_index: target }).in("id", ids);
+    }
+    if (tripStart && tripEnd) {
+      const end = new Date(tripEnd.getTime() - 86400000);
+      const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      await (supabase as any).from("routes").update({ end_date: iso(end) }).eq("id", id);
+    } else {
+      await (supabase as any).from("routes").update({ day_number: Math.max(1, dayCount - 1) }).eq("id", id);
+    }
+    pickDay(null);
+    setDaysSheetOpen(false);
+    haptics.success();
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+    toast.success(t("toast.day_removed"));
+  };
+
   const clearTripDates = async () => {
     if (!id) return;
     await (supabase as any).from("routes").update({ start_date: null, end_date: null }).eq("id", id);
@@ -1171,7 +1430,9 @@ export default function SharedRoute() {
     const trimmed = nameVal.trim();
     if (!trimmed || trimmed === (route?.title ?? "")) { setEditingName(false); return; }
     setSavingName(true);
-    const { error } = await (supabase as any).from("routes").update({ title: trimmed }).eq("id", id);
+    // RPC zamiast UPDATE: uczestnik nie ma UPDATE na `routes`, wiec dotad jego zmiana nazwy
+    // konczyla sie 0 wierszy BEZ bledu - toast "zapisano", a po odswiezeniu stara nazwa.
+    const { error } = await (supabase as any).rpc("set_trip_title", { p_route: id, p_title: trimmed });
     setSavingName(false);
     if (error) {
       // Cenzura siedzi w bazie (wyzwalacz na tytule) - bez osobnego komunikatu user widzi
@@ -1339,7 +1600,7 @@ export default function SharedRoute() {
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
     toast.success(t("toast.photo_deleted"), {
       action: {
-        label: "Cofnij",
+        label: t("common:buttons.undo"),
         onClick: async () => {
           await (supabase as any).rpc("restore_route_photo", { p_route_id: route.id, p_url: url });
           queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
@@ -1399,16 +1660,11 @@ export default function SharedRoute() {
       // po fakcie; jedyne uczciwe cofniecie to nie wykonac usuniecia (zgloszenie Nat 2026-09-09).
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
-      deferDelete({
+      // Do KOSZA OD RAZU + "Cofnij" (2026-09-15) - odroczenie o 5 s potrafilo nie dojsc,
+      // bo ten ekran wlasnie sie odmontowuje (`goBackOr` wyzej).
+      void deleteWithUndo("trip", ids, {
         message: t("toast.trip_deleted"),
-        commit: async () => {
-          await supabase.from("pins").delete().in("route_id", ids);
-          await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
-          const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
-          if (error) { toast.error(t("toast.trip_delete_failed")); return; }
-          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] });
-        },
-        onUndo: () => queryClient.invalidateQueries({ queryKey: ["profile-trip-feed"] }),
+        failMessage: t("toast.trip_delete_failed"),
       });
     } catch (e: any) {
       toast.error(t("toast.trip_delete_failed"));
@@ -1448,7 +1704,9 @@ export default function SharedRoute() {
   // (zgloszenie Nat 2026-09-14; dane przeniesione migracja 20260914).
   const ownerTripNote: string = ((memberNotes as any[]).find((n) => n.user_id === route.user_id)?.note ?? "").trim();
   const routeDescription: string = (route as any).review_narrative || ownerTripNote || route.ai_summary || shareMeta?.share_caption || "";
-  const otherMemberNotes = (memberNotes as any[]).filter((n) => n.user_id !== user?.id && n.user_id !== route.user_id && (n.note ?? "").trim());
+  // Od 2026-09-20 bez wykluczania WLASNEJ notki: uczestnik nie ma juz edytora notki o wyjezdzie
+  // (pisze wspolny opis), wiec jego dawna notka ma byc widoczna tak samo jak cudze.
+  const otherMemberNotes = (memberNotes as any[]).filter((n) => n.user_id !== route.user_id && (n.note ?? "").trim());
   // Galeria = wszystkie zdjecia wyjazdu autora (review_photos), z rozwiazanym URL-em.
   // GALERIA = zdjecia wgrane wprost do galerii (routes.review_photos) ORAZ zdjecia dodane do
   // KONKRETNYCH MIEJSC w zakladce Miejsca (pin_photos) - prosba Nat 2026-09-10. Wczesniej te
@@ -1482,23 +1740,62 @@ export default function SharedRoute() {
       seenGallery.add(k);
       return true;
     });
+  // Zdjecia "tylko dla znajomych" wracaja NA SWOJE MIEJSCE w galerii: `sort_order` to pozycja,
+  // ktora zajmowaly w `review_photos`, zanim je stamtad wyjelismy. Bez tego kazde przelaczenie
+  // przerzucaloby zdjecie na koniec i kolejnosc galerii zmienialaby sie sama.
+  const publicThenFriends: string[] = [...reviewPhotos];
+  for (const fp of ([...(friendPhotoRows as FriendPhoto[])].sort((a, b) => a.sort_order - b.sort_order))) {
+    const u = resolveStored(fp.url);
+    if (!u) continue;
+    const k = storageKey(u);
+    if (seenGallery.has(k)) continue;
+    seenGallery.add(k);
+    publicThenFriends.splice(Math.min(Math.max(fp.sort_order - 1, 0), publicThenFriends.length), 0, u);
+  }
   const galleryPhotos: string[] = [
-    ...reviewPhotos,
+    ...publicThenFriends,
     ...[...pinPhotoByUrl.keys()].filter((u) => !seenGallery.has(storageKey(u))),
   ];
+
+  // Ktore zdjecia sa prywatne - po KLUCZU PLIKU, nie po adresie (dwie domeny tego samego Storage).
+  // Sluzy wylacznie plakietce i stanowi przelacznika; dostepu pilnuje RLS.
+  const friendOnlyKeys = new Set<string>([
+    ...(friendPhotoRows as FriendPhoto[]).map((r) => photoStorageKey(r.url)),
+    ...(pinPhotoRows as PinPhoto[]).filter((r) => r.visibility === "friends").map((r) => photoStorageKey(r.url)),
+  ]);
+  const isFriendsOnly = (url: string) => friendOnlyKeys.has(storageKey(url));
+
+  // Przelacznik widocznosci. Ta sama reguła uprawnien co przy koszu w podgladzie: wlasciciel
+  // wyjazdu odpowiada za cala galerie, uczestnik - za swoje wlasne zdjecie.
+  const canSetAudience = (url: string) => isOwner || (isGroupMember && isMyGalleryPhoto(url));
+  const toggleAudience = async (url: string) => {
+    if (!id) return;
+    const next = !isFriendsOnly(url);
+    haptics.light();
+    const res = await setTripPhotoAudience(id, url, next);
+    if (!res) { haptics.error(); toast.error(t("photo_audience.failed")); return; }
+    queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pin-photos", id] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-friend-photos", id] });
+    toast.success(res === "friends" ? t("photo_audience.now_friends") : t("photo_audience.now_public"));
+  };
   // Handler swipe w galerii fullscreen jest zadeklarowany wyzej (przed early returnami),
   // wiec liczbe zdjec podajemy mu przez ref.
-  galleryPhotosCount.current = galleryPhotos.length;
-  galleryPhotosRef.current = galleryPhotos;
+  galleryPhotosRef.current = galleryPhotos;   // lajki liczymy dla WSZYSTKICH, nie tylko widocznych
   // ── DNI WEWNATRZ WYJAZDU ────────────────────────────────────────────────────
   // Data wybrana + zakres wielodniowy -> miejsca dzielimy na "Dzien 1..N" (pins.day_index,
   // przypisanie RECZNE przez drag). Brak daty albo jeden dzien -> plaska lista jak dotad.
   const tripStart = route.start_date ? new Date(route.start_date) : null;
   const tripEnd = (route as any).end_date ? new Date((route as any).end_date) : null;
+  // Liczba dni: z ZAKRESU DAT, a gdy dat nie ma - z `routes.day_number`, ktore wlasciciel
+  // ustawia recznie ("Liczba dni" w menu "..."). Zgloszenie testerki 2026-09-16: "od razu
+  // chcialabym miec mozliwosc dodania dni... po wybraniu daty CZY TEZ BEZ DAT". Wyjazd bez
+  // dat tez bywa wielodniowy - plan weekendowy powstaje, zanim ktos wybierze termin.
   const dayCount = tripStart && tripEnd
     ? Math.max(1, Math.round((tripEnd.getTime() - tripStart.getTime()) / 86400000) + 1)
-    : 1;
-  const hasDays = !!tripStart && dayCount > 1;
+    : Math.min(MAX_TRIP_DAYS, Math.max(1, Number((route as any).day_number) || 1));
+  // ⛔ Bez `!!tripStart`: podzial na dni niesie teraz takze sama liczba dni, bez terminu.
+  const hasDays = dayCount > 1;
   const dayDate = (day: number) => (tripStart ? new Date(tripStart.getTime() + (day - 1) * 86400000) : null);
   const dayLabel = (day: number) => {
     const d = dayDate(day);
@@ -1519,7 +1816,13 @@ export default function SharedRoute() {
   // ze wyjazd ma podzialke na dni - takze wtedy, gdy dni sa jeszcze puste. Nowe miejsca trafiaja
   // domyslnie do dnia 1, a przypisac je do wlasciwego dnia mozna w kazdej chwili - w wersji
   // roboczej, w trakcie wyjazdu i po nim (gdyby cos poszlo nie tak).
-  const daysUsable = hasDays && (pins as any[]).length > 0;
+  // ⛔ BEZ warunku "sa juz miejsca". Do 2026-09-16 stalo tu `hasDays && pins.length > 0`,
+  // wiec w swiezo utworzonym wyjezdzie pasek dni pojawial sie DOPIERO po dodaniu pierwszego
+  // miejsca - a wtedy wszystkie dni wskakiwaly naraz i wygladalo to jak skok interfejsu
+  // (zgloszenie testerki: "to sie otwiera dopiero po dodaniu miejsca jednego"). Pusty wyjazd
+  // z zakresem dat ma od razu pokazywac, na ile dni jest rozpisany; kazdy dzien ma wlasny
+  // stan zero, wiec nie ma czego chowac.
+  const daysUsable = hasDays;
   // Domyslnie "Wszystkie" (null), nie dzien dzisiejszy (prosba Nat 2026-09-08): wchodzac
   // w wyjazd chce sie najpierw zobaczyc CALOSC, a dopiero potem zawezic do dnia. Dzien
   // dzisiejszy zostaje jednym tapnieciem w chip.
@@ -1527,6 +1830,27 @@ export default function SharedRoute() {
   // Miejsca widoczne na ekranie = te z wybranego dnia. Filtrujemy RAZ, przed grupowaniem po
   // kategoriach - inaczej puste kategorie zostawialyby po sobie same naglowki.
   const visiblePins: any[] = activeDay === null ? (pins as any[]) : (pins as any[]).filter((p) => pinDay(p) === activeDay);
+  // GALERIA PO DNIACH (zgloszenie testerki 2026-09-16). Dzien zdjecia bierze sie z MIEJSCA,
+  // przy ktorym je wrzucono (`pin_photos` -> `pins.day_index`), wiec nie trzeba go nigdzie
+  // zapisywac osobno. ⚠️ Zdjecia wrzucone do SAMEGO wyjazdu (`routes.review_photos`) dnia nie
+  // maja - to plaska tablica adresow - wiec widac je wylacznie w "Wszystkie". Stad guzik
+  // dodawania tez stoi tylko tam: w wybranym dniu obiecywalby przypisanie, ktorego nie ma gdzie
+  // zapisac. Zeby zdjecie trafilo do konkretnego dnia, dodaje sie je przy miejscu z tego dnia.
+  // ⛔ Wiersz `pin_photos` NIE MA `day_index` - niesie tylko `place_name`. Do 2026-09-18 szlo tu
+  // `pinDay(pn)` na samym wierszu zdjecia, wiec `Number(undefined) || 1` dawalo KAZDEMU zdjeciu
+  // dzien 1 i przy wyjezdzie na kilka dni cala galeria ladowala w pierwszym dniu (zgloszenie Nat).
+  // Dzien zdjecia liczymy z PINU o tej samej nazwie (ten sam klucz, co `photosByPlace`).
+  const pinByPhotoKey = new Map<string, any>();
+  for (const p of pins as any[]) { const k = pinPhotoKey(p.place_name); if (!pinByPhotoKey.has(k)) pinByPhotoKey.set(k, p); }
+  const photoDay = (ph: PinPhoto): number | null => {
+    const pin = pinByPhotoKey.get(pinPhotoKey(ph.place_name));
+    return pin ? pinDay(pin) : null;
+  };
+  const visiblePhotos: string[] = activeDay === null
+    ? galleryPhotos
+    : galleryPhotos.filter((u) => { const pn = pinPhotoByUrl.get(u); return !!pn && photoDay(pn) === activeDay; });
+  // Przewijanie w podgladzie pelnoekranowym zawija sie po tym, CO WIDAC, nie po calosci.
+  galleryPhotosCount.current = visiblePhotos.length;
   const pickDay = (day: number | null) => { haptics.selection(); setDayTouched(true); setSelectedDay(day); };
   const placeWord = (n: number) => {
     if (n === 1) return "miejsce";
@@ -1614,10 +1938,14 @@ export default function SharedRoute() {
     if (!canEdit || stage === "planning") return undefined;
     const myNote = ((notesMap.get(placeNoteKey(pin.place_name)) ?? []).find((n: any) => n.user_id === user?.id)?.note ?? "").trim();
     return [
+      // "Dodaj notkę" WRACA (zgloszenie Nat 2026-09-20: "jako uczestnik nie moge dodawac notek").
+      // 18.09 zdjelam ja z menu wyjazdu przez nadinterpretacje - a edytor pod wierszem ma
+      // `hideActions`, wiec bez tej pozycji NIKT (uczestnik ani wlasciciel) nie mial jak zalozyc
+      // notki przy miejscu, ktore jeszcze jej nie ma. Etykieta zalezy od tego, czy notka juz jest.
       {
         key: "note",
         label: myNote ? t("route:note.edit") : t("route:note.add"),
-        icon: <Pencil className="h-4 w-4" />,
+        icon: <BrandNote className="h-4 w-4" />,
         onClick: () => setNotePin(pin),
       },
       {
@@ -1836,10 +2164,12 @@ export default function SharedRoute() {
                 onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
             isTop={!!pin.is_top}
-                /* Gwiazdka ("topka") tylko na wyjezdzie OPUBLIKOWANYM (prosba Nat 2026-09-10).
-                   To wyroznienie dla CZYTAJACYCH - wskazanie, co z tego wyjazdu jest naprawde
-                   warte odwiedzenia. Dopoki wyjazd jest roboczy, nie ma komu tego mowic. */
-                onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
+                /* Gwiazdka ("topka") dla KAZDEGO uczestnika, na kazdym etapie (Nat 2026-09-20:
+                   "jako uczestnik nie moge dodawac gwiazdek"). Do tego dnia stala za `isPublished`
+                   (10.09: "wyroznienie dla czytajacych"), ale odkad wyjazd jest PLANEM, gwiazdka
+                   jest tez sygnalem dla samych uczestnikow - co z planu jest must-see. RLS
+                   `Group members can update pins of shared route` przepuszcza uczestnika. */
+                onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
                 note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
                 selection={selectionFor(pin)}
                 menuExtras={placeMenuExtras(pin)}
@@ -1876,7 +2206,7 @@ export default function SharedRoute() {
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
             onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
+            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
             selection={selectionFor(pin)}
             menuExtras={placeMenuExtras(pin)}
@@ -1887,16 +2217,54 @@ export default function SharedRoute() {
     );
   };
 
+  // Pasek dni jest JEDEN i obsluguje DWIE zakladki: Miejsca i Galerie (zgloszenie testerki
+  // 2026-09-16: "jakby mozna bylo fotki wg dnia dodawac byloby supcio"). Zdjecie przy miejscu
+  // nalezy do dnia tego miejsca, wiec ten sam przelacznik, ktory zaweza liste, zaweza i galerie -
+  // bez uczenia usera drugiego mechanizmu. Dlatego stoi w ZMIENNEJ, a nie skopiowany dwa razy.
+  const dayStrip = daysUsable && !choosing && !reorderMode ? (
+    <div className="sticky top-[65px] z-20 -mx-5 bg-background border-b border-border/50">
+      <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
+        {[null, ...Array.from({ length: dayCount }, (_, i) => i + 1)].map((d) => {
+          const on = activeDay === d;
+          const count = d === null ? pins.length : (pins as any[]).filter((p) => pinDay(p) === d).length;
+          return (
+            <button
+              key={d ?? "all"}
+              onClick={() => pickDay(d)}
+              /* Zaznaczony dzien = peachy z brazowym tekstem (prosba Nat 2026-09-13; zolty
+                 z pierwszej wersji odrzucony), nie pomarancz - ten zostaje dla akcji primary. */
+              className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-[#FCEDE3] text-[#5B2C06]" : "bg-secondary text-foreground"}`}
+            >
+              <span className="text-sm font-semibold">{d === null ? t("days.all") : t("days.nth", { n: d })}</span>
+              <span className={`text-[11px] ${on ? "text-[#5B2C06]/75" : "text-muted-foreground"}`}>
+                {d === null ? `${count} ${placeWord(count)}` : dayChipDate(d)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
+
   const renderList = () => {
     // Pusty DZIEN: miejsca w wyjezdzie sa, tylko nie w tym dniu. Jeden komunikat na cala liste
     // (nie pod kazda kategoria) - i od razu mowi, jak to naprawic.
     if (activeDay !== null && !visiblePins.length) {
       return (
-        <p className="text-[13px] text-muted-foreground py-6 text-center px-4 leading-relaxed">
-          {canEdit
-            ? t("day.empty")
-            : t("day.no_places")}
-        </p>
+        <div className="py-6 px-4 text-center">
+          <p className="text-[13px] text-muted-foreground leading-relaxed">
+            {canEdit ? t("day.empty") : t("day.no_places")}
+          </p>
+          {/* Usuniecie dnia stoi DOKLADNIE tam, gdzie problem widac - w pustym dniu. Osobna
+              pozycja w menu "..." wymagalaby najpierw zgadniecia, ktorego dnia dotyczy.
+              Tylko wlasciciel i tylko gdy zostanie co najmniej jeden dzien. */}
+          {isOwner && dayCount > 1 && (
+            <button onClick={() => setAskRemoveDay(activeDay)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-2 text-[13px] font-semibold text-foreground active:scale-95 transition-transform">
+              <BrandTrash className="h-3.5 w-3.5" />{t("day.remove")}
+            </button>
+          )}
+        </div>
       );
     }
     // Kategorie grupuja miejsca TYLKO na etapie propozycji (tam sluza do przegladania sugestii).
@@ -2041,7 +2409,14 @@ export default function SharedRoute() {
       )}
 
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + uczestnicy + miasto + liczba miejsc + serce */}
-      <div className="shrink-0 bg-background" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      {/* Belka wyjazdu ZAWSZE w zoltym marki (prosba Nat 2026-09-15) - tak jak belka kolekcji,
+          ktora bierze kolor przewodni kolekcji. Wczesniej bylo tu `bg-background`.
+          ⚠️ Kolorowa belka wymusza biale kolka na guzikach: zolte kolko udostepniania
+          zniknelo by w tle, a peachy pigulka autora zlewa sie z zoltym (ten sam problem
+          rozwiazano w widoku kolekcji 2026-09-14). */}
+      {/* Tapniecie w belke = powrot na gore listy miejsc (odruch z iOS); guziki w srodku
+          (wstecz, udostepnij, "...") dzialaja normalnie. */}
+      <div {...scrollTopTapProps()} className="shrink-0 bg-[#FDF184]" style={pendingInvite ? { paddingTop: 12 } : { paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm px-5 pb-2.5">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
@@ -2049,40 +2424,26 @@ export default function SharedRoute() {
             </button>
             {/* Awatar + username WYSRODKOWANE (#5). Wspolny wyjazd: host + pierwsi 2 uczestnicy z
                 PELNA nazwa (awatar + @username, truncate = "jesli sie zmiesci"); reszta = same awatary. */}
-            <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5">
-              {/* Uzytkownik 1 = host, jako pigulka (redesign 2026-09-13, TripHeaderChips). */}
-              {!isAnon && author?.username ? (
+            {/* Autor + uczestnicy wg WSPOLNEJ reguly (Nat 2026-09-15, ta sama co w kolekcji):
+                autor zawsze w calosci, drugi tylko jesli sie miesci, reszta jako "+N" -> arkusz.
+                Wczesniej byly tu dwie osoby z nazwa i nachodzacy stos awatarow z nieklikalnym
+                "+N", wiec przy dluzszych nickach belka sie rozpychala, a pelnej listy nie dalo
+                sie otworzyc. */}
+            <ParticipantsRow
+              className="flex-1 justify-center"
+              others={groupParticipants as any}
+              onOpenAll={() => setAllPeopleOpen(true)}
+              onOpenPerson={(pp) => pp.username && navigate(`/profil/${pp.username}`)}
+              author={!isAnon && author?.username ? (
                 <AuthorPill src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
-                  onClick={() => navigate(`/profil/${author.username}`)} className="shrink" />
+                  onClick={() => navigate(`/profil/${author.username}`)} className="shrink !bg-white" />
               ) : (
                 <span className="flex items-center gap-1.5 font-semibold text-foreground min-w-0 shrink">
                   {!isAnon && <FramedAvatar src={author?.avatar_url} frame={author?.avatar_frame} color={author?.avatar_frame_color} />}
                   <span className="truncate">{authorName}</span>
                 </span>
               )}
-              {/* Uzytkownicy 2-3 = pierwsi uczestnicy z pelna nazwa (awatar + @username). */}
-              {groupParticipants.slice(0, 2).map((p) => (
-                p.username ? (
-                  <button key={p.id} onClick={() => navigate(`/profil/${p.username}`)} className="flex items-center gap-1.5 font-semibold text-foreground active:opacity-60 transition-opacity min-w-0 shrink">
-                    <FramedAvatar src={p.avatar_url} frame={(p as any).avatar_frame} color={(p as any).avatar_frame_color} />
-                    <span className="truncate">@{p.username}</span>
-                  </button>
-                ) : (
-                  <FramedAvatar key={p.id} src={p.avatar_url} frame={(p as any).avatar_frame} color={(p as any).avatar_frame_color} />
-                )
-              ))}
-              {/* Pozostali uczestnicy (4+) = same awatary (nachodzacy stack) + "+N". */}
-              {groupParticipants.length > 2 && (
-                <span className="flex items-center -space-x-2 shrink-0">
-                  {groupParticipants.slice(2, 5).map((p) => (
-                    <img key={p.id} src={avatarSrc(p.avatar_url)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 ring-2 ring-background" />
-                  ))}
-                  {groupParticipants.length > 5 && (
-                    <span className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[9px] font-bold text-foreground">+{groupParticipants.length - 5}</span>
-                  )}
-                </span>
-              )}
-            </div>
+            />
             {/* Polubienie wyjazdu (prawy skraj) - TYLKO gosc. Od 2026-09-13 (makieta Nat) to
                 pomaranczowa GWIAZDKA: pusta = nie polubione, wypelniona = polubione; licznik
                 obok tylko gdy > 0. Wlasciciel: spacer dla symetrii. */}
@@ -2091,15 +2452,15 @@ export default function SharedRoute() {
                 (gosc ma je przy "Zapisz ten wyjazd" na dole). Polubienie stoi przy TYTULE. */}
             {!canEdit ? (
               <ReportContentSheet targetType="route" targetId={route.id} trigger={(open) => (
-                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-foreground/60 active:scale-90 transition-transform">
-                  <Flag className="h-5 w-5" strokeWidth={2} />
+                <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center text-foreground/70 active:scale-90 transition-transform">
+                  <BrandFlag className="h-5 w-5" strokeWidth={2} />
                 </button>
               )} />
             ) : (
               <div className="shrink-0 flex items-center gap-1.5">
                 <button onClick={() => handleShare()} aria-label={t("aria.share")}
-                  className="h-9 w-9 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
-                  <Share2 className="h-[18px] w-[18px] text-[#5B2C06]" strokeWidth={2.2} />
+                  className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center active:scale-90 transition-transform">
+                  <BrandShare className="h-[18px] w-[18px] text-[#5B2C06]" strokeWidth={2.2} />
                 </button>
                 {/* Akcje wyjazdu (opis, nazwa, zaproszenia, usuniecie) pod "..." w BELCE (prosba Nat
                     2026-09-13; wczesniej przy tytule). Biale kolko z delikatnym cieniem. */}
@@ -2114,30 +2475,40 @@ export default function SharedRoute() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-2xl w-60" onCloseAutoFocus={(e) => e.preventDefault()}>
-                    {isOwner && stage !== "planning" && !choosing && (
+                    {canEdit && stage !== "planning" && !choosing && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDescOpenKey((k) => k + 1); }} className="gap-2.5 py-2.5">
-                        <FileText className="h-4 w-4" />
+                        <BrandNote className="h-4 w-4" />
                         {routeDescription ? t("route:note.edit_description") : t("route:note.add_description")}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onSelect={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }} disabled={savingName} className="gap-2.5 py-2.5">
-                      <Pencil className="h-4 w-4" />{t("aria.rename_trip")}
+                      <BrandPencil className="h-4 w-4" />{t("aria.rename_trip")}
                     </DropdownMenuItem>
                     {/* Daty wyjazdu (zakres = podzial na dni) - tylko wlasciciel, jak dotad. */}
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDatesSheetOpen(true); }} className="gap-2.5 py-2.5">
-                        <CalendarIcon className="h-4 w-4" />{route.start_date ? t("aria.change_dates") : t("aria.add_dates")}
+                        <BrandCalendar className="h-4 w-4" />{route.start_date ? t("aria.change_dates") : t("aria.add_dates")}
+                      </DropdownMenuItem>
+                    )}
+                    {/* "Dostosuj ilosc dni" - dostepne ZAWSZE (zgloszenie testerki 2026-09-16,
+                        drugie podejscie: "gdzie user moglby dodawac i usuwac dni"). Przy wyjezdzie
+                        Z DATAMI krokomierz przesuwa `end_date`, bez dat rusza `day_number` - to
+                        nadal JEDNO zrodlo prawdy na wyjazd, tylko inne w zaleznosci od tego, czy
+                        termin jest ustalony. */}
+                    {isOwner && (
+                      <DropdownMenuItem onSelect={() => { haptics.light(); setDayDraft(dayCount); setDaysSheetOpen(true); }} className="gap-2.5 py-2.5">
+                        <BrandCalendar className="h-4 w-4" />{t("day.count_action")}
                       </DropdownMenuItem>
                     )}
                     {/* Zapraszanie tylko HOST: inviteUsersToRoute idzie przez host-only RPC add_member_to_session. */}
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setInviteOpen(true); }} className="gap-2.5 py-2.5">
-                        <UserPlus className="h-4 w-4" />{t("aria.invite_people")}
+                        <BrandUserPlus className="h-4 w-4" />{t("aria.invite_people")}
                       </DropdownMenuItem>
                     )}
                     {isOwner && (
                       <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                        <Trash2 className="h-4 w-4" />{t("aria.delete_trip")}
+                        <BrandTrash className="h-4 w-4" />{t("aria.delete_trip")}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -2151,7 +2522,7 @@ export default function SharedRoute() {
       {/* Zapas na dole = ponad ZWINIETY stos akcji (84px + 56px wysokosci = 140px). Po
           schowaniu czatu i "+" pod jeden guzik (2026-09-10) nie trzeba juz rezerwowac miejsca
           na dwa kolka; rozwiniety stos to nakladka z tlem do zamkniecia, wiec moze zaslaniac. */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
+      <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -2168,7 +2539,21 @@ export default function SharedRoute() {
                 className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight bg-transparent border-b-2 border-primary outline-none"
               />
             ) : (
-              <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
+              /* TAPNIECIE W NAZWE = zmiana nazwy (zgloszenie testerki 2026-09-16: "zamiast
+                 kropek od razu intuicyjnie klikam na sama nazwe"). Menu "..." zostaje - to
+                 skrot, nie zamiennik. Gosc dostaje zwykly naglowek, bez guzika: nie ma czego
+                 tapnac, a przycisk bez akcji uczy, ze nic sie nie dzieje. */
+              canEdit ? (
+                <button
+                  onClick={() => { haptics.light(); setNameVal(route.title || ""); setEditingName(true); }}
+                  className="flex-1 min-w-0 text-left active:opacity-60 transition-opacity"
+                  aria-label={t("aria.rename_trip")}
+                >
+                  <span className="block text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</span>
+                </button>
+              ) : (
+                <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{route.title || cityLabel}</h1>
+              )
             )}
             {/* Wszystkie akcje wyjazdu pod JEDNYM guzikiem z trzema kropkami (prosba Nat
                 2026-09-10). Cztery kolka obok tytulu konkurowaly z nim wzrokowo, a trzy z nich
@@ -2177,8 +2562,44 @@ export default function SharedRoute() {
             {/* Polubienie = BRANDOWE SERCE na wysokosci tytulu (prosba Nat 2026-09-13; gwiazdka
                 zostaje dla "topki"): kontur = nie polubione, pelne = polubione, licznik obok gdy > 0.
                 Tylko gosc. */}
-            {!isOwner && (
+            {/* ⚠️ AUTOR I UCZESTNIK NIE MOGA POLUBIC WLASNEGO WYJAZDU (decyzja Nat 2026-09-17,
+                egzekwuje to trigger `guard_like_not_own_trip` w bazie). Dla nich serce nie jest
+                przelacznikiem, tylko LICZNIKIEM z wejsciem na liste "kto polubil" - dzieki temu
+                autor widzi odzew na swoj wyjazd w tym samym miejscu, w ktorym gosc go zostawia.
+                ⛔ Do 17.09 warunkiem bylo `!isOwner`, wiec UCZESTNIK wspolnego wyjazdu polubial
+                go normalnie - stad 4 takie polubienia na prodzie. Teraz bramka to `canEdit`. */}
+            {canEdit ? (
+              isPublished && (
+                <button onClick={() => { haptics.light(); setLikesOpen(true); }} aria-label={t("likes.title")}
+                  className="flex shrink-0 items-center gap-1.5 active:scale-90 transition-transform">
+                  <BrandHeart filled className="h-7 w-7 text-primary" />
+                  {routeLike.count > 0 && (
+                    <span className="text-[15px] font-bold tabular-nums text-foreground">{routeLike.count}</span>
+                  )}
+                </button>
+              )
+            ) : (
               <TripLikeButton liked={routeLike.liked} count={routeLike.count} onToggle={() => void toggleLike()} label={t("aria.like_trip")} />
+            )}
+            {/* ZAPIS obok serca (prosba Nat 2026-09-16). Zszedl z dolnego paska, bo zapis
+                i polubienie to ta sama klasa gestu - "zostawiam slad na cudzym wyjezdzie" -
+                i powinny stac razem, a nie jedno przy tytule, drugie na dole ekranu.
+                Dolny pasek zwolnil sie przez to na udostepnianie pelnej szerokosci.
+                Pusta zakladka = jeszcze nie zapisane, pelna = zapisane. */}
+            {!isOwner && (
+              <button
+                onClick={() => {
+                  if (!user) { navigate("/auth"); return; }
+                  if (isRouteSaved) { void unsaveFromMine(); return; }
+                  void saveToMine();
+                }}
+                disabled={saving}
+                aria-label={isRouteSaved ? t("saved_trip") : t("save_trip")}
+                aria-pressed={isRouteSaved}
+                className="shrink-0 h-9 w-9 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
+              >
+                <BrandBookmark filled={isRouteSaved} className="h-[26px] w-[26px] text-foreground" />
+              </button>
             )}
           </div>
           {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
@@ -2190,7 +2611,7 @@ export default function SharedRoute() {
               i osobny wiersz "Dodaj daty" pod tytulem). */}
           {dateLabel && (
             <div className="flex items-center gap-1.5 mt-2.5 text-foreground">
-              <CalendarIcon className="h-5 w-5 shrink-0" />
+              <BrandCalendar className="h-5 w-5 shrink-0" />
               <span className="text-base">{dateLabel}</span>
             </div>
           )}
@@ -2198,7 +2619,7 @@ export default function SharedRoute() {
             <p className="text-[17px] font-bold leading-snug text-foreground mt-3">„{route.ai_highlight}"</p>
           )}
           {routeDescription && !descEditing && (
-            <p className="text-[15px] text-foreground/80 leading-relaxed mt-3">{routeDescription}</p>
+            <TranslatableText text={routeDescription} className="text-[15px] text-foreground/80 leading-relaxed mt-3" />
           )}
           {/* Tagi CALEJ TRASY usuniete (prosba Nat 2026-08-31) - widok wyjazdu ma byc czysty.
               Zostaja tylko werdykty przy KONKRETNYCH miejscach (pins.tags). */}
@@ -2222,10 +2643,13 @@ export default function SharedRoute() {
             pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
         {stage !== "planning" && (canEdit || otherMemberNotes.length > 0) && !choosing && (
           <div className="mt-3 mb-5 px-5">
-            {/* WLASCICIEL edytuje tu OPIS WYJAZDU - dokladnie te tresc, ktora widac nad guzikiem.
-                UCZESTNIK nie ma prawa zapisu do `routes`, wiec u niego zostaje jego WLASNA notka
-                (i copy mowi "notka", bo to co innego niz opis calego wyjazdu). */}
-            {isOwner ? (
+            {/* WLASCICIEL I UCZESTNIK edytuja tu ten sam OPIS WYJAZDU (Nat 2026-09-20: guzik
+                "Add note" u uczestnika zdjety, w zamian "Dodaj opis" - wspolny plan ma jeden
+                opis, nie notke na osobe). Zapis idzie przez RPC, wiec brak UPDATE na `routes`
+                u uczestnika nie jest juz przeszkoda. Wlasne notki o wyjezdzie z czasow sprzed
+                tej zmiany (`route_member_covers.note`) zostaja widoczne w dymkach ponizej -
+                nie kasujemy tresci, tylko nie da sie juz pisac nowych. */}
+            {canEdit ? (
               <PlaceNoteEditor
                 note={routeDescription}
                 hideText
@@ -2236,15 +2660,6 @@ export default function SharedRoute() {
                 openKey={descOpenKey}
                 onSave={saveTripDescription}
                 onEditingChange={(v) => { setNoteEditing(v); setDescEditing(v); }}
-              />
-            ) : canEdit ? (
-              <PlaceNoteEditor
-                note={myTripNote}
-                showAvatar
-                avatarUrl={myAvatar}
-                placeholder={t("note.placeholder")}
-                onSave={saveMyTripNote}
-                onEditingChange={setNoteEditing}
               />
             ) : null}
             {otherMemberNotes.length > 0 && (
@@ -2268,9 +2683,9 @@ export default function SharedRoute() {
             {/* Etap PROPOZYCJI (planning) = tylko Miejsca + Mapa (galeria bez sensu przy sugerowaniu).
                 Galeria pojawia sie od "w trakcie" (ongoing) - prosba Nat 2026-08-25. */}
             {([
-              { k: "miejsca" as const, Icon: MapPin, label: t("tabs.places") },
-              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: ImageIcon, label: t("tabs.gallery") }] : []),
-              { k: "mapa" as const, Icon: MapIcon, label: t("tabs.map") },
+              { k: "miejsca" as const, Icon: BrandPin, label: t("tabs.places") },
+              ...(stage !== "planning" ? [{ k: "galeria" as const, Icon: BrandGallery, label: t("tabs.gallery") }] : []),
+              { k: "mapa" as const, Icon: BrandMap, label: t("tabs.map") },
             ]).map(({ k, Icon, label }) => {
               const on = planTab === k;
               return (
@@ -2298,30 +2713,7 @@ export default function SharedRoute() {
             {/* top-65px = dokladna wysokosc paska zakladek wyzej (pt-5 = 20 + guzik py-3 z ikona
                 h-5 = 44 + kreska 1). Bylo 45px, wiec chipy wjezdzaly POD zakladki i ucinaly sie
                 od gory przy przewijaniu (zgloszenie Nat 2026-09-09). */}
-            {daysUsable && !choosing && !reorderMode && (
-              <div className="sticky top-[65px] z-20 -mx-5 bg-background border-b border-border/50">
-                <div className="flex gap-2 overflow-x-auto px-5 py-3 no-scrollbar">
-                  {[null, ...Array.from({ length: dayCount }, (_, i) => i + 1)].map((d) => {
-                    const on = activeDay === d;
-                    const count = d === null ? pins.length : (pins as any[]).filter((p) => pinDay(p) === d).length;
-                    return (
-                      <button
-                        key={d ?? "all"}
-                        onClick={() => pickDay(d)}
-                        /* Zaznaczony dzien = peachy z brazowym tekstem (prosba Nat 2026-09-13; zolty
-                           z pierwszej wersji odrzucony), nie pomarancz - ten zostaje dla akcji primary. */
-                        className={`shrink-0 rounded-full px-3.5 py-2 flex flex-col items-center leading-tight transition-colors active:scale-95 ${on ? "bg-[#FCEDE3] text-[#5B2C06]" : "bg-secondary text-foreground"}`}
-                      >
-                        <span className="text-sm font-semibold">{d === null ? t("days.all") : t("days.nth", { n: d })}</span>
-                        <span className={`text-[11px] ${on ? "text-[#5B2C06]/75" : "text-muted-foreground"}`}>
-                          {d === null ? `${count} ${placeWord(count)}` : dayChipDate(d)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {dayStrip}
             {choosing ? (
               /* Tryb t("choose_places"): zaznacz ktore miejsca wchodza do wyjazdu (reszta usunieta). */
               <div className="space-y-2">
@@ -2336,7 +2728,7 @@ export default function SharedRoute() {
                       if (c === 0) return null;
                       return <span className="shrink-0 inline-flex items-center rounded-full bg-white text-foreground px-2.5 py-0.5 text-[12px] font-bold">{t("votes", { count: c })}</span>;
                     })()}
-                    <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <Check className="h-4 w-4 stroke-[3]" />}</span>
+                    <span className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${chosen.has(pin.id) ? "bg-primary text-primary-foreground" : "border-2 border-border"}`}>{chosen.has(pin.id) && <BrandCheck className="h-4 w-4 stroke-[3]" />}</span>
                   </button>
                 ))}
               </div>
@@ -2380,12 +2772,13 @@ export default function SharedRoute() {
           </div>
         ) : (
           <div className="px-5 pt-4">
-            {galleryPhotos.length > 0 ? (
+            {dayStrip}
+            {visiblePhotos.length > 0 ? (
               /* Uklad masonry (jak Pinterest, prosba Nat 2026-08-30): zdjecia w NATURALNYCH
                  proporcjach, dwie kolumny CSS, bez podpisow. Na kafelku tylko ikona wyboru
                  okladki; usuwanie przeniesione do podgladu pelnoekranowego. */
               <div className="columns-2 gap-2 [&>*]:mb-2">
-                {canAddPhotos && (
+                {canAddPhotos && activeDay === null && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="flex w-full break-inside-avoid aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex-col items-center justify-center gap-1.5 text-muted-foreground active:scale-[0.98] transition-transform disabled:opacity-60">
                     {uploadingPhotos ? (
@@ -2400,7 +2793,7 @@ export default function SharedRoute() {
                     ) : <><Plus className="h-6 w-6" /><span className="text-xs font-semibold">{t("add_photo")}</span></>}
                   </button>
                 )}
-                {galleryPhotos.map((url, i) => {
+                {visiblePhotos.map((url, i) => {
                   // Zaznaczone = MOJA okladka (to nia steruje ikona). U hosta pokrywa sie z okladka
                   // eksploracji, bo jeden gest ustawia obie.
                   const isCover = (resolveStored(myCover) ?? null) === url || (isOwner && !myCover && (route as any).list_cover_url === url);
@@ -2410,13 +2803,48 @@ export default function SharedRoute() {
                       {/* Siatka masonry ma ~180 px na kolumne - pobieramy miniature, nie oryginal.
                           Podglad pelnoekranowy nizej zostaje przy pelnej rozdzielczosci. */}
                       <StoredImage url={url} size={200} className="w-full h-auto block" />
-                      {/* Licznik polubien (gdy sa) - siatka zostaje czysta, lajkuje sie w podgladzie. */}
-                      {likeStateOf(url).count > 0 && (
-                        <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[11px] font-semibold text-white">
-                          <Heart className={`h-3 w-3 ${likeStateOf(url).liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-                          {likeStateOf(url).count}
+                      {/* PLAKIETKA "tylko dla znajomych". Widzi ja KAZDY, kto to zdjecie dostal -
+                          nie tylko wlasciciel. Znajomy ma wiedziec, ze oglada tresc prywatna,
+                          zanim zrobi z niej zrzut ekranu. Lewy gorny rog, bo prawy zajmuje wybor
+                          okladki, a lewy dolny licznik polubien. */}
+                      {isFriendsOnly(url) && (
+                        <span className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-sm px-2 py-1 text-[10px] font-bold text-white">
+                          <Users className="h-3 w-3" />{t("photo_audience.badge")}
                         </span>
                       )}
+                      {/* POLUBIENIE WPROST Z SIATKI (prosba Nat 2026-09-17). Do tej pory byl tu
+                          sam licznik i tylko gdy > 0 - zeby polubic, trzeba bylo wejsc w zdjecie.
+                          ⛔ To ZNOSI wczesniejsza regule "siatka zostaje czysta, lajkuje sie
+                          w podgladzie": serce jest teraz na kazdym kafelku, bo bez niego
+                          najczestszy gest w galerii kosztowal dwa dodatkowe tapniecia.
+                          ⛔ Brandowe serce (`BrandHeart`), NIE lucide `Heart` - i pomaranczem
+                          marki, nie czerwienia; czerwony fill byl tu jedynym kolorem spoza palety. */}
+                      <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
+                        aria-label={likeStateOf(url).liked ? t("aria.unlike_photo") : t("aria.like_photo")}
+                        className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-1 active:scale-90 transition-transform">
+                        <BrandHeart filled={likeStateOf(url).liked} className={`h-3.5 w-3.5 ${likeStateOf(url).liked ? "text-primary" : "text-white"}`} />
+                        {likeStateOf(url).count > 0 && (
+                          <span className="text-[11px] font-semibold leading-none text-white tabular-nums">{likeStateOf(url).count}</span>
+                        )}
+                      </button>
+                      {/* WYROZNIENIE na kafelku - prawy dolny rog (lewy zajmuje serce, gorne
+                          plakietka "Znajomi" i wybor okladki). Gosc moze wyroznic wprost
+                          z siatki, autor widzi sam licznik. */}
+                      {canStar ? (
+                        <button onClick={(e) => { e.stopPropagation(); void toggleStarUi(url); }}
+                          aria-label={isStarred(url) ? t("stars.remove") : t("stars.add")}
+                          className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-1 active:scale-90 transition-transform">
+                          <BrandStar filled={isStarred(url)} className={`h-3.5 w-3.5 ${isStarred(url) ? "text-primary" : "text-white"}`} />
+                          {starCountOf(url) > 0 && (
+                            <span className="text-[11px] font-semibold leading-none text-white tabular-nums">{starCountOf(url)}</span>
+                          )}
+                        </button>
+                      ) : starCountOf(url) > 0 ? (
+                        <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-sm px-2 py-1">
+                          <BrandStar filled className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-[11px] font-semibold leading-none text-white tabular-nums">{starCountOf(url)}</span>
+                        </span>
+                      ) : null}
                       {/* Ikona eksploracji = "to jest okladka TEGO wyjazdu u mnie". Widzi ja KAZDY
                           uczestnik, nie tylko host (zgloszenie Nat 2026-09-01) - wczesniej byla
                           za `isOwner`, wiec uczestnik nie mial jak wybrac okladki swojej karty
@@ -2444,9 +2872,14 @@ export default function SharedRoute() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
-                <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">{t("gallery_empty")}</p>
-                {canAddPhotos && (
+                <BrandGallery className="h-8 w-8 text-muted-foreground/50" />
+                {/* W wybranym DNIU mowimy, skad sie biora zdjecia tego dnia - guzik "dodaj"
+                    wrzucilby zdjecie do calego wyjazdu, a nie do tego dnia (`review_photos`
+                    nie ma dnia), wiec obiecywalby cos, czego nie zrobi. */}
+                <p className="text-sm text-muted-foreground max-w-[260px] leading-relaxed">
+                  {activeDay === null ? t("gallery_empty") : t("gallery_empty_day")}
+                </p>
+                {canAddPhotos && activeDay === null && (
                   <button onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}
                     className="mt-1 px-4 py-2.5 rounded-full border border-border text-foreground font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
                     {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{" "}
@@ -2495,6 +2928,7 @@ export default function SharedRoute() {
             google_place_id: p.google_place_id ?? null, rating: p.rating ?? null,
           }))}
           onAdd={handleAddPlaces}
+          limit={{ kind: "trip_places", current: pins.length }}
         />
       )}
 
@@ -2562,7 +2996,7 @@ export default function SharedRoute() {
                   className="w-full flex items-center gap-3 px-5 py-3 text-left active:bg-secondary/60 transition-colors disabled:opacity-50"
                 >
                   <span className="h-10 w-10 shrink-0 rounded-xl bg-[#fcede3] flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-[#BC4206]" />
+                    <BrandPin className="h-5 w-5 text-[#BC4206]" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-semibold text-foreground truncate">{tr.title || scopeLabel(tr) || t("trip_default")}</span>
@@ -2652,21 +3086,41 @@ export default function SharedRoute() {
             ...(id ? [{
               key: "chat",
               label: t("fabs.chat"),
-              icon: <MessageCircle className="h-6 w-6" strokeWidth={2.2} />,
+              icon: <BrandChat className="h-6 w-6" strokeWidth={2.2} />,
               badge: unreadChat,
               onClick: () => setChatOpen(true),
             } as TripFab] : []),
-            {
-              // "+" znaczy "dodaj to, na co patrzysz" (prosba Nat 2026-09-08): w Miejscach
-              // dodaje miejsce, w Galerii otwiera wybor zdjec.
+            // "DODAJ NOWE MIEJSCE" ZESZLO Z TEGO STOSU DO DOLNEGO PASKA (prosba Nat 2026-09-17),
+            // obok publikacji, jako guzik secondary. Zostaje tu sam wariant GALERII: tam "+"
+            // nie ma odpowiednika na dolnym pasku, a kafelek z kreskowanym obrysem w siatce
+            // jest widoczny dopiero po przewinieciu do konca zdjec.
+            ...(planTab === "galeria" && canAddPhotos ? [{
               key: "add",
-              label: planTab === "galeria" && canAddPhotos ? t("add_photo_cta") : t("add_place"),
+              label: t("add_photo_cta"),
               icon: <Plus className="h-6 w-6" strokeWidth={2.4} />,
-              onClick: () => {
-                if (planTab === "galeria" && canAddPhotos) photoInputRef.current?.click();
-                else setAddPlaceOpen(true);
-              },
-            },
+              onClick: () => photoInputRef.current?.click(),
+            } as TripFab] : []),
+            // "Dostosuj okladke" - dopiero PO publikacji (prosba Nat 2026-09-17). Przed nia
+            // okladke wybiera sie w kroku publikacji, wiec druga droga tylko by go dublowala.
+            // Wlasciciel zmienia okladke eksploracji, uczestnik swoja wlasna - o to dba juz
+            // `setCoverFromGallery`, wiec obaj dostaja ten sam wiersz.
+            ...(isPublished ? [{
+              key: "cover",
+              label: t("cover.action"),
+              icon: <BrandGallery className="h-6 w-6" strokeWidth={2.2} />,
+              onClick: () => setCoverSheet("adjust"),
+            } as TripFab] : []),
+            // "Dostosuj ilosc dni" W STOSIE, nie tylko w menu "..." (prosba Nat 2026-09-16,
+            // TRZECIE podejscie). Dwa wczesniejsze wyladowaly w menu "..." i w kreatorze -
+            // a Nat przez "chevron" cala czas rozumiala TEN rozwijany stos, nie wiersz z lista.
+            // Tu ta akcja ma zreszta wiecej sensu: stos to rzeczy, ktore robi sie Z wyjazdem
+            // w trakcie pracy nad nim, a menu "..." to jego ustawienia.
+            ...(isOwner ? [{
+              key: "days",
+              label: t("day.count_action"),
+              icon: <BrandCalendar className="h-6 w-6" strokeWidth={2.2} />,
+              onClick: () => { setDayDraft(dayCount); setDaysSheetOpen(true); },
+            } as TripFab] : []),
             // Zmiana kolejnosci zeszla tu z dolnego paska (prosba Nat 2026-09-10) i jest
             // w stosie akcja PRIMARY - to jedyna z trzech, ktora zmienia sam uklad wyjazdu.
             ...(pins.length > 1 ? [{
@@ -2679,6 +3133,31 @@ export default function SharedRoute() {
         />
       )}
 
+      {/* Okladka: ten sam arkusz przed publikacja i po niej - rozni je tylko tryb.
+          "publish" potwierdza i od razu publikuje, "adjust" zapisuje sama okladke. */}
+      {id && (
+        <TripCoverSheet
+          open={coverSheet !== null}
+          onOpenChange={(v) => { if (!v) setCoverSheet(null); }}
+          mode={coverSheet === "adjust" ? "adjust" : "publish"}
+          photos={galleryPhotos}
+          value={resolveStored(myCover) ?? (route as any).list_cover_url ?? null}
+          busy={publishing}
+          onPick={canPickCover}
+          onUpload={(file) => uploadCoverPhoto(file, coverSheet === "publish")}
+          onConfirm={(url) => {
+            if (coverSheet === "adjust") { setCoverSheet(null); void setCoverFromGallery(url); }
+            else void doPublish(url);
+          }}
+        />
+      )}
+      {id && <TripLikesSheet open={likesOpen} onOpenChange={setLikesOpen} routeId={id} />}
+
+      <PeopleSheet
+        open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.trip_title")}
+        author={!isAnon && author?.username ? { id: route.user_id, username: author.username, avatar_url: author.avatar_url ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color } : null}
+        others={groupParticipants as any}
+      />
       {canEdit && id && (
         <TripChatSheet open={chatOpen} onOpenChange={setChatOpen} routeId={id} tripTitle={route.title ?? cityLabel}
           participants={[
@@ -2730,9 +3209,10 @@ export default function SharedRoute() {
       )}
 
       {/* Fullscreen podglad zdjecia galerii (object-contain, kropki paginacji + polubienie). */}
-      {viewerIndex !== null && galleryPhotos[viewerIndex] && (
+      {viewerIndex !== null && visiblePhotos[viewerIndex] && (
         <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
-          <img src={galleryPhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+          <img src={visiblePhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain"
+            onClick={onPhotoTap(visiblePhotos[viewerIndex])} />
           <button onClick={() => setViewerIndex(null)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
             <X className="h-5 w-5 text-white" />
           </button>
@@ -2740,30 +3220,80 @@ export default function SharedRoute() {
               i dodatkowych ikon), zostaje na niej tylko wybor okladki.
               Kosz widzi wlasciciel wyjazdu (odpowiada za cala galerie) ORAZ uczestnik przy
               WLASNYM zdjeciu - skoro moze je dodac, musi tez moc je zabrac. */}
-          {(isOwner || (isGroupMember && isMyGalleryPhoto(galleryPhotos[viewerIndex]))) && (
-            <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(galleryPhotos[viewerIndex]); setViewerIndex(null); }}
+          {(isOwner || (isGroupMember && isMyGalleryPhoto(visiblePhotos[viewerIndex]))) && (
+            <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(visiblePhotos[viewerIndex]); setViewerIndex(null); }}
               aria-label={t("aria.delete_photo")}
               className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
               style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-              <Trash2 className="h-5 w-5 text-white" />
+              <BrandTrash className="h-5 w-5 text-white" />
             </button>
           )}
-          {/* Polubienie zdjecia - lewy dolny rog, nad kropkami paginacji. */}
+          {/* SERCE i GWIAZDKA obok siebie, lewy dolny rog. To sa DWIE rozne rzeczy i dlatego
+              stoja osobno: serce jest bez limitu ("podoba mi sie"), a gwiazdka ma budzet
+              3 na caly wyjazd ("to jest najlepsze z tego wyjazdu") - i tylko dla goscia,
+              bo autor nie przyznaje wyroznien sam sobie. */}
           {(() => {
-            const url = galleryPhotos[viewerIndex];
+            const url = visiblePhotos[viewerIndex];
             const st = likeStateOf(url);
+            const starred = isStarred(url);
+            const stars = starCountOf(url);
             return (
-              <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
-                aria-label={st.liked ? t("aria.unlike_photo") : t("aria.like_photo")}
-                className="absolute left-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
+              <div className="absolute left-3 z-10 flex items-center gap-2"
                 style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
-                <Heart className={`h-5 w-5 ${st.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-                {st.count > 0 && <span className="text-white text-sm font-semibold">{st.count}</span>}
+                <button onClick={(e) => { e.stopPropagation(); void togglePhotoLikeUi(url); }}
+                  aria-label={st.liked ? t("aria.unlike_photo") : t("aria.like_photo")}
+                  className="h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform">
+                  <BrandHeart filled={st.liked} className={`h-5 w-5 ${st.liked ? "text-primary" : "text-white"}`} />
+                  {st.count > 0 && <span className="text-white text-sm font-semibold tabular-nums">{st.count}</span>}
+                </button>
+                {/* Gosc dostaje GUZIK, reszta - gdy sa juz wyroznienia - sam licznik.
+                    ⛔ Nie `disabled` na guziku: klik w wylaczony guzik przechodzi na rodzica,
+                    a rodzicem jest tu nakladka zamykajaca podglad. */}
+                {canStar ? (
+                  <button onClick={(e) => { e.stopPropagation(); void toggleStarUi(url); }}
+                    aria-label={starred ? t("stars.remove") : t("stars.add")}
+                    className="h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform">
+                    <BrandStar filled={starred} className={`h-5 w-5 ${starred ? "text-primary" : "text-white"}`} />
+                    {stars > 0 && <span className="text-white text-sm font-semibold tabular-nums">{stars}</span>}
+                  </button>
+                ) : stars > 0 ? (
+                  <span className="h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5">
+                    <BrandStar filled className="h-5 w-5 text-primary" />
+                    <span className="text-white text-sm font-semibold tabular-nums">{stars}</span>
+                  </span>
+                ) : null}
+              </div>
+            );
+          })()}
+          {/* KTO WIDZI TO ZDJECIE - prawy dolny rog, naprzeciw polubienia. Pigulka pokazuje stan
+              AKTUALNY (nie akcje), bo to jest informacja, ktorej wlasciciel szuka najczesciej;
+              tapniecie go przelacza. Tylko dla tych, ktorzy moga zmieniac: wlasciciel wyjazdu
+              i uczestnik przy WLASNYM zdjeciu - ta sama regula co przy koszu obok. */}
+          {canSetAudience(visiblePhotos[viewerIndex]) && (() => {
+            const url = visiblePhotos[viewerIndex];
+            const priv = isFriendsOnly(url);
+            return (
+              <button onClick={(e) => { e.stopPropagation(); void toggleAudience(url); }}
+                aria-label={priv ? t("photo_audience.make_public") : t("photo_audience.make_friends")}
+                className="absolute right-3 z-10 h-10 px-3 rounded-full bg-white/15 backdrop-blur-sm flex items-center gap-1.5 active:scale-90 transition-transform"
+                style={{ bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))" }}>
+                {priv ? <Users className="h-4 w-4 text-white" /> : <BrandGlobe className="h-4 w-4 text-white" />}
+                <span className="text-white text-[13px] font-semibold">
+                  {priv ? t("photo_audience.friends") : t("photo_audience.public")}
+                </span>
               </button>
             );
           })()}
+          {/* Duze serce W MIEJSCU PALCA po podwojnym tapnieciu. `fixed` + wspolrzedne z
+              zdarzenia, wiec trafia dokladnie tam, gdzie user stuknal, niezaleznie od tego,
+              jak zdjecie jest wykadrowane. Znika samo po 900 ms. */}
+          {likeBurst && (
+            <span aria-hidden className="pointer-events-none fixed z-[96]" style={{ left: likeBurst.x, top: likeBurst.y }}>
+              <BrandHeart filled className="animate-photo-like-burst h-24 w-24 text-primary drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]" />
+            </span>
+          )}
           {/* Kropki zamiast strzalek - sugeruja przewijanie gestem (prosba Nat 2026-08-30). */}
-          <PhotoPagination count={galleryPhotos.length} index={viewerIndex} />
+          <PhotoPagination count={visiblePhotos.length} index={viewerIndex} />
         </div>
       )}
 
@@ -2773,7 +3303,10 @@ export default function SharedRoute() {
       {/* Po przeniesieniu zmiany kolejnosci do stosu FAB dolny pasek bywa PUSTY (wyjazd
           w trakcie, jeszcze bez publikacji) - wtedy zostawal sam bialy pasek z kreska.
           Renderujemy go dopiero, gdy jest w nim jakakolwiek akcja. */}
-      {!noteEditing && !editingName && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish)) || !canEdit) && (
+      {/* ⚠️ Warunek dosypuje `canEdit && planTab !== "galeria"`, bo od 2026-09-17 pasek niesie
+          takze "Dodaj nowe miejsce" - bez tego opublikowany wyjazd (brak guzika publikacji)
+          zostawalby BEZ dodawania miejsc w ogole, skoro akcja zeszla ze stosu FAB. */}
+      {!noteEditing && !editingName && ((canEdit && (choosing || reorderMode || (isOwner && stage === "planning" && pins.length > 0) || canPublish || planTab !== "galeria")) || !canEdit) && (
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-2 bg-background border-t border-border/30"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         {canEdit ? (
@@ -2783,7 +3316,7 @@ export default function SharedRoute() {
                 <button onClick={() => setChoosing(false)} className="px-4 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.98] transition-transform">{t("common:buttons.cancel")}</button>
                 <button onClick={confirmChoose} disabled={choosingBusy || chosen.size === 0}
                   className={`flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-transform ${choosingBusy || chosen.size === 0 ? "bg-primary/40 text-white/80" : "bg-primary text-white active:scale-[0.98]"}`}>
-                  {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
+                  {choosingBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandCheck className="h-4 w-4 stroke-[3]" />} Zatwierdź{chosen.size ? ` (${chosen.size})` : ""}
                 </button>
               </div>
             ) : (
@@ -2792,17 +3325,27 @@ export default function SharedRoute() {
               reorderMode ? (
                 <button onClick={() => { haptics.success(); setReorderMode(false); }}
                   className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                  <Check className="h-4 w-4 stroke-[3]" />{t("common:buttons.done")}</button>
+                  <BrandCheck className="h-4 w-4 stroke-[3]" />{t("common:buttons.done")}</button>
               ) : (
               <div className="flex items-center gap-2">
                 {/* Dolny pasek zostaje dla akcji ETAPU (wybor miejsc / publikacja). "Dodaj
                     miejsce", czat i zmiana kolejnosci mieszkaja w stosie plywajacych guzikow
                     pod chevronem (prosba Nat 2026-08-30 i 2026-09-10). */}
+                {/* DODAJ NOWE MIEJSCE - guzik secondary obok publikacji (prosba Nat 2026-09-17).
+                    Szary fill, bo to akcja secondary (styl YouTube), a pomarancz zostaje dla
+                    akcji, ktora konczy etap. W zakladce Galeria go nie ma - tam "+" dotyczy
+                    zdjec i siedzi w stosie. */}
+                {canEdit && planTab !== "galeria" && (
+                  <button onClick={() => setAddPlaceOpen(true)}
+                    className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform">
+                    <Plus className="h-4 w-4 stroke-[3]" />{t("add_place")}
+                  </button>
+                )}
                 {/* Etap PROPOZYCJI (host): wybierz miejsca -> w trakcie. */}
                 {isOwner && stage === "planning" && pins.length > 0 && (
                   <button onClick={startChoosing}
                     className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-                    <Check className="h-4 w-4 stroke-[3]" />{t("choose_places")}</button>
+                    <BrandCheck className="h-4 w-4 stroke-[3]" />{t("choose_places")}</button>
                 )}
                 {/* PUBLIKACJA jednym guzikiem. Opis, tagi i zdjecia powstaja juz w tym widoku -
                     stepper "podsumowania" zostal usuniety z flow.
@@ -2829,30 +3372,17 @@ export default function SharedRoute() {
                Zapis calosci byl zdjety 2026-09-10 i wrocil 2026-09-11 na prosbe Nat. */
             !pickMode ? (
               <>
-                {/* CTA pokazuje STAN zakladki, nie tylko akcje: zapisane = szary guzik
-                    z wypelnionym bookmarkiem, a ponowne tapniecie zdejmuje zapis. */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (!user) { navigate("/auth"); return; }
-                      if (isRouteSaved) { void unsaveFromMine(); return; }
-                      setShowDateSheet(true);
-                    }}
-                    disabled={saving}
-                    className={`flex-1 min-w-0 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 ${
-                      isRouteSaved ? "bg-secondary text-secondary-foreground" : "bg-primary text-white"
-                    }`}
-                  >
-                    <BrandIcon src={SAVE_ICON} className="h-4 w-4" />
-                    {saving ? t("saving") : isRouteSaved ? t("saved_trip") : t("save_trip")}
-                  </button>
-                  {/* Udostepnianie = zolte kolko z brazowa ikona bezposrednio na prawo od zapisu
-                      (prosba Nat 2026-09-13). */}
-                  <button onClick={() => handleShare()} aria-label={t("aria.share")}
-                    className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
-                    <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
-                  </button>
-                </div>
+                {/* UDOSTEPNIANIE na CALA SZEROKOSC (prosba Nat 2026-09-16). Zapis przeniosl sie
+                    do zakladki obok serca przy tytule, wiec dolny pasek nalezy teraz do jednej
+                    akcji - tej, ktora rozsiewa tresc dalej.
+                    ⚠️ Zolte tlo z brazowym napisem, nie pomaranczowe: udostepnianie w calej apce
+                    ma kolor zolty (kolko przy CTA kolekcji, arkusz udostepniania), a pomarancz
+                    zostaje dla akcji, ktora cos tworzy albo zapisuje. Na zoltym piszemy WYLACZNIE
+                    brazem - pomarancz ma na nim 3,08:1. */}
+                <button onClick={() => handleShare()}
+                  className="w-full py-3 rounded-full bg-[#FDF184] text-[#5B2C06] font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                  <BrandShare className="h-4 w-4" strokeWidth={2.4} />{t("share_trip_cta")}
+                </button>
               </>
             ) : (
             <>
@@ -2887,26 +3417,112 @@ export default function SharedRoute() {
         </div>
       )}
 
-      {/* Gosc: kiedy planuje ten wyjazd. Data nalezy do ZAPISUJACEGO, nie do trasy, i jest
-          opcjonalna ("Zapisz bez daty"). Arkusz na `Sheet`, wiec gest "w dol" ma z pudelka. */}
-      <Sheet open={showDateSheet} onOpenChange={setShowDateSheet}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">
-          <SheetTitle className="sr-only">{t("date_sheet_title")}</SheetTitle>
-          <div className="px-5 pb-1 text-center">
-            <p className="text-lg font-black leading-tight">{t("date_sheet_title")}</p>
-            <p className="text-xs text-muted-foreground mt-1">{t("date_sheet_desc")}</p>
+      {/* LICZBA DNI bez wybranego terminu (zgloszenie testerki 2026-09-16). Krokomierz, nie
+          pole tekstowe: liczba dni to zawsze kilka-kilkanascie, a klawiatura numeryczna nad
+          arkuszem zabralaby pol ekranu. */}
+      <Sheet open={daysSheetOpen} onOpenChange={setDaysSheetOpen}>
+        <SheetContent side="bottom" className="px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))]">
+          <SheetTitle className="text-center text-lg font-black">{t("day.count_title")}</SheetTitle>
+          <p className="mt-1 text-center text-[13px] text-muted-foreground leading-relaxed">{t("day.count_desc")}</p>
+          <div className="mt-6 flex items-center justify-center gap-6">
+            <button onClick={() => { haptics.light(); setDayDraft((n) => Math.max(1, n - 1)); }} disabled={dayDraft <= 1}
+              aria-label={t("day.count_less")}
+              className="h-12 w-12 rounded-full border border-border flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform disabled:opacity-30">-</button>
+            <span className="min-w-[4ch] text-center text-4xl font-black tabular-nums">{dayDraft}</span>
+            <button onClick={() => { haptics.light(); setDayDraft((n) => Math.min(MAX_TRIP_DAYS, n + 1)); }} disabled={dayDraft >= MAX_TRIP_DAYS}
+              aria-label={t("day.count_more")}
+              className="h-12 w-12 rounded-full border border-border flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform disabled:opacity-30">+</button>
           </div>
-          <FullCalendarPicker onConfirm={(d) => void saveToMine(d)} />
-          <button
-            onClick={() => void saveToMine()}
-            disabled={saving}
-            className="mx-5 mt-1 w-[calc(100%-2.5rem)] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors disabled:opacity-50"
-          >
-            {t("save_without_date")}
+          <button onClick={() => requestDayCount(dayDraft)}
+            className="mt-7 w-full rounded-full bg-primary py-3.5 text-[15px] font-bold text-white active:scale-[0.98] transition-transform">
+            {t("common:buttons.save")}
           </button>
+
+          {/* WYRZUCENIE JEDNEGO DNIA ZE SRODKA. Krokomierz wyzej skraca wyjazd OD KONCA -
+              komu wypadl dzien 2 z pieciu, temu nie sluzy do niczego. Dlatego kazdy dzien
+              ma tu wlasny wiersz z liczba miejsc i wlasny kosz. Wiersz pokazuje liczbe
+              miejsc, zeby bylo widac, co sie przeniesie, zanim user tapnie kosz. */}
+          {isOwner && dayCount > 1 && (
+            <div className="mt-7 border-t border-border/60 pt-5">
+              <p className="text-[14px] font-bold">{t("day.remove_section")}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{t("day.remove_section_desc")}</p>
+              <div className="mt-2 max-h-[30dvh] overflow-y-auto">
+                {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => {
+                  const n = (pins as any[]).filter((pn) => pinDay(pn) === d).length;
+                  return (
+                    <div key={d} className="flex items-center gap-3 py-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14px] font-semibold">{t("days.nth", { n: d })}</span>
+                        <span className="block text-[12px] text-muted-foreground">
+                          {n ? `${n} ${placeWord(n)}` : t("day.no_places")}
+                        </span>
+                      </span>
+                      {/* Arkusz zamykamy w tym samym zapisie stanu, w ktorym otwieramy
+                          potwierdzenie - nowa nakladka wchodzi od razu, wiec tapniecie nie
+                          ma jak spasc na wyjazd pod spodem. */}
+                      <button onClick={() => { setDaysSheetOpen(false); setAskRemoveDay(d); }}
+                        aria-label={t("day.remove")}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground active:scale-90 transition-transform">
+                        <BrandTrash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 
+      {/* SKROCENIE WYJAZDU. To NIE jest akcja destrukcyjna - nic nie ginie, miejsca tylko
+          zjezdzaja na ostatni dzien - wiec guzik jest pomaranczowy, nie czerwony. Pytamy
+          mimo to, bo z samego krokomierza nie widac, ze cokolwiek sie przesunie. */}
+      <AlertDialog open={askShorten !== null} onOpenChange={(o) => { if (!o) setAskShorten(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("day.shorten_title", { count: askShorten?.to ?? 1 })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("day.shorten_desc", { count: askShorten?.moving ?? 0, to: askShorten?.to ?? 1 })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); const a = askShorten; setAskShorten(null); if (a) void saveDayCount(a.to); }}>
+              {t("day.shorten_confirm")}
+            </AlertDialogAction>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Usuniecie pustego dnia. Copy MUSI powiedziec o skroceniu wyjazdu - przy wyjezdzie
+          z datami zmienia sie takze data konca, a to jest niespodzianka, jesli o niej nie
+          uprzedzimy. */}
+      <AlertDialog open={askRemoveDay !== null} onOpenChange={(o) => { if (!o) setAskRemoveDay(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("day.remove_title", { day: askRemoveDay ?? 0 })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {tripStart ? t("day.remove_desc_dated") : t("day.remove_desc")}
+              {/* Dzien z miejscami: mowimy WPROST, ze nic nie ginie. Bez tego zdania kosz
+                  przy dniu z dorobkiem wyglada jak kasowanie zdjec i notatek. `span`, nie
+                  `p` - opis jest juz akapitem i akapit w akapicie jest nieprawidlowy. */}
+              {!!askRemoveDay && (pins as any[]).filter((pn) => pinDay(pn) === askRemoveDay).length > 0 && (
+                <span className="mt-2 block">
+                  {t("day.remove_moves", { count: (pins as any[]).filter((pn) => pinDay(pn) === askRemoveDay).length })}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); const d = askRemoveDay; setAskRemoveDay(null); if (d) void removeDay(d); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("day.remove")}</AlertDialogAction>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Gosc: kiedy planuje ten wyjazd. Data nalezy do ZAPISUJACEGO, nie do trasy, i jest
+          opcjonalna ("Zapisz bez daty"). Arkusz na `Sheet`, wiec gest "w dol" ma z pudelka. */}
       {/* Wlasciciel: zakres dat wyjazdu. Zakres wielodniowy wlacza podzial miejsc na dni. */}
       <Sheet open={datesSheetOpen} onOpenChange={setDatesSheetOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl px-0 pb-[max(16px,env(safe-area-inset-bottom))] pt-5 max-h-[88dvh] overflow-y-auto">

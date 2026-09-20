@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
-import { X, Check } from "lucide-react";
+import { X } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { CategoryIcon } from "@/components/CategoryIcon";
 
@@ -171,7 +172,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
                       </div>
                       <p className="flex-1 text-sm font-semibold leading-tight">{pin.place_name}</p>
                       <div className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${isOn ? "bg-orange-500" : "bg-muted border border-border"}`}>
-                        {isOn && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+                        {isOn && <BrandCheck className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
                       </div>
                     </button>
 

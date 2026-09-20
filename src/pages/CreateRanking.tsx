@@ -4,7 +4,8 @@ import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, GripVertical } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { Reorder, useDragControls } from "framer-motion";
 import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,7 @@ import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
-import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
+import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSavedPlaces } from "@/lib/placeLists";
@@ -614,6 +615,7 @@ const CreateRanking = () => {
           body: { type: "ranking", title: collectionTitle, city, collection_id: collectionId, author: author.name },
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
+      if (!editId) track("collection_created", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       track("list_published", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
       // Listy widoczne w profilu (zakładka Listy). Kieruj na profil zamiast na pusty feed -
@@ -706,7 +708,7 @@ const CreateRanking = () => {
                     {TRIP_REGIONS.map((region) => (
                       <optgroup key={region} label={region}>
                         {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
-                          <option key={c.name} value={c.name}>{c.name}</option>
+                          <option key={c.name} value={c.name}>{countryLabel(c.name)}</option>
                         ))}
                       </optgroup>
                     ))}
@@ -734,7 +736,7 @@ const CreateRanking = () => {
               na pole nazwy gdy klawiatura przewija widok). */}
           <div className={`${titleFocused ? "" : "sticky top-0 z-20"} bg-background px-4 pt-3 pb-2`}>
             <div className="relative">
-              <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+              <BrandSearch className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
               <input ref={searchInputRef} value={search} onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
@@ -788,7 +790,7 @@ const CreateRanking = () => {
                 {!searchLoading && !googleLoading && (
                   <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
                     className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
-                    {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" /> : <Search className="h-4 w-4 text-primary shrink-0" />}
+                    {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" /> : <BrandSearch className="h-4 w-4 text-primary shrink-0" />}
                     <span className="text-sm font-semibold">{t("search.preview_cta", { query: search.trim() })}</span>
                   </button>
                 )}

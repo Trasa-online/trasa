@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Send, Mic, MicOff, Camera, MapPin, Coffee, Utensils, Map, Loader2, Plus, Check } from "lucide-react";
+import { X, Send, Mic, MicOff, Camera, Coffee, Utensils, Loader2, Plus } from "lucide-react";
+import { BrandMap, BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -238,7 +239,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
     chips.push({
       label: tHome("chip_edit_plan", { city: route.city }),
       query: "",
-      icon: <MapPin className="h-3 w-3" />,
+      icon: <BrandPin className="h-3 w-3" />,
       action: () => { onClose(); navigate(`/edit-plan?route=${route.id}`); },
     });
   }
@@ -250,7 +251,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
   chips.push({
     label: tHome("chip_sightseeing"),
     query: "",
-    icon: <Map className="h-3 w-3" />,
+    icon: <BrandMap className="h-3 w-3" />,
     action: () => setShowSightseeingCategories(true),
   });
   const visibleChips = chips.slice(0, 4);
@@ -378,7 +379,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
                                 : "bg-foreground/5 hover:bg-foreground/10 text-foreground"
                             )}
                           >
-                            {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                            {added ? <BrandCheck className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                           </button>
                         )}
                       </div>

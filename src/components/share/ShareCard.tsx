@@ -9,6 +9,8 @@ import { thumbUrl } from "@/lib/imageUrl";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import TrasaBigCard from "@/components/home/TrasaBigCard";
+import { ListTile, LIST_TILES, type GridItem, type GridPlace } from "@/components/home/FeedTiles";
+import { listTheme } from "@/lib/listThemes";
 import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
 import { SwipeCard, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { rowOwnPhotos } from "@/lib/placeUserPhotos";
@@ -287,10 +289,15 @@ export function ShareCardPlace({ place, city, photos = [], onNextPhoto, onClose,
 }
 
 /** Karta LISTY: siatka miejsc + licznik "ile jeszcze". */
-export function ShareCardList({ title, city, items, author, avatar, authorId, authorFrame, authorFrameColor, onClose, onShare, shareUrl }: {
+export function ShareCardList({ title, city, items, author, avatar, authorId, authorFrame, authorFrameColor, collectionId, theme, visitedCount, onClose, onShare, shareUrl }: {
   title: string;
   city?: string | null;
   items: any[];
+  /** Id i motyw kolekcji - z nich powstaje MINIATURA kafelka (kolor tla liczy sie z id, gdy
+   *  `theme` jest puste, dokladnie tak jak w eksploracji). */
+  collectionId: string;
+  theme?: string | null;
+  visitedCount?: number;
   author: string;
   avatar?: string | null;
   /** Autor listy - do awatara z ramka w belce arkusza (ramka po id, gdy rodzic jej nie ma). */
@@ -302,64 +309,49 @@ export function ShareCardList({ title, city, items, author, avatar, authorId, au
   shareUrl?: string;
 }) {
   const { t } = useTranslation("sharing");
-  // Dziewiec kafelkow = pelna siatka 3x3; gdy miejsc jest wiecej, ostatnie pole zamienia sie
-  // w licznik "+N" (makieta Nat "Udostępnianie list", 2026-09-09).
-  const CELLS = 9;
-  const shown = items.length > CELLS ? items.slice(0, CELLS - 1) : items.slice(0, CELLS);
-  const rest = items.length - shown.length;
-  const word = items.length === 1 ? "miejsce" : items.length % 10 >= 2 && items.length % 10 <= 4 && (items.length % 100 < 12 || items.length % 100 > 14) ? "miejsca" : "miejsc";
+  // MINIATURA KOLEKCJI zamiast generycznej bialej karty (prosba Nat 2026-09-15): arkusz
+  // pokazuje DOKLADNIE ten kafelek, ktory kolekcja ma w eksploracji i na profilu - z jej
+  // kolorem przewodnim, pigulka autora, chipami i okladkami miejsc.
+  // Wczesniej byla tu biala karta z siatka 3x3: wyjazd pokazywal swoja karte z eksploracji,
+  // a kolekcja cos, czego nie widac nigdzie indziej w produkcie.
+  // ⛔ Nie duplikuj tu ukladu kafelka - `ListTile` jest jeden i ma sie zmieniac w jednym miejscu.
+  // ⚠️ Zrodla zdjecia w TEJ kolejnosci: okladka podana przez widok kolekcji (`photo_url` jest
+  // tam juz przeliczone przez `pinCover`, czyli wlasne zdjecie ALBO zdjecie usera z `place_photos`),
+  // a dopiero potem zdjecia z samego wiersza (`images` / `user_photo_urls`).
+  // ⛔ NIE czytaj tu `item._cover`: stara karta udostepniania to robila, a tego pola w widoku
+  // kolekcji NIE MA (ustawiaja je tylko zapytania feedu i profilu). Efekt byl taki, ze wszystkie
+  // miniatury miejsc na karcie udostepniania kolekcji byly puste - zgloszenie Nat 2026-09-15
+  // ("miniatury nie renderuja sie wcale"), blad starszy niz przejscie na `ListTile`.
+  const places: GridPlace[] = items.slice(0, LIST_TILES).map((it: any) => ({
+    name: it.place_name,
+    category: it.category ?? null,
+    photo: resolveStored(it.photo_url ?? null) ?? rowOwnPhotos(it)[0] ?? null,
+  }));
+  const tile: GridItem = {
+    kind: "list", id: collectionId, title,
+    cover: places.find((x) => x.photo)?.photo ?? null,
+    where: city ?? "",
+    // Autor ma tu sam handle: `author` przychodzi juz w postaci "@nick".
+    authorName: "", authorHandle: author,
+    authorAvatar: avatar ?? null, authorId: authorId ?? null,
+    authorFrame: authorFrame ?? null, authorFrameColor: authorFrameColor ?? null,
+    showAuthor: true,
+    at: 0, placesCount: items.length, days: null, mapUrl: null,
+    theme: listTheme(theme ?? null, collectionId),
+    places,
+    visitedCount,
+  };
   return (
     <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
       plainPreview linkHeading={t("share.link_heading_list")}
       author={{ userId: authorId, avatar, frame: authorFrame, color: authorFrameColor }}>
-      {/* Biala karta na zoltym tle arkusza - tak samo, jak wyjazd pokazuje karte z eksploracji:
-          odbiorca ma zobaczyc DOKLADNIE to, co dostanie pod linkiem. */}
-      <div className="w-full rounded-3xl bg-white px-4 pt-4 pb-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <UserAvatar userId={authorId} src={avatar} frame={authorFrame} color={authorFrameColor} size={48} imgClassName="!bg-[#fcede3]" />
-          <div className="min-w-0">
-            <p className="truncate text-[19px] font-black leading-tight text-foreground">{title}</p>
-            <p className="truncate text-[13px] text-muted-foreground">{[city, `${items.length} ${word}`].filter(Boolean).join(" - ")}</p>
-          </div>
-        </div>
-        <div className="mt-3 h-px bg-spontaway-orange/70" />
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {shown.map((it, i) => <ListShareTile key={it.id ?? i} item={it} />)}
-          {rest > 0 && (
-            <div className="flex aspect-[3/4] items-center justify-center rounded-2xl bg-spontaway-yellow">
-              <span className="font-brand text-[26px] leading-none text-spontaway-orange">+{rest}</span>
-            </div>
-          )}
-        </div>
+      {/* ⚠️ Biala oprawa jest KONIECZNA, nie dekoracyjna: arkusz ma tlo `#FDF184`, a dokladnie
+          ten kolor jest w palecie kolekcji (razem ze zlotym i kremowym) - kolekcja w zoltym
+          motywie zniknela by w tle bez zadnej krawedzi. Oprawa czyta sie tez jak miniatura. */}
+      <div className="w-full rounded-[28px] bg-white p-2 shadow-sm">
+        <ListTile it={tile} size="feed" />
       </div>
     </ShareSheet>
-  );
-}
-
-/** Kafelek miejsca na karcie listy: zdjecie albo ikona kategorii, plakietka kategorii w rogu
- *  i nazwa u dolu. Osobny od [PlaceTile] z profilu, bo tam nie ma plakietki ani znacznika
- *  odwiedzenia, a ten kafelek jest tresciowo bogatszy (makieta Nat 2026-09-09). */
-function ListShareTile({ item }: { item: any }) {
-  const photo = thumbUrl(rowOwnPhotos(item)[0] ?? resolveStored(item._cover ?? null), 160);
-  const cat = item.category && item.category !== "other" ? subcategoryLabelLocalized(item.category) : null;
-  return (
-    <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-[#fcede3]">
-      {photo ? (
-        <>
-          <img src={photo} alt="" loading="lazy" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-        </>
-      ) : (
-        <img src={categoryIconSrc(item.category)} alt="" draggable={false}
-          className="absolute left-1/2 top-1/2 w-2/5 max-w-[46px] -translate-x-1/2 -translate-y-1/2 opacity-90" />
-      )}
-      {cat && (
-        <span className="absolute right-1.5 top-1.5 max-w-[80%] truncate rounded-full bg-spontaway-brown/90 px-2 py-0.5 text-[9.5px] font-bold text-white">{cat}</span>
-      )}
-      <p className={`absolute bottom-1.5 left-2 right-2 line-clamp-2 text-[11px] font-bold leading-tight ${photo ? "text-white [text-shadow:_0_1px_2px_rgb(0_0_0_/_45%)]" : "text-foreground/75"}`}>
-        {item.place_name}
-      </p>
-    </div>
   );
 }
 

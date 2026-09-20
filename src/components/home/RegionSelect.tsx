@@ -1,4 +1,5 @@
-import { ChevronDown, Check, MapPin } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ export default function RegionSelect({
           aria-label={t("region.pick_city")}
         >
           {/* Globus przy "Wszystkie" usuniety (2026-08-04) - ikona pinezki tylko dla konkretnego miasta. */}
-          {!isAll && <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />}
+          {!isAll && <BrandPin className="h-3.5 w-3.5 text-primary shrink-0" />}
           <span className="text-sm font-bold text-foreground truncate">{isAll ? t("region.all") : cur}</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         </button>
@@ -41,7 +42,7 @@ export default function RegionSelect({
           className="gap-2 rounded-xl cursor-pointer pl-3"
         >
           <span className={cn("flex-1", isAll && "font-bold")}>{t("region.all")}</span>
-          {isAll && <Check className="h-4 w-4 text-primary shrink-0" />}
+          {isAll && <BrandCheck className="h-4 w-4 text-primary shrink-0" />}
         </DropdownMenuItem>
 
         {cities.length > 0 && <DropdownMenuSeparator />}
@@ -55,7 +56,7 @@ export default function RegionSelect({
               className="gap-2 rounded-xl cursor-pointer pl-3"
             >
               <span className={cn("flex-1", selected && "font-bold")}>{c}</span>
-              {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+              {selected && <BrandCheck className="h-4 w-4 text-primary shrink-0" />}
             </DropdownMenuItem>
           );
         })}

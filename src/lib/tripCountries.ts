@@ -4,6 +4,8 @@
 // Google przez proxy, wiec dzialaja niezaleznie od naszej bazy `places`).
 // Miasta = najwazniejsze/turystyczne per kraj (lista skrocona, nie wyczerpujaca).
 
+import i18n from "@/i18n";
+
 export type TripCountry = { name: string; region: "Polska" | "Europa" | "Azja" | "Ameryka Północna" | "Ameryka Południowa" | "Afryka" | "Oceania"; cities: string[] };
 
 export const TRIP_COUNTRIES: TripCountry[] = [
@@ -110,6 +112,117 @@ export const TRIP_COUNTRIES: TripCountry[] = [
   { name: "Nowa Zelandia", region: "Oceania", cities: ["Auckland", "Wellington", "Queenstown", "Christchurch"] },
   { name: "Fidżi", region: "Oceania", cities: ["Suva", "Nadi"] },
 ];
+
+
+// ─── Nazwy krajow po ANGIELSKU ────────────────────────────────────────────────
+// `name` w TRIP_COUNTRIES to KLUCZ DANYCH: tak kraj siedzi w `routes.countries` /
+// `discovery_collections.countries`, po nim ida tabele odmiany w placeNaming.ts i
+// `countryForCity`. Nie tlumacz go w danych - do tego jest ta mapa i `countryLabel()`.
+// Zgloszenie Nat 2026-09-18: w angielskiej apce kreator wyjazdu pokazywal "Niemcy", "Wlochy".
+// Dopisujesz kraj do TRIP_COUNTRIES -> dopisz go TUTAJ (i w placeNaming.ts).
+// i18n-ignore-start
+export const COUNTRY_NAME_EN: Record<string, string> = {
+  "Polska": "Poland",
+  "Niemcy": "Germany",
+  "Francja": "France",
+  "Hiszpania": "Spain",
+  "Włochy": "Italy",
+  "Wielka Brytania": "United Kingdom",
+  "Holandia": "Netherlands",
+  "Czechy": "Czechia",
+  "Austria": "Austria",
+  "Portugalia": "Portugal",
+  "Grecja": "Greece",
+  "Chorwacja": "Croatia",
+  "Węgry": "Hungary",
+  "Belgia": "Belgium",
+  "Szwajcaria": "Switzerland",
+  "Szwecja": "Sweden",
+  "Norwegia": "Norway",
+  "Dania": "Denmark",
+  "Litwa": "Lithuania",
+  "Łotwa": "Latvia",
+  "Estonia": "Estonia",
+  "Irlandia": "Ireland",
+  "Islandia": "Iceland",
+  "Turcja": "Turkey",
+  "Finlandia": "Finland",
+  "Słowacja": "Slovakia",
+  "Słowenia": "Slovenia",
+  "Rumunia": "Romania",
+  "Bułgaria": "Bulgaria",
+  "Serbia": "Serbia",
+  "Ukraina": "Ukraine",
+  "Cypr": "Cyprus",
+  "Malta": "Malta",
+  "Luksemburg": "Luxembourg",
+  "Monako": "Monaco",
+  "Albania": "Albania",
+  "Czarnogóra": "Montenegro",
+  "Bośnia i Hercegowina": "Bosnia and Herzegovina",
+  "Macedonia Północna": "North Macedonia",
+  "Japonia": "Japan",
+  "Tajlandia": "Thailand",
+  "Wietnam": "Vietnam",
+  "Indonezja": "Indonesia",
+  "Zjednoczone Emiraty Arabskie": "United Arab Emirates",
+  "Chiny": "China",
+  "Korea Południowa": "South Korea",
+  "Indie": "India",
+  "Singapur": "Singapore",
+  "Malezja": "Malaysia",
+  "Filipiny": "Philippines",
+  "Sri Lanka": "Sri Lanka",
+  "Gruzja": "Georgia",
+  "Kambodża": "Cambodia",
+  "Nepal": "Nepal",
+  "Izrael": "Israel",
+  "Jordania": "Jordan",
+  "Katar": "Qatar",
+  "Oman": "Oman",
+  "Armenia": "Armenia",
+  "Azerbejdżan": "Azerbaijan",
+  "Kazachstan": "Kazakhstan",
+  "Malediwy": "Maldives",
+  "Mongolia": "Mongolia",
+  "Stany Zjednoczone": "United States",
+  "Kanada": "Canada",
+  "Meksyk": "Mexico",
+  "Kuba": "Cuba",
+  "Kostaryka": "Costa Rica",
+  "Panama": "Panama",
+  "Dominikana": "Dominican Republic",
+  "Brazylia": "Brazil",
+  "Argentyna": "Argentina",
+  "Peru": "Peru",
+  "Chile": "Chile",
+  "Kolumbia": "Colombia",
+  "Ekwador": "Ecuador",
+  "Boliwia": "Bolivia",
+  "Urugwaj": "Uruguay",
+  "Egipt": "Egypt",
+  "Maroko": "Morocco",
+  "Tunezja": "Tunisia",
+  "Republika Południowej Afryki": "South Africa",
+  "Kenia": "Kenya",
+  "Tanzania": "Tanzania",
+  "Mauritius": "Mauritius",
+  "Seszele": "Seychelles",
+  "Namibia": "Namibia",
+  "Australia": "Australia",
+  "Nowa Zelandia": "New Zealand",
+  "Fidżi": "Fiji",
+};
+// i18n-ignore-end
+
+/** Nazwa kraju do WYSWIETLENIA w jezyku interfejsu. Nieznana nazwa (miasto wpisane recznie,
+ *  stary wiersz) wraca bez zmian. */
+export function countryLabel(name: string): string {
+  if (!name) return name;
+  const lang = (i18n.language || "").toLowerCase();
+  if (lang.startsWith("en")) return COUNTRY_NAME_EN[name] ?? name;
+  return name;
+}
 
 export const TRIP_REGIONS: TripCountry["region"][] = ["Polska", "Europa", "Azja", "Ameryka Północna", "Ameryka Południowa", "Afryka", "Oceania"];
 

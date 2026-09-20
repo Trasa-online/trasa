@@ -1,7 +1,7 @@
 {
   "home_header": {
-    "title": "Your trips",
-    "subtitle": "Active trips, group routes and planning new ones."
+    "title": "Your plans",
+    "subtitle": "Active plans, group routes and planning new ones."
   },
   "liked": {
     "empty_title": "No saved places",
@@ -69,7 +69,7 @@
     "soon": "soon"
   },
   "search": {
-    "placeholder_all": "Search trips, places, people...",
+    "placeholder_all": "Search plans, places, people...",
     "by_category": "Search by category",
     "close": "Close search",
     "categories_title": "What are you looking for?",
@@ -89,5 +89,10 @@
     "mark_place": "Mark a place"
   },
   "filters_aria": "Filters",
-  "places": {}
+  "places": {},
+  "scope": {
+    "everywhere": "Everywhere",
+    "all_cities": "Whole country",
+    "other_countries": "Other"
+  }
 }

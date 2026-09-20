@@ -37,7 +37,9 @@ export default function Miejsca() {
         <TabSearchField s={search} />
         {!search.open && user && !(user as any).is_anonymous && <NotificationsBell userId={user.id} />}
       </TabTopBar>
-      {search.open && <TabSearchResults s={search} />}
+      {/* `scope` = pasek wyboru kraju i miasta nad wynikami (prosba Nat 2026-09-15). Tylko tu:
+          w Eksploracji i na profilu szuka sie tresci, a nie miejsc w konkretnym miescie. */}
+      {search.open && <TabSearchResults s={search} scope />}
       <div className={cn("flex-1 min-h-0 flex flex-col", search.open && "hidden")}>
         <ExploreSwiper city="all" active={!search.open} sortNearestNonce={nearbyNonce} />
       </div>

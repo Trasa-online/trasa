@@ -1,9 +1,10 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Search, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity } from "@/lib/tripCountries";
+import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
 
 // Wspolny wybor kraju (dropdown) + miasta (drum-scroll). Wydzielony z CountryCityPicker,
 // reuse w nowym CreateFlowSheet (arkusz "Nowy wyjazd") oraz na pelnoekranowym /utworz.
@@ -131,7 +132,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
                 {TRIP_REGIONS.map((region) => (
                   <optgroup key={region} label={region}>
                     {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
-                      <option key={c.name} value={c.name}>{c.name}</option>
+                      <option key={c.name} value={c.name}>{countryLabel(c.name)}</option>
                     ))}
                   </optgroup>
                 ))}
@@ -149,7 +150,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
         <div>
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Wpisz miasto</p>
           <div className="relative">
-            <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <BrandSearch className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`np.${NBSP}Kuusamo`} autoFocus
               className="w-full h-12 rounded-2xl bg-secondary text-secondary-foreground border-0 pl-10 pr-4 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           </div>
@@ -170,7 +171,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
                 <button key={r.full_address} type="button"
                   onClick={() => { onCityChange(r.name); setQuery(""); setResults([]); }}
                   className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors active:bg-muted/60", selected ? "bg-secondary" : "")}>
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <BrandPin className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{r.full_address}</p>

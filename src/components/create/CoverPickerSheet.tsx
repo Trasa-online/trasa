@@ -1,4 +1,5 @@
-import { X, Plus, Check, Loader2 } from "lucide-react";
+import { X, Plus, Loader2 } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 
@@ -59,7 +60,7 @@ export default function CoverPickerSheet({
                   <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] font-semibold text-white leading-tight line-clamp-2 [text-shadow:_0_1px_2px_rgb(0_0_0/60%)]">{opt.name}</span>
                   {isCurrent && (
                     <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
-                      <Check className="h-3 w-3" strokeWidth={3} />
+                      <BrandCheck className="h-3 w-3" strokeWidth={3} />
                     </span>
                   )}
                 </button>

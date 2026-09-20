@@ -10,9 +10,10 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Navigation, Check, Share2, Loader2 } from "lucide-react";
+import { Navigation, Loader2 } from "lucide-react";
 import { usePlaceShare } from "@/hooks/usePlaceShare";
-import { BrandIcon, PLUS_ICON, SAVE_ICON } from "@/components/BrandIcon";
+import { BrandIcon, PLUS_ICON, BrandShare, BrandCheck } from "@/components/BrandIcon";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import { haptics } from "@/hooks/useHaptics";
 import { useDistanceReference, setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
@@ -140,6 +141,14 @@ const PlaceSwiperDetail = ({
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (UUID_RE.test(place.id)) {
       posthog.capture("place_viewed", { place_id: place.id });
+      // Wydarzenie lokalu pokazuje sie razem z wizytowka, wiec jego "wyswietlenie" to ten
+      // sam moment. Osobne zdarzenie, bo panel lokalu liczy je osobno - lokal chce wiedziec,
+      // czy wydarzenie w ogole kogos dosieglo.
+      // Tytul wydarzenia siedzi na miejscu jako `businessEventTitle` (PlaceSwiper sklada go
+      // z business_profiles przez pickEventPillTitle) - adapter przemianowuje go dopiero
+      // w karcie, wiec TUTAJ czytamy oryginalna nazwe pola.
+      const evTitle = (place as { businessEventTitle?: string | null }).businessEventTitle;
+      if (evTitle) posthog.capture("place_event_viewed", { place_id: place.id, event_title: evTitle });
     }
 
     const fetchAll = async () => {
@@ -483,6 +492,9 @@ const PlaceSwiperDetail = ({
           <PremiumBusinessCard
             data={businessData}
             mode="detail"
+            /* "Wyróżnione" tylko na wizytowce premium - na wizytowce w stanie zero tej sekcji
+               nie ma (decyzja Nat 2026-09-16). */
+            premium={isPremiumBusiness}
             referenceDate={referenceDate}
             detailPhotos={displayPhotos}
             detailLoading={loading}
@@ -526,10 +538,14 @@ const PlaceSwiperDetail = ({
                    plus) - trzy guziki w rzedzie nie miescily pelnych zdan (prosba Nat 2026-09-14). */
                 <button
                   onClick={handleLike}
-                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
+                  className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${onAdd || savedEffective ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
-                  {onAdd ? t("save_short") : t("save_place")}
-                  <BrandIcon src={SAVE_ICON} className="h-[18px] w-[18px]" />
+                  {/* Guzik NIESIE STAN (prosba Nat 2026-09-15): dopoki miejsce nie jest nigdzie
+                      u usera zapisane - pomaranczowe "Zapisz to miejsce" z PUSTA zakladka;
+                      po zapisie - szare "Miejsce zapisane" z PELNA. Zostaje klikalny, bo
+                      ponowne tapniecie otwiera wybor kolekcji. */}
+                  {savedEffective ? t("saved_place") : (onAdd ? t("save_short") : t("save_place"))}
+                  <BrandBookmark filled={savedEffective} className="h-[18px] w-[18px]" />
                 </button>
               )}
               {onAdd && (
@@ -540,7 +556,7 @@ const PlaceSwiperDetail = ({
                   className={`flex-1 h-11 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform ${added ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-primary text-white"}`}
                 >
                   {added ? t("added_place") : t("add_short")}
-                  {added ? <Check className="h-4 w-4" strokeWidth={2.6} /> : <BrandIcon src={PLUS_ICON} className="h-[18px] w-[18px]" />}
+                  {added ? <BrandCheck className="h-4 w-4" strokeWidth={2.6} /> : <BrandIcon src={PLUS_ICON} className="h-[18px] w-[18px]" />}
                 </button>
               )}
               {/* Udostepnij = zolte kolko z brazowa ikona (jak przy "Zapisz ten wyjazd"). Tylko zalogowani -
@@ -548,7 +564,7 @@ const PlaceSwiperDetail = ({
               {onLike && placeShare.canShare && ep && (
                 <button onClick={handleShare} disabled={placeShare.loading} aria-label={t("share_place")}
                   className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform disabled:opacity-70">
-                  {placeShare.loading ? <Loader2 className="h-5 w-5 animate-spin text-[#5B2C06]" /> : <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />}
+                  {placeShare.loading ? <Loader2 className="h-5 w-5 animate-spin text-[#5B2C06]" /> : <BrandShare className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />}
                 </button>
               )}
             </div>

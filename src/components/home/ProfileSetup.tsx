@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
-import { ArrowLeft, Check, Plus, Bell, Loader2, MapPin } from "lucide-react";
+import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { BrandBell, BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -298,7 +299,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
                     className="flex-1 bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
                   {uStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
+                  {uStatus === "ok" && <BrandCheck className="h-5 w-5 text-green-600" />}
                 </div>
                 <div className="h-6 mt-2 px-1 text-sm">
                   {uStatus === "ok" && <span className="text-green-600 font-medium">{t("profile.username_available")}</span>}
@@ -374,7 +375,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
-                <MapPin className="h-14 w-14 text-white" strokeWidth={2} />
+                <BrandPin className="h-14 w-14 text-white" strokeWidth={2} />
               </div>
             </div>
           </>
@@ -388,7 +389,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
-                <Bell className="h-14 w-14 text-white" strokeWidth={2} />
+                <BrandBell className="h-14 w-14 text-white" strokeWidth={2} />
               </div>
             </div>
           </>

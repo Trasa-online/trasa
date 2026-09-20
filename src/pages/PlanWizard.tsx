@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, MapPin, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, ArrowRight, ChevronDown, Layers, Compass, SlidersHorizontal } from "lucide-react";
+import { BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/components/OnboardingGuide";
@@ -564,7 +565,7 @@ const PlanWizard = () => {
                                           <img src={place.photo_url} alt={place.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" />
                                         ) : (
                                           <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
-                                            <MapPin className="h-5 w-5 text-muted-foreground" />
+                                            <BrandPin className="h-5 w-5 text-muted-foreground" />
                                           </div>
                                         )}
                                         <div className="flex-1 min-w-0">
@@ -582,7 +583,7 @@ const PlanWizard = () => {
                                             isSelected ? "bg-primary border-primary" : "border-border/60 bg-background"
                                           )}
                                         >
-                                          {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                                          {isSelected && <BrandCheck className="h-3.5 w-3.5 text-white" />}
                                         </div>
                                       </button>
                                     );
@@ -686,7 +687,7 @@ const PlanWizard = () => {
                   title={!hasStartRef ? t("sort_nearest_disabled_hint") : ""}
                 >
                   {t("sort_nearest")}
-                  {sortMode === "nearest" && <Check className="inline h-3.5 w-3.5 ml-1" />}
+                  {sortMode === "nearest" && <BrandCheck className="inline h-3.5 w-3.5 ml-1" />}
                 </button>
               </div>
             </div>
@@ -761,7 +762,7 @@ const PlanWizard = () => {
                           <CategoryIcon category={sub.id} className="h-4 w-4 shrink-0" />
                           <span>{sub.label}</span>
                           {active
-                            ? <Check className="h-3.5 w-3.5 ml-0.5 text-primary" />
+                            ? <BrandCheck className="h-3.5 w-3.5 ml-0.5 text-primary" />
                             : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                         </button>
                       );
@@ -813,7 +814,7 @@ const PlanWizard = () => {
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-primary" />
+                <BrandPin className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("dup_title", { city: dupTrip.city })}</p>

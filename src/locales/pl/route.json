@@ -72,7 +72,7 @@
     "guest_desc": "Załóż darmowe konto żeby zachować trasę i wrócić do niej kiedy chcesz.",
     "guest_benefit_1": "Zapisz trasę i wróć do niej kiedy chcesz",
     "guest_benefit_2": "Prowadź dziennik podróży ze zdjęciami",
-    "guest_benefit_3": "Planuj wyjazdy razem ze znajomymi",
+    "guest_benefit_3": "Planuj podróże razem ze znajomymi",
     "guest_cta": "Zakładam konto - to darmowe →",
     "guest_back": "Wróć do trasy"
   },
@@ -143,7 +143,7 @@
     "empty": "Brak wiadomości. Napisz pierwszą, żeby omówić miejsca z uczestnikami.",
     "placeholder": "Napisz wiadomość...",
     "send": "Wyślij",
-    "title": "Czat wyjazdu",
+    "title": "Czat planu",
     "title_named": "Czat: {{title}}",
     "participant": "Uczestnik"
   },
@@ -158,9 +158,9 @@
     "top_place": "Miejsce z topki",
     "set_top": "Dodaj do topki",
     "unset_top": "Usuń z topki",
-    "top_limit_one": "Możesz wyróżnić maksymalnie {{count}} miejsce z tego wyjazdu",
-    "top_limit_few": "Możesz wyróżnić maksymalnie {{count}} miejsca z tego wyjazdu",
-    "top_limit_many": "Możesz wyróżnić maksymalnie {{count}} miejsc z tego wyjazdu",
+    "top_limit_one": "Możesz wyróżnić maksymalnie {{count}} miejsce z tego planu",
+    "top_limit_few": "Możesz wyróżnić maksymalnie {{count}} miejsca z tego planu",
+    "top_limit_many": "Możesz wyróżnić maksymalnie {{count}} miejsc z tego planu",
     "more_actions": "Więcej akcji"
   },
   "note": {

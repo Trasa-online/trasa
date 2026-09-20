@@ -58,22 +58,47 @@ const COPY = {
       ctaSecondary: "Pobierz aplikację",
       storeNote: "Aplikacja dostępna wkrótce również w Google Play!",
       heroAlt: "Aplikacja Spontaway: trasa po Łodzi i profil z wyjazdem do Gdańska",
+      heroImg: "/grafika_hero.png",
     },
     features: [
       { title: "Odkrywaj najlepsze\nmiejsca i wydarzenia", body: "Zobacz gdzie i jak najlepiej spędzić czas.", cta: "Zacznij odkrywać", img: "/mockup_odkrywaj.png", alt: "Karty miejsc i wydarzeń w aplikacji Spontaway" },
-      { title: "Twórz własne\nkolekcje tematyczne", body: "Odwiedzone lub te, które chcesz odwiedzić.\nZapisuj miejsca i podziel się z innymi swoją opinią.", cta: "Stwórz pierwszą listę", img: "/mockup_listy.png", alt: "Lista miejsc „Fav kawiarnie” w aplikacji Spontaway" },
-      { title: "Dziel się wrażeniami\nz przeżytych podróży", body: "Planuj i twórz podsumowania wyjazdów, pomagając innym użytkownikom w ich podróżach.", cta: "Dodaj pierwszy wyjazd", img: "/mockup_dziel_sie.png", alt: "Planowanie wyjazdu i podsumowanie podróży w aplikacji Spontaway" },
+      { title: "Twórz własne\nkolekcje tematyczne", body: "Odwiedzone lub te, które chcesz odwiedzić.\nZapisuj miejsca i podziel się z innymi swoją opinią.", cta: "Stwórz pierwszą listę", img: "/kolekcje_grafika.png", alt: "Lista miejsc „Fav kawiarnie” w aplikacji Spontaway" },
+      { title: "Dziel się wrażeniami\nz przeżytych podróży", body: "Twórz plany podróży i ich podsumowania, pomagając innym użytkownikom w ich podróżach.", cta: "Dodaj pierwszy plan", img: "/dziel_sie.png", alt: "Planowanie wyjazdu i podsumowanie podróży w aplikacji Spontaway" },
     ],
     stats: { heading: "SPONTAWAY TO", countries: "Krajów", cities: "Miast", possibilities: "Możliwości" },
     business: {
-      navLink: "Dla firm",
       title: "Prowadzisz lokal?",
       // **gwiazdki** = pogrubienie (patrz `boldParts`). Tak jest w makiecie: wyroznione sa
       // trzy powody, dla ktorych ktos siega po aplikacje, a nie cale zdanie.
       body: "Nie pozwól by Ci, którzy **szukają gdzie zjeść**, **co zobaczyć** i **jak spędzić czas** go przegapili",
       cta: "Załóż konto",
-      more: "Dowiedz się więcej",
+      ctaSecondary: "Skontaktuj się",
       mockupAlt: "Wizytówka lokalu w aplikacji: zdjęcia, menu, godziny otwarcia i wydarzenie",
+    },
+    inquiry: {
+      title: "Witamy na pokładzie",
+      body: "Na podany adres e-mail prześlemy link aktywacyjny oraz więcej szczegółów",
+      venue: "Nazwa lokalu",
+      venuePlaceholder: "np. Kawiarnia Poranek",
+      city: "Miasto",
+      cityPlaceholder: "np. Łódź",
+      person: "Osoba do\u00a0kontaktu",
+      personPlaceholder: "Imię i\u00a0Nazwisko",
+      email: "E-mail",
+      emailPlaceholder: "kontakt@twojlokal.pl",
+      phone: "Telefon",
+      phonePlaceholder: "123 123 123",
+      message: "Dodatkowe informacje",
+      messagePlaceholder: "Kilka słów o\u00a0lokalu, docelowych klientach itp.",
+      optional: "opcjonalnie",
+      submit: "Wyślij",
+      sending: "Wysyłam...",
+      doneTitle: "Zapytanie poszło!",
+      done: "Odezwiemy się na podany adres w ciągu dwóch dni roboczych.",
+      error: "Nie udało się wysłać. Spróbuj jeszcze raz.",
+      close: "Zamknij",
+      consentPre: "Wysyłając formularz zgadzasz się na kontakt w\u00a0sprawie oferty. Szczegóły w\u00a0",
+      consentLink: "polityce prywatności",
     },
     footerCta: { title: "Odkrywaj, planuj, dziel się!", sub: "Pobierz Spontaway i zacznij zabawę", note: "Za darmo na iOS... i wkrótce na Android!" },
     footer: { rights: "© 2026 Spontaway · Stworzone z", inPoland: "w Polsce", terms: "Regulamin", privacy: "Prywatność" },
@@ -107,21 +132,47 @@ const COPY = {
       ctaPrimary: "Start exploring",
       ctaSecondary: "Get the app",
       storeNote: "Coming soon to Google Play as well!",
-      heroAlt: "The Spontaway app: a route around Lodz and a profile with a trip to Gdansk",
+      heroAlt: "The Spontaway app: a May trip around the Tricity and a profile with collections",
+      // Grafiki WYLACZNIE dla wersji angielskiej (Nat 2026-09-18): ekrany apki po angielsku.
+      heroImg: "/grafika_hero_en.png",
     },
     features: [
-      { title: "Discover the best\nplaces and events", body: "See where and how to spend your time best.", cta: "Start exploring", img: "/mockup_odkrywaj.png", alt: "Place and event cards in the Spontaway app" },
-      { title: "Build your own\nthemed collections", body: "Places you have been to, or the ones you still want to see.\nSave them and share your take with others.", cta: "Create your first list", img: "/mockup_listy.png", alt: "A place list in the Spontaway app" },
-      { title: "Share what you brought\nback from a trip", body: "Plan your trips and turn them into recaps that help other travellers.", cta: "Add your first trip", img: "/mockup_dziel_sie.png", alt: "Trip planning and trip recap in the Spontaway app" },
+      { title: "Discover the best\nplaces and events", body: "See where and how to spend your time best.", cta: "Start exploring", img: "/mockup_odkrywaj_en.png", alt: "Place and event cards in the Spontaway app" },
+      { title: "Build your own\nthemed collections", body: "Places you have been to, or the ones you still want to see.\nSave them and share your take with others.", cta: "Create your first list", img: "/kolekcje_grafika.png", alt: "A place list in the Spontaway app" },
+      { title: "Share what you brought\nback from a trip", body: "Create travel plans and turn them into recaps that help other travellers.", cta: "Add your first plan", img: "/dziel_sie_en.png", alt: "Trip planning and trip recap in the Spontaway app" },
     ],
     stats: { heading: "SPONTAWAY IS", countries: "Countries", cities: "Cities", possibilities: "Possibilities" },
     business: {
-      navLink: "For business",
       title: "Running a place?",
       body: "Don't let the people **looking for a bite**, **something to see** and **a way to spend the day** walk past you",
       cta: "Create an account",
-      more: "Learn more",
+      ctaSecondary: "Get in touch",
       mockupAlt: "A place listing in the app: photos, menu, opening hours and an event",
+    },
+    inquiry: {
+      title: "Welcome aboard",
+      body: "We will send an activation link and more details to the address you give us",
+      venue: "Name of the place",
+      venuePlaceholder: "e.g. Poranek Coffee",
+      city: "City",
+      cityPlaceholder: "e.g. Lodz",
+      person: "Contact person",
+      personPlaceholder: "First and last name",
+      email: "Email",
+      emailPlaceholder: "hello@yourplace.com",
+      phone: "Phone",
+      phonePlaceholder: "123 123 123",
+      message: "Anything else",
+      messagePlaceholder: "A few words about your place, who you want to reach, and so on.",
+      optional: "optional",
+      submit: "Send",
+      sending: "Sending...",
+      doneTitle: "Enquiry sent!",
+      done: "We will get back to you at that address within two working days.",
+      error: "Could not send that. Please try again.",
+      close: "Close",
+      consentPre: "By sending this form you agree to be contacted about our offer. Details in the ",
+      consentLink: "privacy policy",
     },
     footerCta: { title: "Discover, plan, share!", sub: "Get Spontaway and start the fun", note: "Free on iOS... and soon on Android!" },
     footer: { rights: "© 2026 Spontaway · Made with", inPoland: "in Poland", terms: "Terms", privacy: "Privacy" },
@@ -148,8 +199,11 @@ type Copy = (typeof COPY)["pl"];
 
 // ─── Znak marki ───────────────────────────────────────────────────────────────
 
+// Lockup ma teraz GWIAZDKE wystajaca ponad napis (nowe logo, 2026-09-15), wiec ramka pliku
+// urosla z 240x43 na 240x47,3. Klasy wysokosci przy kazdym uzyciu sa przeskalowane o te same
+// ~10%, zeby SAM NAPIS zostal w dotychczasowym rozmiarze.
 function Wordmark({ className }: { className?: string }) {
-  return <img src="/wordmark_spontaway.svg" alt="spontaway" className={className} width={240} height={43} />;
+  return <img src="/wordmark_spontaway.svg" alt="spontaway" className={className} width={240} height={47} />;
 }
 
 // ─── Plakietki sklepowe ───────────────────────────────────────────────────────
@@ -316,7 +370,7 @@ function DownloadModal({ c, lang, onClose }: { c: Copy; lang: Lang; onClose: () 
 
         <div className="flex flex-col items-center bg-spontaway-yellow px-6 pb-7 pt-9 text-center">
           {/* Sam znak marki, bez bialego kafelka - na zoltym tle ramka tylko dzielila kompozycje. */}
-          <img src="/logo.svg" alt="" width={37} height={33} className="w-[52px]" />
+          <img src="/logo.svg" alt="" width={618} height={636} className="w-[50px]" />
           <h2 className="mt-4 font-brand text-[26px] leading-[1.15] text-spontaway-orange">
             {APP_LIVE ? c.modal.titleLive : c.modal.titleSoon}
           </h2>
@@ -371,7 +425,7 @@ function InstallBanner({ c, onDownload }: { c: Copy; onDownload: () => void }) {
         </svg>
       </button>
       <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] bg-spontaway-yellow">
-        <img src="/logo.svg" alt="" width={37} height={33} className="w-[22px]" />
+        <img src="/logo.svg" alt="" width={618} height={636} className="w-[24px]" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-bold leading-tight text-spontaway-brown">{c.banner.name}</p>
@@ -397,18 +451,12 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
     <header className="sticky top-0 z-30 bg-[#F9F9F9] shadow-[0_4px_25px_0_rgba(0,0,0,0.05)]">
       <InstallBanner c={c} onDownload={onDownload} />
       <div className="mx-auto flex h-[56px] max-w-[1440px] items-center justify-between px-5 lg:h-[80px] lg:px-[120px]">
-        <Wordmark className="h-[17px] w-auto shrink-0 sm:h-[19px] lg:h-[33px]" />
+        <Wordmark className="h-[19px] w-auto shrink-0 sm:h-[21px] lg:h-[36px]" />
         <div className="flex items-center gap-2 lg:gap-3">
-          {/* Wejscie dla lokali. Tekstowy link, nie guzik - to sciezka poboczna wobec
-              glownego CTA konsumenckiego, a kolor marki B2B (niebieski) zostaje w samej
-              sekcji nizej, zeby nie rozbijac pomaranczowego naglowka. */}
-          <Link
-            to="/dla-firm"
-            onClick={() => posthog.capture("landing_business_click", { placement: "nav" })}
-            className="whitespace-nowrap px-1 text-[10px] font-semibold text-spontaway-brown underline-offset-2 hover:underline sm:text-[11px] lg:px-2 lg:text-[15px]"
-          >
-            {c.business.navLink}
-          </Link>
+          {/* ⛔ Wejscia "Dla firm" TU NIE MA (decyzja Nat 2026-09-15). Landingu B2B jeszcze
+              nie ma, a zbieramy trakcje na samych uzytkownikach - jedyna sciezka dla lokali
+              to guzik "Skontaktuj sie" w sekcji nizej, ktory otwiera formularz zapytania.
+              Nie przywracaj linku do /dla-firm, dopoki nie powstanie landing dla firm. */}
           <Pill tone="brown" onClick={onDownload} className="hidden h-[47px] text-[15px] lg:inline-flex">
             {c.nav.login}
           </Pill>
@@ -428,7 +476,12 @@ function Nav({ c, onDownload }: { c: Copy; onDownload: () => void }) {
 function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   const nb = useNb();
   return (
-    <section className="px-4 pb-12 pt-6 lg:px-[50px] lg:pb-[80px] lg:pt-[53px]">
+    <section className="px-8 pb-12 pt-6 lg:px-[50px] lg:pb-[80px] lg:pt-[53px]">
+      {/* MOBILE: zolta karta ma 32 px marginesu z obu stron (`px-8` na sekcji), a mockup
+          telefonow wychodzi POZA nia na cala szerokosc ekranu (`-mx-[52px]` nizej = 32 px
+          sekcji + 20 px paddingu karty) - makieta Nat 2026-09-18: wezsza belka i grafika
+          wystajaca z tla daja hero przestrzennosc. ⛔ Karta NIE moze dostac `overflow-hidden`,
+          bo wtedy przycielaby telefony do swojej szerokosci. */}
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-5 py-10 text-center lg:h-[644px] lg:flex-row lg:items-center lg:justify-between lg:rounded-[36px] lg:px-[40px] lg:py-0 lg:text-left">
         {/* Kolumna z tekstem */}
         <div className="order-1 w-full lg:w-[560px] lg:shrink-0">
@@ -456,14 +509,37 @@ function Hero({ c, onDownload }: { c: Copy; onDownload: () => void }) {
           </div>
         </div>
 
-        {/* Telefony z aplikacja */}
-        <img
-          src="/hero_mockup.png"
-          alt={c.hero.heroAlt}
-          width={722}
-          height={774}
-          className="order-2 -mx-5 mt-6 w-[calc(100%+40px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]"
-        />
+        {/* Telefony z aplikacja + TRZY gwiazdki marki (grafika od Nat 2026-09-17).
+            Gwiazdki sa OSOBNYMI elementami, nie czescia PNG - tylko wtedy moga sie ruszac.
+            Pozycje i rozmiar w PROCENTACH kontenera, wiec trzymaja sie grafiki na kazdej
+            szerokosci ekranu; `aria-hidden`, bo nie niosa tresci.
+            ⚠️ Kazda ma INNA animacje (`-alt`, `-slow`): przy wspolnej dwie sasiadujace
+            gwiazdki pulsuja rownoczesnie i caly hero zaczyna mrugac jak jeden element. */}
+        <div className="relative order-2 -mx-[52px] mt-6 w-[calc(100%+104px)] max-w-none lg:mx-0 lg:mt-0 lg:w-[680px]">
+          <img
+            src={c.hero.heroImg}
+            alt={c.hero.heroAlt}
+            width={963}
+            height={1032}
+            className="w-full"
+          />
+          {/* GORNA: wcisnieta w "V" miedzy telefonami. Zeszla z `top-[2%]` na `top-[8%]`,
+              zeby NACHODZILA na mockup (prosba Nat 2026-09-17) - wczesniej tylko musnela
+              rog i wygladala, jakby unosila sie obok grafiki, a nie na niej. */}
+          <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
+            className="animate-star-twinkle pointer-events-none absolute left-[45%] top-[6%] w-[8%]" />
+          {/* PRAWA (nowa 2026-09-17): przy PRAWEJ KRAWEDZI prawego telefonu, ~2/3 wysokosci.
+              Razem z gorna i dolna lewa tworzy trojkat - trzy gwiazdki przy jednej krawedzi
+              czytalyby sie jak rzad, a nie jak rozsypane akcenty.
+              ⛔ Nie wracaj z nia pod gore ekranu: przy `top-[4%]` stala tuz obok gornej
+              i obie zlewaly sie w jedna pare, a przy `top-[11%]` siadala na czarnej ramce
+              obok wyspy, miedzy godzina a ikonami zasiegu (oba sprawdzone renderem w WebKit). */}
+          <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
+            className="animate-star-twinkle-slow pointer-events-none absolute left-[80%] top-[67%] w-[8%]" />
+          {/* DOLNA LEWA. */}
+          <img src="/star.svg" alt="" aria-hidden="true" width={51} height={47}
+            className="animate-star-twinkle-alt pointer-events-none absolute left-[3%] top-[82%] w-[8%]" />
+        </div>
 
       </div>
     </section>
@@ -550,9 +626,8 @@ function boldParts(text: string) {
   );
 }
 
-function BusinessStrip({ c }: { c: Copy }) {
+function BusinessStrip({ c, onContact }: { c: Copy; onContact: () => void }) {
   const nb = useNb();
-  const track = (placement: string) => posthog.capture("landing_business_click", { placement });
   return (
     <section className="mx-auto max-w-[1440px] px-4 py-12 lg:px-[50px] lg:py-[88px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center gap-8 lg:flex-row lg:justify-center lg:gap-[80px]">
@@ -573,25 +648,249 @@ function BusinessStrip({ c }: { c: Copy }) {
             {boldParts(nb(c.business.body))}
           </p>
 
+          {/* DWA guziki (prosba Nat 2026-09-20): primary "Zaloz konto" prowadzi na landing
+              z rejestracja lokalu (`/auth?business=true`), secondary "Skontaktuj sie" otwiera
+              formularz zapytania o oferte (modal na desktopie, arkusz na telefonie).
+              ⚠️ To odwraca decyzje z 2026-09-15 (jeden guzik, zero wyjsc B2B z landingu):
+              Nat chce, zeby lokal mogl zalozyc konto sam, bez rozmowy. Secondary = braz
+              marki, tak jak kazdy guzik drugorzedny w palecie landingu. */}
           <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Link
-              to="/biznes/start"
-              onClick={() => track("section_cta")}
-              className="inline-flex h-[48px] items-center justify-center rounded-full bg-spontaway-orange px-6 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:min-w-[160px]"
+              to="/auth?business=true"
+              className="inline-flex h-[48px] w-full items-center justify-center rounded-full bg-spontaway-orange px-7 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:w-auto sm:min-w-[200px]"
             >
               {c.business.cta}
             </Link>
-            <Link
-              to="/dla-firm"
-              onClick={() => track("section_more")}
-              className="inline-flex h-[48px] items-center justify-center rounded-full border border-spontaway-brown px-6 text-[15px] font-extrabold text-spontaway-brown transition-colors hover:bg-spontaway-brown/[0.06] active:scale-[0.98] sm:min-w-[160px]"
+            <button
+              type="button"
+              onClick={onContact}
+              className="inline-flex h-[48px] w-full items-center justify-center rounded-full bg-spontaway-brown px-7 text-[15px] font-extrabold text-white transition-colors hover:bg-[#4a2405] active:scale-[0.98] sm:w-auto sm:min-w-[200px]"
             >
-              {c.business.more}
-            </Link>
+              {c.business.ctaSecondary}
+            </button>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+// ─── Zapytanie o oferte (lokal) ──────────────────────────────────────────────
+// Jedyna sciezka dla lokali na tym landingu. Na desktopie modal na srodku, na telefonie
+// arkusz dolem - to ta sama komponenta, roznica siedzi w klasach (`items-end` -> `sm:items-center`),
+// zeby copy i logika nie rozjechaly sie miedzy dwiema wersjami.
+//
+// Zapisu NIE robimy z klienta: `business_inquiries` nie ma polityki INSERT dla anon,
+// wszystko idzie przez funkcje brzegowa `business-inquiry` (walidacja, limit, mail do nas).
+
+/** Kierunkowe w formularzu lokalu. Polska pierwsza (i domyslna), dalej sasiedzi i najwieksze
+ *  rynki europejskie - lista ma byc krotka, bo to pole opcjonalne przy zapytaniu o oferte,
+ *  a nie miedzynarodowy formularz rejestracji. */
+const DIAL_CODES = ["+48", "+49", "+420", "+421", "+380", "+370", "+44", "+353", "+31", "+32", "+33", "+34", "+39", "+1"];
+
+const INQ_FIELD =
+  "h-[46px] w-full rounded-2xl border border-black/10 bg-white px-4 text-[14px] text-spontaway-brown outline-none placeholder:text-black/30 focus:border-spontaway-orange";
+
+// ⚠️ `h-full justify-end` NIE jest ozdoba: w rzedzie dwukolumnowym (miasto + osoba do
+// kontaktu) etykiety maja rozna liczbe linii, a bez tego kazde pole startowalo od GORY
+// swojej kolumny i input z dluzsza etykieta zjezdzal nizej niz sasiad (zgloszenie Nat
+// 2026-09-17). Zmierzone: "Osoba do kontaktu (opcjonalnie)" potrzebuje 196,1 px, a kolumna
+// ma 200 px - wiec zawija sie u kazdego, kto ma choc odrobine szersza zastepcza czcionke
+// (Inter jest wczytywany BEZ wagi 600, wiec `font-semibold` bywa syntezowane roznie).
+// ⛔ Nie prostuj tego skracaniem copy ani mniejszym "(opcjonalnie)" - zapas wychodzi
+// najwyzej 10 px i pierwszy dluzszy przeklad znowu to zlamie. `justify-end` dosuwa
+// etykiete DO SWOJEGO pola, wiec wolne miejsce zostaje NAD krotsza etykieta, gdzie nie
+// rzuca sie w oczy, a oba inputy stoja w jednej linii niezaleznie od liczby linii tekstu.
+function InquiryField({
+  label, hint, children,
+}: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="flex h-full flex-col justify-end gap-1.5">
+      <span className="px-1 text-[12px] font-semibold text-spontaway-brown">
+        {label}
+        {hint ? <span className="ml-1 font-normal text-spontaway-brown/50">({hint})</span> : null}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function BusinessInquirySheet({ c, lang, onClose }: { c: Copy; lang: Lang; onClose: () => void }) {
+  const nb = useNb();
+  const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [form, setForm] = useState({ venue: "", city: "", person: "", email: "", phone: "", message: "" });
+  // Kierunkowy osobno od numeru (makieta Nat 2026-09-17). Lokale sa dzis polskie, wiec +48
+  // jest domyslne, ale lista musi istniec - inaczej lokal spoza Polski nie ma jak podac numeru,
+  // a pole i tak jest opcjonalne, wiec nikt go nie poprawi za niego.
+  const [dial, setDial] = useState("+48");
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (state === "sending") return;
+    setState("sending");
+    const { error } = await supabase.functions.invoke("business-inquiry", {
+      body: {
+        venue_name: form.venue.trim(),
+        city: form.city.trim(),
+        contact_name: form.person.trim(),
+        email: form.email.trim().toLowerCase(),
+        // Kierunkowy doklejamy TYLKO do niepustego numeru - inaczej do skrzynki zalozycielek
+        // trafialoby samo "+48" jako telefon lokalu.
+        phone: form.phone.trim() ? `${dial} ${form.phone.trim()}` : "",
+        message: form.message.trim(),
+        language: lang,
+        source: "landing_b2c",
+      },
+    });
+    if (error) {
+      setState("error");
+      return;
+    }
+    posthog.capture("landing_business_inquiry_sent", { lang, has_phone: !!form.phone.trim() });
+    setState("done");
+  };
+
+  return (
+    // z-[70], bo pasek zgody na ciasteczka stoi na z-[60] i na telefonie zaslanial guzik
+    // "Wyslij zapytanie" - formularz musi stac nad nim.
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 sm:items-center sm:px-5 sm:py-8"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={c.inquiry.title}
+    >
+      <div
+        className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl duration-200 animate-in slide-in-from-bottom-6 sm:max-h-[88dvh] sm:max-w-[460px] sm:rounded-[28px] sm:slide-in-from-bottom-0 sm:fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={c.inquiry.close}
+          className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-spontaway-brown transition-colors hover:bg-black/10"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        <div className="overflow-y-auto overscroll-contain">
+          <div className="flex flex-col items-center bg-spontaway-yellow px-6 pb-7 pt-5 text-center sm:pt-9">
+            {/* Uchwyt arkusza - tylko na telefonie, gdzie panel wchodzi od dolu. */}
+            <div className="mb-4 h-1 w-10 shrink-0 rounded-full bg-spontaway-brown/20 sm:hidden" />
+            <img src="/logo.svg" alt="" width={618} height={636} className="w-[44px]" />
+            <h2 className="mt-3 font-brand text-[24px] leading-[1.15] text-spontaway-orange sm:text-[26px]">
+              {nb(state === "done" ? c.inquiry.doneTitle : c.inquiry.title)}
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.45] text-spontaway-brown">
+              {nb(state === "done" ? c.inquiry.done : c.inquiry.body)}
+            </p>
+          </div>
+
+          {state !== "done" && (
+            <form
+              onSubmit={submit}
+              className="flex flex-col gap-3 px-6 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 sm:pb-7"
+            >
+              {/* E-MAIL JEST PIERWSZY (makieta Nat 2026-09-17). To jedyne pole, bez ktorego
+                  zapytanie jest bezuzyteczne - nie ma jak odpisac - wiec stoi nad reszta.
+                  Nazwa lokalu zaraz pod nim; cala reszta jest opcjonalna. */}
+              <InquiryField label={c.inquiry.email}>
+                <input required type="email" inputMode="email" autoComplete="email" value={form.email} onChange={set("email")} placeholder={c.inquiry.emailPlaceholder} className={INQ_FIELD} />
+              </InquiryField>
+              <InquiryField label={c.inquiry.venue}>
+                <input required value={form.venue} onChange={set("venue")} placeholder={c.inquiry.venuePlaceholder} className={INQ_FIELD} />
+              </InquiryField>
+              {/* ⛔ `sm:flex-1`, a NIE `flex-1`: na telefonie ten kontener jest KOLUMNA, a w
+                  kolumnie `flex: 1 1 0%` steruje WYSOKOSCIA - pola dostawalyby rowne wysokosci
+                  liczone od bazy 0 zamiast wlasnej tresci (ta sama pulapka, co przy polu email
+                  w hero B2B, CLAUDE.md). Podzial na kolumny ma dzialac dopiero od `sm`. */}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="sm:flex-1">
+                  <InquiryField label={c.inquiry.city} hint={c.inquiry.optional}>
+                    <input value={form.city} onChange={set("city")} placeholder={c.inquiry.cityPlaceholder} className={INQ_FIELD} />
+                  </InquiryField>
+                </div>
+                <div className="sm:flex-1">
+                  <InquiryField label={c.inquiry.person} hint={c.inquiry.optional}>
+                    <input value={form.person} onChange={set("person")} placeholder={c.inquiry.personPlaceholder} className={INQ_FIELD} />
+                  </InquiryField>
+                </div>
+              </div>
+              <InquiryField label={c.inquiry.phone} hint={c.inquiry.optional}>
+                <div className="flex gap-2">
+                  {/* Natywny <select>: na telefonie otwiera kolo iOS, ktorego niczym wlasnym
+                      nie zastapimy lepiej. `appearance-none` + wlasny chevron, zeby pole
+                      wygladalo jak sasiednie, a nie jak systemowy formularz. */}
+                  <div className="relative shrink-0">
+                    <select
+                      value={dial}
+                      onChange={(e) => setDial(e.target.value)}
+                      aria-label={c.inquiry.phone}
+                      className={`${INQ_FIELD} w-[92px] appearance-none pr-7`}
+                    >
+                      {DIAL_CODES.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-spontaway-brown/60">
+                      <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={set("phone")} placeholder={c.inquiry.phonePlaceholder} className={`${INQ_FIELD} flex-1`} />
+                </div>
+              </InquiryField>
+              <InquiryField label={c.inquiry.message} hint={c.inquiry.optional}>
+                <textarea
+                  rows={3}
+                  value={form.message}
+                  onChange={set("message")}
+                  placeholder={c.inquiry.messagePlaceholder}
+                  className="w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-[14px] leading-[1.4] text-spontaway-brown outline-none placeholder:text-black/30 focus:border-spontaway-orange"
+                />
+              </InquiryField>
+
+              <button
+                type="submit"
+                disabled={state === "sending"}
+                className="mt-1 h-[48px] w-full rounded-full bg-spontaway-orange text-[15px] font-extrabold text-white transition-colors hover:bg-[#d94a05] active:scale-[0.98] disabled:opacity-60"
+              >
+                {state === "sending" ? c.inquiry.sending : c.inquiry.submit}
+              </button>
+              {state === "error" && (
+                <p className="text-center text-[12px] font-semibold text-red-600">{nb(c.inquiry.error)}</p>
+              )}
+              <p className="px-1 text-center text-[11px] leading-snug text-spontaway-brown/70">
+                {nb(c.inquiry.consentPre)}
+                <Link to="/privacy" className="underline">{c.inquiry.consentLink}</Link>.
+              </p>
+            </form>
+          )}
+
+          {state === "done" && (
+            <div className="px-6 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 sm:pb-7">
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-[48px] w-full rounded-full bg-spontaway-orange text-[15px] font-extrabold text-white transition-colors hover:bg-[#d94a05] active:scale-[0.98]"
+              >
+                {c.inquiry.close}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -602,7 +901,7 @@ function FooterCta({ c, onDownload }: { c: Copy; onDownload: () => void }) {
   return (
     <section className="px-4 py-12 lg:px-[50px] lg:py-[125px]">
       <div className="mx-auto flex max-w-[1340px] flex-col items-center rounded-[28px] bg-spontaway-yellow px-6 py-10 text-center lg:h-[480px] lg:justify-center lg:rounded-[36px] lg:py-0">
-        <Wordmark className="h-[32px] w-auto lg:h-[43px]" />
+        <Wordmark className="h-[35px] w-auto lg:h-[47px]" />
         <h2 className="mt-6 font-brand text-[30px] leading-[1.14] text-spontaway-orange lg:mt-[43px] lg:text-[52px]">
           {nb(c.footerCta.title)}
         </h2>
@@ -704,6 +1003,12 @@ export default function SpontawayLanding() {
     posthog.capture("landing_language_switched", { lang: next });
   }, []);
   const [modalOpen, setModalOpen] = useState(false);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+
+  const openInquiry = useCallback(() => {
+    posthog.capture("landing_business_inquiry_open", { placement: "section" });
+    setInquiryOpen(true);
+  }, []);
 
   const openDownload = useCallback((placement: string) => {
     posthog.capture("landing_download_modal_open", { placement, app_live: APP_LIVE });
@@ -718,8 +1023,8 @@ export default function SpontawayLanding() {
   const features = c.features;
   const imgMeta = [
     { w: 1038, h: 616, cls: "w-full max-w-[430px] lg:w-[676px] lg:max-w-none", body: 399 },
-    { w: 900, h: 792, cls: "w-full max-w-[340px] lg:w-[574px] lg:max-w-none", body: 382 },
-    { w: 834, h: 733, cls: "w-full max-w-[430px] lg:w-[600px] lg:max-w-none", body: 460 },
+    { w: 1066, h: 933, cls: "w-full max-w-[340px] lg:w-[574px] lg:max-w-none", body: 382 },
+    { w: 1112, h: 977, cls: "w-full max-w-[430px] lg:w-[600px] lg:max-w-none", body: 460 },
   ];
 
   return (
@@ -745,11 +1050,12 @@ export default function SpontawayLanding() {
           />
         ))}
         <Stats c={c} />
-        <BusinessStrip c={c} />
+        <BusinessStrip c={c} onContact={openInquiry} />
         <FooterCta c={c} onDownload={() => openDownload("footer_cta")} />
       </main>
       <FooterBar c={c} lang={lang} onSwitchLang={switchLang} />
       {modalOpen && <DownloadModal c={c} lang={lang} onClose={() => setModalOpen(false)} />}
+      {inquiryOpen && <BusinessInquirySheet c={c} lang={lang} onClose={() => setInquiryOpen(false)} />}
     </div>
     </NbContext.Provider>
   );

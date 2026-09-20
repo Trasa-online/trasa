@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { checkUsername, cleanUsername, escapeLike, checkFirstName, FIRST_NAME_MAX, type UsernameProblem } from "@/lib/usernameRules";
 import { avatarSrc } from "@/lib/avatar";
 import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
-import { ArrowLeft, Check, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { Link } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
@@ -318,7 +319,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
               className="mt-8 flex items-start gap-3 text-left max-w-xs active:opacity-70 transition-opacity"
             >
               <span className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${termsAccepted ? "bg-primary border-primary" : "border-border bg-background"}`}>
-                {termsAccepted && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+                {termsAccepted && <BrandCheck className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
               </span>
               <span className="text-[13px] text-muted-foreground leading-relaxed">
                 {/* Zdanie z DWOMA linkami w srodku - <Trans>, bo szyk zdania i miejsce linkow
@@ -357,7 +358,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         placeholder={t("source.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
-                      <span className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
+                      <span className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0"><BrandCheck className="h-4 w-4 text-white" strokeWidth={3} /></span>
                     </div>
                   );
                 }
@@ -369,7 +370,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                   >
                     <span>{t(o.labelKey)}</span>
                     <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-primary border-primary" : "border-muted-foreground/30")}>
-                      {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                      {active && <BrandCheck className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
                   </button>
                 );
@@ -398,7 +399,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                         placeholder={t("goals.other_placeholder")}
                         className="flex-1 bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/50"
                       />
-                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-primary flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" strokeWidth={3} /></button>
+                      <button onClick={() => toggleGoal(o.id)} aria-label="Odznacz" className="h-6 w-6 rounded-md bg-primary flex items-center justify-center shrink-0"><BrandCheck className="h-4 w-4 text-white" strokeWidth={3} /></button>
                     </div>
                   );
                 }
@@ -410,7 +411,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                   >
                     <span>{t(o.labelKey)}</span>
                     <span className={cn("h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", active ? "bg-primary border-primary" : "border-muted-foreground/30")}>
-                      {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                      {active && <BrandCheck className="h-4 w-4 text-white" strokeWidth={3} />}
                     </span>
                   </button>
                 );
@@ -488,7 +489,7 @@ const OnboardingFlow = ({ onDone }: Props) => {
                     className="flex-1 bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
                   />
                   {uStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
+                  {uStatus === "ok" && <BrandCheck className="h-5 w-5 text-green-600" />}
                 </div>
                 <div className="h-6 mt-2 px-1 text-sm">
                   {uStatus === "ok" && <span className="text-green-600 font-medium">{t("name.username_free")}</span>}

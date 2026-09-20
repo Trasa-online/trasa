@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriendList } from "@/lib/friends";
 import { useFollowList } from "@/hooks/useFollow";
 import { avatarSrc } from "@/lib/avatar";
-import { Search, Check, X, Loader2, UserPlus, Clock } from "lucide-react";
+import { X, Loader2, Clock } from "lucide-react";
+import { BrandSearch, BrandCheck, BrandUserPlus } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
@@ -59,7 +60,12 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
 
   // Domyslna lista (puste pole): znajomi + obserwowani (dedup, bez siebie i biznesow) - zeby nie bylo
   // pusto (prosba Nat 2026-08-26).
-  const { data: friends = EMPTY_ARRAY } = useFriends(user?.id);
+  // ⚠️ ZNAJOMI to od 2026-09-17 WZAJEMNA OBSERWACJA (`src/lib/friends.ts`), nie stara tabela
+  // `friendships`. Tamta ma na prodzie 4 wiersze i nikt jej juz nie zasila poza linkiem
+  // `/dodaj/:code`, wiec podpowiedzi opieraly sie faktycznie na niczym. Znajomi sa tu
+  // PIERWSI, bo to ich zaprasza sie najczesciej; reszta obserwowanych leci pod nimi.
+  // ⛔ Jedno pojecie "znajomy" w calej apce - inaczej profil pokazywalby 22, a ten ekran 4.
+  const { data: friends = EMPTY_ARRAY } = useFriendList(user?.id);
   const { data: following = EMPTY_ARRAY } = useFollowList(user?.id, "following");
   const myPeople = useMemo<Profile[]>(() => {
     const map = new Map<string, Profile>();
@@ -145,7 +151,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
 
         <div className="px-5 shrink-0">
           <div className="flex items-center gap-2.5 px-4 h-11 rounded-2xl bg-secondary focus-within:ring-2 focus-within:ring-orange-400/50">
-            <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
+            <BrandSearch className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
             <input
               autoFocus
               value={q}
@@ -213,11 +219,11 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
                     </div>
                     {already ? (
                       <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                        <Check className="h-3.5 w-3.5" strokeWidth={3} /> {t("invite.added")}
+                        <BrandCheck className="h-3.5 w-3.5" strokeWidth={3} /> {t("invite.added")}
                       </span>
                     ) : (
                       <span className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors", on ? "bg-primary border-primary" : "border-muted-foreground/30")}>
-                        {on && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                        {on && <BrandCheck className="h-4 w-4 text-white" strokeWidth={3} />}
                       </span>
                     )}
                   </button>
@@ -233,7 +239,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
             disabled={!selectedList.length || sending}
             className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><UserPlus className="h-4 w-4" /> {selectedList.length ? t("invite.cta_count", { count: selectedList.length }) : t("invite.cta")}</>}
+            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><BrandUserPlus className="h-4 w-4" /> {selectedList.length ? t("invite.cta_count", { count: selectedList.length }) : t("invite.cta")}</>}
           </button>
         </div>
       </SheetContent>

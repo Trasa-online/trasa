@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { haptics } from "@/hooks/useHaptics";
 import { AVATAR_PRESET_IDS, presetAvatarUrl } from "@/lib/avatarPresets";
 
@@ -34,7 +34,7 @@ export default function AvatarPresetRow({ value, onPick, disabled, title, desc, 
               <img src={url} alt="" className="h-full w-full object-cover" draggable={false} loading="lazy" />
               {active && (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/25">
-                  <Check className="h-5 w-5 text-white drop-shadow" strokeWidth={3} />
+                  <BrandCheck className="h-5 w-5 text-white drop-shadow" strokeWidth={3} />
                 </span>
               )}
             </button>

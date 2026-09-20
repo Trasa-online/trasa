@@ -1,5 +1,7 @@
 export const config = { runtime: "edge" };
 
+import { listTheme } from "../src/lib/listThemes";
+
 // PUBLICZNA STRONA WYJAZDU / LISTY - to, co widzi osoba, ktora dostala link i NIE MA aplikacji.
 //
 // Skad sie wziela: adres z hashem (spontaway.com/#/route/<id>) nigdy nie dociera na serwer, wiec
@@ -48,7 +50,7 @@ const SYMBOL_IMG = `${SITE}/spontaway-symbol.png`;
 // dokladnie proporcja, ktorej oczekuja komunikatory (~1,91:1). Kwadratowa ikona aplikacji
 // pokazywala sie tam jako maly kafelek z boku, a nie jako karta - stad "brakuje miniaturek"
 // przy listach (zgloszenie Nat 2026-09-09).
-const OG_BANNER = { url: `${SITE}/baner-ios.png`, w: 1800, h: 945 };
+const OG_BANNER = { url: `${SITE}/baner-ios.png?v=2`, w: 1800, h: 945 };
 const ctaTop = () => CTA_READY
   ? `<a class="badge" href="${esc(APP_STORE_URL!)}"><img src="${BADGE}" alt="${CTA_LABEL}"></a>`
   : `<span class="badge off" title="Dostępne wkrótce"><img src="${BADGE}" alt="${CTA_LABEL}"></span>`;
@@ -286,13 +288,17 @@ body.trip{background:#FDF184}
 /* KARTA LISTY - makieta Nat "Udostępnianie list" (2026-09-09). Biala karta na zoltym tle,
    nad siatka autor + tytul + kreska, w siatce 3x3 kafelki miejsc; ostatnie pole zamienia sie
    w licznik "+N", gdy miejsc jest wiecej niz dziewiec. */
-.lc{width:100%;max-width:360px;background:#fff;border-radius:24px;padding:16px 16px 20px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.lc{width:100%;max-width:360px;background:#fff;border-radius:28px;padding:8px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.lt{border-radius:22px;padding:14px 14px 16px}
+.lt .hd{margin-bottom:12px}
 .lc .hd{display:flex;align-items:center;gap:12px}
 .lc .hd img{width:48px;height:48px;flex:none;border-radius:50%;object-fit:cover;background:#fcede3}
 .lc .hd b{display:block;font-size:19px;font-weight:900;line-height:1.2;color:#0E0E0E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc .hd span{display:block;font-size:13px;color:#979797;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc hr{border:0;height:1px;background:rgba(238,83,7,.7);margin:12px 0}
-.lc .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+/* minmax(0,1fr), nie samo 1fr: tor 1fr ROSNIE do najszerszego dziecka, wiec jeden
+   kafelek ze sztywna szerokoscia potrafi rozepchnac cala kolumne. Z minmax(0,...) nie moze. */
+.lc .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .tl{position:relative;aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:#fcede3}
 .tl img.ph{width:100%;height:100%;object-fit:cover;display:block}
 .tl .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 55%)}
@@ -301,8 +307,13 @@ body.trip{background:#FDF184}
 .tl .nm2{position:absolute;left:8px;right:8px;bottom:6px;font-size:11px;font-weight:700;line-height:1.2;height:2.4em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical}
 .tl.has .nm2{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
 .tl.none .nm2{color:rgba(14,14,14,.75)}
-.tl.more{display:flex;align-items:center;justify-content:center;background:#FDF184}
-.tl.more span{font-family:Sigmar,Inter,sans-serif;font-size:26px;line-height:1;color:#EE5307}
+/* ⛔ Klasa "plus", NIE "more". Klasa "more" to chip "Jeszcze N miejsc" ze strony WYJAZDU
+   (width:150px;height:104px;border:2px dashed) i nadpisywal ten kafelek: trzecia kolumna
+   siatki rozciagala sie do 150 px, kafelki w niej robily sie 150x200 zamiast 76x101,
+   a cala siatka sie rozjezdzala (zgloszenie Nat 2026-09-16, zmierzone w WebKit).
+   Jeden arkusz stylow na dwie strony = nazwy klas musza byc rozlaczne. */
+.tl.plus{display:flex;align-items:center;justify-content:center;background:#FDF184}
+.tl.plus span{font-family:Sigmar,Inter,sans-serif;font-size:26px;line-height:1;color:#EE5307}
 .go{margin-top:32px;width:100%;max-width:420px;border-radius:999px;background:#EE5307;color:#fff;font-size:17px;font-weight:800;text-align:center;padding:16px 0;text-decoration:none;display:block}
 .page .tail{margin:16px 0 0;text-align:center;font-size:12.5px;line-height:1.4;color:rgba(91,44,6,.8)}
 /* Arkusz po "Zobacz wyjazd" - w stylu modala z landingu (zolty panel, znak marki, naglowek
@@ -428,7 +439,7 @@ ${o.body}` : `<body>
 <div class="bar"><div class="in"><img class="mark" src="${BRAND_IMG}" alt=""><span class="brand">spontaway</span>
 ${ctaTop()}</div></div>
 <div class="wrap">${o.body}
-<div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta kolekcja powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+<div class="foot"><p>${o.noun === "route" ? "Ten plan powstał w spontaway" : o.noun === "list" ? "Ta kolekcja powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 ${ctaBig()}</div></div>`}
 </body></html>`;
 }
@@ -529,7 +540,7 @@ ${choiceSheet()}`;
   }
 
   if (isList) {
-    const [col] = await rest(`discovery_collections?id=eq.${id}&select=title,city,description,user_id&limit=1`);
+    const [col] = await rest(`discovery_collections?id=eq.${id}&select=title,city,description,user_id,theme&limit=1`);
     if (!col) return missing();
     const items = await rest(`discovery_items?collection_id=eq.${id}&select=place_name,category,short_desc,photo_url,images,google_place_id&order=order_index.asc&limit=60`);
     const photos = await communityPhotos(items.map((it) => placeKey(it.google_place_id, it.place_name)));
@@ -553,12 +564,19 @@ ${cat && it.category !== "other" ? `<span class="cat">${esc(cat)}</span>` : ""}
 <p class="nm2">${esc(it.place_name || "")}</p></div>`;
     }).join("");
 
+    // KOLOR KOLEKCJI jak w aplikacji (zgloszenie Nat 2026-09-16: "stary jest widok kolekcji").
+    // Paleta idzie IMPORTEM z `src/lib/listThemes` - jedno zrodlo kolorow dla apki i dla tej
+    // strony; przepisana tutaj rozjechalaby sie przy pierwszym nowym kolorze.
+    // ⚠️ Biala oprawa ZOSTAJE: tlo strony to zolty marki, ktory jest TAKZE w palecie kolekcji -
+    // bez niej kolekcja w zoltym motywie znikalaby w tle (ten sam powod, co w `ShareCardList`).
+    const th = listTheme(col.theme, String(id));
     const body = `<div class="page">
 <div class="lc">
+<div class="lt" style="background:${esc(th.bg)};color:${esc(th.ink)}">
 <div class="hd"><img src="${esc(img(author?.avatar_url, 64, 64) ?? BRAND_IMG)}" alt="">
-<span style="min-width:0"><b>${esc(title)}</b><span>${esc([col.city, count].filter(Boolean).join(" - "))}</span></span></div>
-<hr>
-<div class="grid">${tiles}${restN > 0 ? `<div class="tl more"><span>+${restN}</span></div>` : ""}</div>
+<span style="min-width:0"><b style="color:${esc(th.ink)}">${esc(title)}</b><span style="color:${esc(th.ink)};opacity:.72">${esc([col.city, count].filter(Boolean).join(" - "))}</span></span></div>
+<div class="grid">${tiles}${restN > 0 ? `<div class="tl plus"><span>+${restN}</span></div>` : ""}</div>
+</div>
 </div>
 <a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz kolekcję</a>
 <p class="tail">Ta kolekcja powstała w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
@@ -577,7 +595,7 @@ ${choiceSheet()}`;
   const pins = await rest(`pins?route_id=eq.${id}&select=place_name,category,tags,images,user_photo_urls,image_url,photo_url,pin_order,place_id,day_index&order=pin_order.asc&limit=120`);
   const pinPhotos = await communityPhotos(pins.map((p) => placeKey(null, p.place_name)));
   const [author] = route.user_id ? await rest(`profiles?id=eq.${route.user_id}&select=username,avatar_url&limit=1`) : [];
-  const title = route.title || (route.city ? `Wyjazd do ${route.city}` : "Wyjazd");
+  const title = route.title || (route.city ? `Plan: ${route.city}` : "Plan");
   const count = `${pins.length} ${plural(pins.length)}`;
   const desc = route.description || [route.city, pins.length ? count : null].filter(Boolean).join(" · ");
   const cover = img(route.list_cover_url || route.cover_url, 1200, 630);
@@ -626,8 +644,8 @@ ${cover ? `<img class="bg" src="${esc(cover)}" alt="">` : ""}
 ${chips.length ? `<div class="chips">${chips.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
 </div></div>
 ${strips}${more}
-<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz wyjazd</a>
-<p class="tail">Ten wyjazd powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz plan</a>
+<p class="tail">Ten plan powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 </div>
 ${choiceSheet()}`;
   // Wymiary okladki liczymy TYLKO dla robota budujacego podglad - czlowiek nie czeka na nic

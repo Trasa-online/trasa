@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil } from "lucide-react";
+import { BrandNote } from "@/components/BrandIcon";
 import { avatarSrc } from "@/lib/avatar";
 
 // Kompaktowy edytor notki miejsca - WSPOLDZIELONY przez listy (SharedList) i wyjazdy (SharedRoute),
@@ -146,7 +146,7 @@ export default function PlaceNoteEditor({
             onClick={startEdit}
             className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-foreground active:scale-95 transition-transform"
           >
-            {noteText ? <Pencil className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            <BrandNote className="h-3.5 w-3.5" />
             {noteText ? (editLabel ?? t("note.edit")) : (addLabel ?? t("note.add"))}
           </button>
           {photoSlot}

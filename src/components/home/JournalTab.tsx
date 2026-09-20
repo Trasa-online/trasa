@@ -3,11 +3,13 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { moveToTrash, invalidateContentLists } from "@/lib/trash";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { Loader2, Trash2, Sparkles, BookOpen, Images } from "lucide-react";
+import { Loader2, Sparkles, BookOpen, Images } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PLANNING_DISABLED } from "@/lib/appMode";
@@ -260,10 +262,11 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
       commit: async () => {
         try {
           if (entry.is_own) {
-            await supabase.from("pins").delete().eq("route_id", entry.id);
-            await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
-            const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-            if (error) throw error;
+            // Do KOSZA, nie DELETE (2026-09-15) - patrz src/lib/trash.ts. Tu zostaje
+            // odroczenie, bo DRUGA galaz (opuszczenie cudzego wyjazdu) jest nieodwracalna
+            // przez RLS i jedynym uczciwym cofnieciem jest nie wykonac operacji.
+            await moveToTrash("trip", entry.id);
+            invalidateContentLists();
           } else {
             if (!entry.group_session_id) throw new Error("missing group_session_id");
             // count: 'exact' zeby wykryc silent RLS fail (migracja 20260604_gsm_delete_policy.sql).
@@ -381,7 +384,7 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
                 aria-label={entry.is_own ? t("journal.delete_aria") : t("journal.leave_aria")}
                 className="shrink-0 -mr-0.5 -mt-0.5 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive active:scale-90 transition-colors disabled:opacity-50"
               >
-                {deletingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {deletingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BrandTrash className="h-3.5 w-3.5" />}
               </button>
             )}
           </div>

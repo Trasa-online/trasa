@@ -4,8 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { track } from "@/lib/analytics";
-import { Heart, Trash2, ArrowRight, ArrowLeft, Pencil, ListChecks, ChevronDown, ChevronRight, Check, Search, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { Heart, ArrowRight, ArrowLeft, ListChecks, ChevronDown, ChevronRight, X, Layers, Compass, Bookmark, Plus } from "lucide-react";
+import { BrandTrash, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -40,6 +42,7 @@ import { PLANNING_DISABLED, GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode"
 import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteWithUndo } from "@/lib/trash";
 import { toast } from "sonner";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
@@ -333,7 +336,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
       {/* Waska wyszukiwarka - filtruje po nazwie/opisie. */}
       <div className="pb-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <BrandSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -418,7 +421,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                     "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm",
                     checked ? "bg-primary border-primary" : "bg-black/40 border-white/90 backdrop-blur-sm",
                   )}>
-                    {checked && <Check className="h-5 w-5 text-white" strokeWidth={3} />}
+                    {checked && <BrandCheck className="h-5 w-5 text-white" strokeWidth={3} />}
                   </span>
                 </button>
               )}
@@ -436,7 +439,7 @@ export const LikedTab = ({ selectMode = false, onExitSelection, city: controlled
                     className="h-7 w-7 -mt-1 -mr-1 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
                     aria-label={t("liked.remove_aria")}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <BrandTrash className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
@@ -517,16 +520,11 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
       const refresh = () => queryClient.invalidateQueries({ queryKey: ["my-collections", user.id] });
       setConfirmDelete(null);
       refresh();
-      deferDelete({
+      // Do KOSZA OD RAZU + "Cofnij" (2026-09-15).
+      void deleteWithUndo("list", target.id, {
         message: t("collections.toast_deleted"),
-        commit: async () => {
-          await (supabase as any).from("discovery_items").delete().eq("collection_id", target.id);
-          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", target.id).eq("user_id", user.id);
-          if (error) toast.error(t("collections.toast_delete_error", { error: error.message }));
-          refresh();
-        },
-        onUndo: refresh,
-      });
+        failMessage: t("collections.toast_delete_error", { error: t("collections.error_fallback") }),
+      }).then(refresh);
     } catch (e: any) {
       toast.error(t("collections.toast_delete_error", { error: e?.message ?? t("collections.error_fallback") }));
     } finally {
@@ -651,7 +649,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
                 aria-label={t("collections.delete_aria")}
                 className="absolute top-0 right-0 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 active:text-destructive active:scale-90 transition-colors"
               >
-                <Trash2 className="h-4 w-4" />
+                <BrandTrash className="h-4 w-4" />
               </button>
             </div>
           );
@@ -688,7 +686,7 @@ export const MyCollections = ({ showCreate = true }: { showCreate?: boolean } = 
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                <Trash2 className="h-5 w-5 text-destructive" />
+                <BrandTrash className="h-5 w-5 text-destructive" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-base font-black leading-snug">{t("collections.delete_title")}</p>
@@ -789,9 +787,12 @@ const Explore = () => {
   // Przy wyjsciu z Eksploracji zawsze przywroc BottomNav.
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("trasa:hide-bottomnav", { detail: false })); }, []);
 
-  // Czy feed jest odscrollowany od gory - od tego zalezy widocznosc banera wyjazdu.
-  // Prog 8 px, zeby baner nie migal przy mikroruchach palca.
-  const [feedScrolled, setFeedScrolled] = useState(false);
+  // Powrot z wyjazdu/kolekcji ma wracac NA TEN KAFELEK, a nie na gore feedu (prosba Nat
+  // 2026-09-15). Scroller siedzi w `PullToRefresh`, wiec bierzemy go stamtad przez `scrollRef`.
+  // W trybie szukania ten sam kontener pokazuje wyniki - wtedy hook spi, zeby nie wrzucil
+  // w wyniki pozycji zapisanej dla feedu (i zeby po zamknieciu szukania feed wrocil na swoje).
+  const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  useScrollRestore("/eksploruj", feedScrollRef, { enabled: !searchOpen });
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -848,34 +849,24 @@ const Explore = () => {
         </PullToRefresh>
       ) : (
         <>
-          {/* Skrot do wyjazdu "w trakcie" / roboczego - TYLKO w widoku feedu. W trybie kart miejsc
-              (swiper) NIE renderujemy go: wysokosc karty 9:16 jest wyliczana ze stalego chrome i
-              dolozenie paska rozjechaloby zamrozony layout (CLAUDE.md - PlaceSwiper sizing). */}
+          {/* Skrot do wyjazdu "w trakcie" / roboczego = PIGULKA POD GORNA BELKA (prosba Nat
+              2026-09-17; 16.09 stala nad dolna nawigacja, wczesniej byla nakladka na feedzie).
+              Stoi W UKLADZIE, miedzy belka a scrollerem: nie lezy na okladce, wiec nie zaslania
+              ani mini-mapy, ani pigulki autora - i nie potrzebuje juz ani `fixed`, ani liczenia
+              odstepu od wysokosci `BottomNav`. Jest POZA scrollerem, wiec zostaje widoczny, jak
+              daleko by user nie zjechal feedem - w tym cala jego wartosc.
+              Przy otwartej wyszukiwarce znika razem z feedem - ekran wynikow ma byc czysty
+              (prosba Nat 2026-09-06). ⛔ W trybie kart miejsc (swiper) go NIE MA: wysokosc karty
+              9:16 liczy sie ze stalego chrome i dolozenie pasa rozjechaloby zamrozony layout
+              (CLAUDE.md - PlaceSwiper sizing). */}
+          {!searchOpen && <ActiveTripBanner />}
           <div className="relative flex-1 min-h-0 flex flex-col">
-            {/* Skrot do wyjazdu "w trakcie" / roboczego - NAKLADKA przyklejona pod gorna belka.
-                Chowa sie po scrollu w dol, wraca na samej gorze (prosba Nat 2026-09-01).
-                Dlaczego nakladka, a nie element ukladu - dwa poprzednie podejscia sie wylozyly:
-                  1) nad scrollerem, chowany zwijaniem wysokosci -> gorna krawedz listy jechala w
-                     gore W TRAKCIE gestu i snap przeliczal sie od nowa: karty skakaly;
-                  2) w srodku scrollera -> nie skakal, ale spychal pierwsza karte o swoja wysokosc,
-                     wiec jej dol wchodzil pod plywajacy BottomNav.
-                Nakladka nie zajmuje miejsca w ukladzie, wiec karta ma pelna wysokosc i wlasciwa
-                pozycje, a pojawianie sie i znikanie banera nie rusza NICZEGO pod spodem - nie ma
-                czym skoczyc. Wezszy o mapke w prawym gornym rogu karty, zeby jej nie zaslaniac.
-                W trybie kart miejsc (swiper) banera nie ma: wysokosc karty 9:16 liczy sie ze
-                stalego chrome (CLAUDE.md - zamrozony layout PlaceSwiper). */}
-            {/* Przy otwartej wyszukiwarce baner znika razem z feedem - ekran wynikow ma byc
-                czysty (prosba Nat 2026-09-06). */}
-            <div className={cn("absolute inset-x-0 top-0 z-30 transition-all duration-200 ease-out",
-              feedScrolled || searchOpen ? "-translate-y-[130%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100")}>
-              <ActiveTripBanner floating />
-            </div>
             {/* EKSPLORACJA (IA 2026-09-13): jedna kolumna kafelkow wyjazdow i list od WSZYSTKICH
                 (DiscoveryFeed bez followingOnly), karta po karcie ze snapem. Zakladka "Glowna"
                 (siatka 2 kolumny) i osobny feed obserwowanych (/feed) zdjete z paska tego dnia -
                 zostal jeden widok odkrywania. Snap tylko poza szukaniem: wyniki nie maja punktow
                 przyciagania. Przy wyszukiwaniu ten sam scroller pokazuje wyniki zamiast feedu. */}
-            <PullToRefresh onRefresh={handleRefresh} onScroll={(top) => setFeedScrolled(top > 8)}
+            <PullToRefresh onRefresh={handleRefresh} scrollRef={feedScrollRef}
               className={cn("flex-1 min-h-0 flex flex-col pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]", !searchOpen && "snap-y snap-mandatory scroll-pt-3")}>
               {/* Wyszukiwarka: lista kategorii jedna pod druga / wyniki (wspolny SearchPane -
                   ten sam co w Miejscach i na profilu). Poza szukaniem - feed. */}

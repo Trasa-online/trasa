@@ -59,7 +59,7 @@
   "author_anon": "Anonymous",
   "author_default": "User",
   "search_placeholder": "Search routes, authors, collections…",
-  "routes_heading": "Trips",
+  "routes_heading": "Plans",
   "places_heading": "Places",
   "people_heading": "People",
   "in_city": "in {{city}}",
@@ -108,18 +108,18 @@
   },
   "onboarding_next": "Next",
   "empty": {
-    "no_saved_routes_desc": "Bookmark a trip in Explore to see it here.",
+    "no_saved_routes_desc": "Bookmark a plan in Explore to see it here.",
     "no_saved_lists_desc": "Bookmark a collection while browsing to see it here.",
-    "no_saved_routes": "No saved trips",
+    "no_saved_routes": "No saved plans",
     "no_saved_lists": "No saved collections",
-    "saved_any": "Bookmark a collection or a trip while browsing to see it here."
+    "saved_any": "Bookmark a collection or a plan while browsing to see it here."
   },
   "filters": {
     "show_label": "Show"
   },
   "undo": "Undo",
   "card": {
-    "show_map": "Show the trip map",
+    "show_map": "Show the plan map",
     "collapse_map": "Collapse map",
     "expand": "Expand",
     "delete": "Delete",
@@ -132,13 +132,13 @@
     "empty_lists_routes": "No saved collections or routes yet"
   },
   "grid": {
-    "trip": "Trip",
+    "trip": "Plan",
     "list": "Collection",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days"
   },
   "feed_empty": {
-    "nobody_title": "Trips and collections from people you follow will show up here",
+    "nobody_title": "Plans and collections from people you follow will show up here",
     "nobody_hint": "You are not following anyone yet. Find friends or travellers whose taste you like.",
     "nobody_cta": "Find people to follow",
     "quiet_title": "Quiet for now",
@@ -148,6 +148,8 @@
   "new_place": "New place!",
   "stats": {
     "saves_aria_one": "{{count}} save",
-    "saves_aria_other": "{{count}} saves"
+    "saves_aria_other": "{{count}} saves",
+    "privacy_public": "Public collection",
+    "privacy_private": "Private collection"
   }
 }

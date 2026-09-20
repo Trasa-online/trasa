@@ -77,5 +77,8 @@
   "added_place": "Added",
   "share_place": "Share this place",
   "save_short": "Save",
-  "add_short": "Add"
+  "add_short": "Add",
+  "saved_place": "Place saved",
+  "starred_by_one": "Highlighted by {{count}} person",
+  "starred_by_other": "Highlighted by {{count}} people"
 }

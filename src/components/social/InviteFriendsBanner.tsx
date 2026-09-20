@@ -1,4 +1,5 @@
-import { UserPlus, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { BrandUserPlus } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,7 +48,7 @@ export default function InviteFriendsBanner({ className }: { className?: string 
         style={{ background: "radial-gradient(150px 90px at 16% 50%, rgba(96,165,250,0.22), transparent 70%)" }}
       />
       <div className="relative h-11 w-11 rounded-2xl bg-white/80 flex items-center justify-center shrink-0 shadow-sm">
-        <UserPlus className="h-5 w-5 text-blue-600" />
+        <BrandUserPlus className="h-5 w-5 text-blue-600" />
       </div>
       <div className="relative min-w-0 flex-1">
         <p className="font-display font-extrabold text-base leading-tight text-foreground">{t("invite.heading")}</p>

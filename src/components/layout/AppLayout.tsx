@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
+import { haptics } from "@/hooks/useHaptics";
+import { scrollMainToTop } from "@/lib/scrollTop";
 import OrbOverlay from "./OrbOverlay";
 import OfflineBanner from "./OfflineBanner";
 import GuestWelcomeSheet from "@/components/auth/GuestWelcomeSheet";
@@ -110,6 +112,28 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
           z notch. pt-safe (env(safe-area-inset-top, 0px) + 0.75rem) zalatwia globalnie.
           min-h-0: pozwala flex-childom (scrollerom) skurczyc sie ponizej contentu, zeby
           overflow-y:auto faktycznie sie wlaczyl. */}
+      {/* PASEK STATUSU JAKO CEL TAPNIECIA (prosba Nat 2026-09-16, drugie podejscie).
+          W Eksploracji i w Miejscach gorna belka jest w CALOSCI wypelniona polem
+          wyszukiwania i dzwonkiem - nie ma w niej ani kawalka "pustego" miejsca, wiec
+          `scrollTopTapProps` na belce nie mial czego lapac. Pas nad belka to dokladnie to
+          miejsce, w ktore stuka sie w natywnym iOS, i na kazdym ekranie jest pusty
+          (`pt-safe` spycha tresc nizej).
+          ⚠️ `z-20`: wyzej niz tlo, ale DUZO nizej niz toasty (u gory ekranu) i arkusze -
+          inaczej pas przechwytywalby ich tapniecia. Wysokosc = sam inset, wiec na webie
+          (brak notcha) element ma 0 px i nie istnieje dla palca.
+          ⛔ TYLKO na trasach `hideTopBar` (Eksploracja, Miejsca, Profil, /home). Tam `pt-safe`
+          gwarantuje, ze pod insetem NIC nie ma. Na pozostalych ekranach tresc siega samej gory
+          (np. pasek "masz zaproszenie" nad belka wyjazdu) i pas przechwytywalby jego guziki.
+          Tamte widoki maja tapniecie na wlasnej belce (`scrollTopTapProps`), gdzie wolnego
+          miejsca nie brakuje. */}
+      {hideTopBar && (
+        <div
+          aria-hidden
+          onClick={() => { if (scrollMainToTop()) haptics.light(); }}
+          className="fixed inset-x-0 top-0 z-20"
+          style={{ height: "env(safe-area-inset-top, 0px)" }}
+        />
+      )}
       <main className={`flex-1 flex flex-col min-h-0 max-w-lg mx-auto w-full${hideTopBar ? " pt-safe" : ""}`}>
         {children}
       </main>

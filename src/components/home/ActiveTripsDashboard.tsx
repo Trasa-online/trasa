@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteWithUndo } from "@/lib/trash";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
-import { MapPin, Users, ChevronRight, ChevronDown, Trash2, Loader2, X } from "lucide-react";
+import { Users, ChevronRight, ChevronDown, Loader2, X } from "lucide-react";
+import { BrandTrash, BrandPin } from "@/components/BrandIcon";
 import { format, parseISO, isValid } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { avatarSrc } from "@/lib/avatar";
@@ -38,7 +40,7 @@ function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSe
         {photos.length > 0 ? photos.map((url, i) => (
           <img key={i} src={url} alt="" className="h-6 w-6 rounded-full object-cover bg-muted border-2 border-secondary" style={{ zIndex: photos.length - i }} loading="lazy" />
         )) : (
-          <div className="h-6 w-6 rounded-full bg-muted border-2 border-secondary flex items-center justify-center"><MapPin className="h-3 w-3 text-muted-foreground" /></div>
+          <div className="h-6 w-6 rounded-full bg-muted border-2 border-secondary flex items-center justify-center"><BrandPin className="h-3 w-3 text-muted-foreground" /></div>
         )}
         {extra > 0 && (
           <div className="h-6 w-6 rounded-full bg-foreground/80 text-background text-[9px] font-bold flex items-center justify-center border-2 border-secondary" style={{ zIndex: 0 }}>+{extra}</div>
@@ -108,27 +110,11 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   const handleDelete = (e: React.MouseEvent, r: any) => {
     e.stopPropagation();
     const name = r.city || r.title || t("trip_fallback");
-    const prev = queryClient.getQueryData(["home-active-solo", userId]);
-    queryClient.setQueryData(["home-active-solo", userId], (old: any) =>
-      (old ?? []).filter((x: any) => x.id !== r.id),
-    );
-    deferDelete({
+    // Do KOSZA OD RAZU + "Cofnij" w toascie (2026-09-15). Wczesniej commit byl odroczony
+    // o 5 s i potrafil nie dojsc, gdy user w tym czasie wyszedl z ekranu albo z apki.
+    void deleteWithUndo("trip", r.id, {
       message: t("dashboard.toast_route_deleted", { name }),
-      onUndo: () => queryClient.setQueryData(["home-active-solo", userId], prev),
-      commit: async () => {
-        try {
-          await supabase.from("pins").delete().eq("route_id", r.id);
-          await (supabase as any).from("chat_sessions").delete().eq("route_id", r.id);
-          const { error } = await supabase.from("routes").delete().eq("id", r.id);
-          if (error) throw error;
-          queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
-          queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-        } catch (err: any) {
-          console.error("[ActiveTripsDashboard] delete failed:", err?.message ?? err);
-          notify.error(t("dashboard.toast_route_delete_error"));
-          queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
-        }
-      },
+      failMessage: t("dashboard.toast_route_delete_error"),
     });
   };
 
@@ -340,7 +326,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         ) : groupSessions.length === 0 ? (
           <EmptySection
             variant="solo"
-            icon={<MapPin className="h-6 w-6 text-primary" />}
+            icon={<BrandPin className="h-6 w-6 text-primary" />}
             title={t("dashboard.empty_title")}
             sub={t("dashboard.empty_sub")}
             cta={t("dashboard.empty_cta")}
@@ -464,7 +450,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     onClick={(e) => { e.stopPropagation(); removeDraft(d.city); setDrafts(getDrafts()); }}
                     className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 active:scale-90 transition-transform"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <BrandTrash className="h-4 w-4" />
                   </span>
                   <ChevronRight className="h-5 w-5 text-primary/50 shrink-0" />
                 </button>
@@ -487,7 +473,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
               className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
             >
-              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-primary" /></div>
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><BrandPin className="h-5 w-5 text-primary" /></div>
               <div className="min-w-0">
                 <p className="font-bold text-sm">{t("dashboard.plan_solo_title")}</p>
                 <p className="text-xs text-muted-foreground">{t("dashboard.plan_solo_desc")}</p>

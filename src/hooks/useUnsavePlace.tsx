@@ -38,7 +38,7 @@ export function useUnsavePlace() {
       icon: thumb(place),
       description: t("saved.removed_toast"),
       action: {
-        label: "Cofnij",
+        label: t("common:buttons.undo"),
         onClick: async () => {
           for (const l of containing) await addPlaceToList(l.id, { ...place });
           invalidate();

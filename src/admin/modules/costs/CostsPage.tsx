@@ -1,30 +1,133 @@
-// Koszty Google Places. Dwa bezpieczniki: miesieczny na wyszukiwarke i dzienny na wszystko.
-import { format, parseISO } from "date-fns";
+// Koszty Google. Na gorze PRAWDZIWY rachunek z eksportu rozliczen (PLN, jak na fakturze),
+// nizej dwa bezpieczniki proxy: miesieczny na wyszukiwarke i dzienny na wszystko.
+// ⛔ Bez przeliczania wywolan na dolary (2026-09-20): licznik x cennik katalogowy dawal "$52",
+// gdy faktura mowila 23,85 zl - Google ma darmowa pule per SKU, a licznik nie widzi
+// geokodowania, Maps JS ani zdjec. Kwota jest w rachunku, liczniki to tylko stan limitow.
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { RefreshCw, ExternalLink } from "lucide-react";
+import { format, parseISO, getDaysInMonth } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
-import { AppShell, PageHeader, Section, Metric, Bar, Loading, EmptyState, DataTable, type Column } from "../../ui";
+import { AppShell, PageHeader, Section, Metric, Bar, Loading, EmptyState, DataTable, Button, type Column } from "../../ui";
 import {
   useTextsearchMonthly,
   useDailyGoogleQuota,
+  useGoogleBilling,
+  syncGoogleBilling,
   TEXTSEARCH_MONTHLY_LIMIT,
   DAILY_CALL_LIMIT,
-  TEXTSEARCH_COST_PER_CALL,
   type MonthUsage,
   type DayUsage,
+  type BillingRow,
 } from "./useApiCosts";
 
-const usd = (n: number) => `$${n.toFixed(2)}`;
 const pl = (n: number) => n.toLocaleString("pl-PL");
+// Waluta konta rozliczeniowego Google (PLN) - to, co jest na fakturze.
+const money = (n: number, cur = "PLN") => n.toLocaleString("pl-PL", { style: "currency", currency: cur, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const GOOGLE_BILLING_URL = "https://console.cloud.google.com/billing";
 
 export function CostsPage() {
   return (
     <AppShell>
       <PageHeader
         title="Koszty API"
-        subtitle="Zużycie płatnych wywołań Google Places. Po przekroczeniu limitu proxy przestaje wołać Google."
+        subtitle="Rachunek Google Cloud z eksportu rozliczeń (kwoty jak na fakturze) oraz stan limitów, po których proxy przestaje wołać Google."
       />
+      <Billing />
       <Monthly />
       <Daily />
     </AppShell>
+  );
+}
+
+/* ── RACHUNEK GOOGLE ────────────────────────────────────────────────────────
+   google_billing_daily <- google-billing-sync <- eksport rozliczen w BigQuery. "Do zaplaty" =
+   koszt katalogowy - rabaty/darmowa pula. Prognoza = tempo z dni, ktore Google juz rozliczyl
+   (eksport dosypuje dane z ~dobowym opoznieniem, wiec dzisiejszy dzien zwykle jeszcze nie jest). */
+function Billing() {
+  const { data, isLoading, isError } = useGoogleBilling();
+  const qc = useQueryClient();
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  const now = new Date();
+  const monthKey = format(now, "yyyy-MM");
+  const prevKey = format(new Date(now.getFullYear(), now.getMonth() - 1, 1), "yyyy-MM");
+  const rows = data ?? [];
+  const cur = rows[0]?.currency ?? "PLN";
+  const net = (rs: BillingRow[]) => rs.reduce((a, r) => a + r.cost - r.credits, 0);
+  const thisMonth = rows.filter((r) => r.day.startsWith(monthKey));
+  const lastMonth = rows.filter((r) => r.day.startsWith(prevKey));
+  const due = net(thisMonth);
+  const list = thisMonth.reduce((a, r) => a + r.cost, 0);
+  const saved = thisMonth.reduce((a, r) => a + r.credits, 0);
+  const lastDay = thisMonth.length ? Math.max(...thisMonth.map((r) => Number(r.day.slice(8, 10)))) : 0;
+  const forecast = lastDay > 0 ? (due / lastDay) * getDaysInMonth(now) : 0;
+  const syncedAt = rows.length ? rows.reduce((a, r) => (r.synced_at > a ? r.synced_at : a), rows[0].synced_at) : null;
+
+  // Rozbicie na uslugi (Places API, Maps JavaScript API, Geocoding...), netto, malejaco.
+  type ServiceRow = { service: string; amount: number };
+  const byService: ServiceRow[] = Array.from(thisMonth.reduce((m, r) => {
+    const k = r.service || "(inne)";
+    m.set(k, (m.get(k) ?? 0) + r.cost - r.credits);
+    return m;
+  }, new Map<string, number>())).map(([service, amount]) => ({ service, amount })).sort((a, b) => b.amount - a.amount);
+  const maxService = Math.max(0.01, ...byService.map((s) => s.amount));
+  const columns: Column<ServiceRow>[] = [
+    { key: "service", label: "Usługa", primary: true, render: (s) => <span>{s.service}</span> },
+    {
+      key: "amount", label: "Do zapłaty", align: "right",
+      render: (s) => (
+        <div className="flex items-center justify-end gap-2">
+          <Bar pct={Math.round((Math.max(0, s.amount) / maxService) * 100)} className="hidden w-24 md:block" />
+          <span className="data">{money(s.amount, cur)}</span>
+        </div>
+      ),
+    },
+  ];
+
+  const sync = async () => {
+    setSyncing(true); setSyncMsg(null);
+    const res = await syncGoogleBilling();
+    setSyncing(false);
+    setSyncMsg(res.ok ? (res.note ? "Google nie założył jeszcze tabeli eksportu" : `Pobrano ${res.rows ?? 0} wierszy`) : `Błąd: ${res.error ?? "nieznany"}`);
+    qc.invalidateQueries({ queryKey: ["api-costs", "google-billing"] });
+  };
+
+  const right = (
+    <div className="flex items-center gap-2">
+      <a href={GOOGLE_BILLING_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] text-[var(--stone)] hover:text-[var(--ink)]">
+        Google Billing <ExternalLink className="h-3 w-3" />
+      </a>
+      <Button onClick={sync} disabled={syncing} icon={<RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />}>Odśwież</Button>
+    </div>
+  );
+
+  return (
+    <Section title={`Rachunek Google · ${format(now, "LLLL yyyy", { locale: dateLocale() })}`} right={right}>
+      {isLoading ? <Loading /> : isError ? (
+        <EmptyState fact="Rachunek nie przyszedł." next="Odśwież stronę - dane żyją w tabeli google_billing_daily." />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          fact="Eksport rozliczeń jeszcze nie dojechał."
+          next="Google zapisuje pierwsze wiersze kilka godzin po włączeniu eksportu i nie uzupełnia ich wstecz. Synchronizacja idzie sama raz dziennie o 6:20; „Odśwież” dociąga od razu."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <Metric label={`Do zapłaty, dni 1-${lastDay}`} value={money(due, cur)} tone="ok" />
+            <Metric label="Prognoza na miesiąc" value={`≈ ${money(forecast, cur)}`} hint="z tempa rozliczonych dni" />
+            <Metric label="Rabaty i darmowa pula" value={`-${money(saved, cur)}`} hint={`z ${money(list, cur)} wg cennika`} />
+            <Metric label="Poprzedni miesiąc" value={lastMonth.length ? money(net(lastMonth), cur) : "-"} />
+          </div>
+          {byService.length ? <DataTable columns={columns} rows={byService} keyOf={(s) => s.service} /> : null}
+        </>
+      )}
+      <p className="text-[12px] leading-5 text-[var(--stone)]">
+        {syncedAt ? `Zsynchronizowano ${format(parseISO(syncedAt), "d MMMM, HH:mm", { locale: dateLocale() })}` : "Jeszcze nie synchronizowano"}
+        {syncMsg ? ` · ${syncMsg}` : ""}
+      </p>
+    </Section>
   );
 }
 
@@ -47,34 +150,28 @@ function Monthly() {
       render: (m) => <span className="capitalize">{format(parseISO(m.month), "LLLL yyyy", { locale: dateLocale() })}</span>,
     },
     { key: "calls", label: "Wywołania", width: 160, align: "right", render: (m) => <span className="data">{pl(m.textsearch_calls)}</span> },
-    {
-      key: "cost", label: "Koszt", width: 140, align: "right",
-      render: (m) => <span className="data text-[var(--ink)]">{usd(m.textsearch_calls * TEXTSEARCH_COST_PER_CALL)}</span>,
-    },
   ];
 
   return (
     <>
-      <Section title="Wyszukiwarka · bieżący miesiąc">
+      <Section title="Limit wyszukiwarki (Text Search) · bieżący miesiąc">
         {isLoading ? <Loading /> : isError ? (
-          <EmptyState fact="Dane o zużyciu nie przyszły." next="Odśwież stronę - licznik żyje w bazie, nie w przeglądarce." />
+          <EmptyState fact="Dane o zużyciu nie przyszły." next="Odśwież stronę - licznik żyje w bazie, nie w przeglądarce." />
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              <Metric
-                label="Wydane w tym miesiącu"
-                value={usd(calls * TEXTSEARCH_COST_PER_CALL)}
-                hint={`z limitu ${usd(TEXTSEARCH_MONTHLY_LIMIT * TEXTSEARCH_COST_PER_CALL)}`}
-                tone={tone}
-              />
-              <Metric label="Wywołania" value={pl(calls)} hint={`z ${pl(TEXTSEARCH_MONTHLY_LIMIT)}`} />
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              <Metric label="Wywołania" value={pl(calls)} hint={`z ${pl(TEXTSEARCH_MONTHLY_LIMIT)}`} tone={tone} />
               <Metric label="Zostało" value={pl(Math.max(0, TEXTSEARCH_MONTHLY_LIMIT - calls))} />
               <Metric label="Wykorzystanie" value={`${pct}%`} tone={tone} />
             </div>
             <Bar pct={pct} tone={tone} className="mt-1" />
+            <p className="text-[12px] leading-5 text-[var(--stone)]">
+              Bezpiecznik kosztowy, nie koszt: po przekroczeniu proxy przestaje wołać Google do końca miesiąca.
+              Podnosisz go sekretem <span className="data">GOOGLE_TEXTSEARCH_MONTHLY_LIMIT</span> funkcji google-places-proxy (i stałą w useApiCosts.ts).
+            </p>
             {blocked ? (
               <p className="text-[12px] leading-5 text-[var(--bad)]">
-                Wyszukiwarka jest zablokowana do końca miesiąca. Użytkownicy widzą propozycje z bazy zamiast wyników
+                Wyszukiwarka jest zablokowana do końca miesiąca. Użytkownicy widzą propozycje z bazy zamiast wyników
                 Google. Limit zeruje się pierwszego dnia następnego miesiąca (UTC).
               </p>
             ) : null}
@@ -128,7 +225,7 @@ function Daily() {
           </div>
           <Bar pct={pct} tone={tone} className="mt-1" />
           <p className="text-[12px] leading-5 text-[var(--stone)]">
-            Bezpiecznik obejmuje wszystkie płatne wywołania razem: wyszukiwarkę, szczegóły miejsc i zdjęcia.
+            Bezpiecznik obejmuje wszystkie płatne wywołania razem: wyszukiwarkę, szczegóły miejsc i zdjęcia.
           </p>
           {data && data.length > 1 ? (
             <DataTable columns={columns} rows={data} keyOf={(d) => d.day} />

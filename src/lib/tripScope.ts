@@ -8,7 +8,7 @@
 // Kazde miejsce w kodzie, ktore chce wiedziec "gdzie to jest", pyta o to TUTAJ - dzieki
 // temu stare wyjazdy (kraje puste, miasto ustawione) dzialaja bez zmian.
 
-import { countryForCity } from "@/lib/tripCountries";
+import { countryForCity, countryLabel } from "@/lib/tripCountries";
 
 export type ScopeRow = { countries?: string[] | null; city?: string | null };
 
@@ -21,7 +21,8 @@ export function scopeCountries(row: ScopeRow | null | undefined): string[] {
 
 /** Podpis zasiegu na karcie/naglowku: "Polska", "Polska · Czechy", "Polska +2". */
 export function scopeLabel(row: ScopeRow | null | undefined, max = 2): string {
-  const cs = scopeCountries(row);
+  // Nazwy w danych sa po polsku (klucz); na ekran ida w jezyku interfejsu (countryLabel).
+  const cs = scopeCountries(row).map(countryLabel);
   if (!cs.length) return row?.city ?? "";
   if (cs.length <= max) return cs.join(" · ");
   return `${cs.slice(0, max).join(" · ")} +${cs.length - max}`;

@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { ReactNode, CSSProperties } from "react";
+import type { ReactNode, CSSProperties, ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Search, MapPin, User, Plus } from "lucide-react";
+import { User, Plus } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { isNative } from "@/lib/platform";
 import { COACH_PENDING_KEY } from "@/components/onboarding/OnboardingFlow";
 
@@ -70,7 +71,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 // ─── Spotlight-tour ──────────────────────────────────────────────────────────
 
 interface StepCfg {
-  icon: typeof Home;
+  icon: ComponentType<{ className?: string }>;
   titleKey: string;
   bodyKey: string;
   target: string | null;   // selektor data-ob elementu do podswietlenia
@@ -84,13 +85,13 @@ interface StepCfg {
 // jest opisany przy Eksploracji i Miejscach, a Profil dostal wlasny krok.
 const STEPS: StepCfg[] = [
   {
-    icon: Search, target: '[data-ob="nav-eksploruj"]', route: "/eksploruj",
+    icon: BrandSearch, target: '[data-ob="nav-eksploruj"]', route: "/eksploruj",
     titleKey: "guide.trips_title",
     bodyKey: "guide.trips_desc",
     ctaKey: "guide.next",
   },
   {
-    icon: MapPin, target: '[data-ob="nav-miejsca"]', route: "/miejsca",
+    icon: BrandPin, target: '[data-ob="nav-miejsca"]', route: "/miejsca",
     titleKey: "guide.places_title",
     bodyKey: "guide.places_desc",
     ctaKey: "guide.next",

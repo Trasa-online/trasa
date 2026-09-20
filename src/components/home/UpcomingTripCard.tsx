@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Trash2, MapPin, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
+import { BrandTrash, BrandPin } from "@/components/BrandIcon";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { API_BASE } from "@/lib/platform";
@@ -141,7 +142,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
             onClick={onDelete}
             className="h-8 w-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
           >
-            <Trash2 className="h-3.5 w-3.5 text-white/80" />
+            <BrandTrash className="h-3.5 w-3.5 text-white/80" />
           </button>
         </div>
 
@@ -154,7 +155,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
             )}
             {dateLabel && <span className="text-white/30">·</span>}
             <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3 text-white/50" />
+              <BrandPin className="h-3 w-3 text-white/50" />
               <span className="text-white/70 text-sm">
                 {allPins.length} {t("places", { count: allPins.length })}
               </span>

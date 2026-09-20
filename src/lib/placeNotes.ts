@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 // (trasy grupowe/opublikowane); dla prywatnych (solo draft) tylko wlasne - ale solo ma jednego autora.
 
 export interface PlaceNote {
-  route_id: string;
+  /** Trasa, z ktorej pochodzi notka. Brak = notka z KOLEKCJI (discovery_item_notes, 2026-09-15). */
+  route_id?: string;
   user_id: string;
   place_name: string;
   note: string;

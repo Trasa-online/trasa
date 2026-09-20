@@ -40,7 +40,9 @@ All colors MUST be HSL.
 
     --border: 0 0% 85%;
     --input: 0 0% 91%;
-    --ring: 19.7 94.3% 48%;
+    /* FOCUS = ZOLTY MARKI #FDF184 (prosba Nat 2026-09-16; wczesniej pomarancz primary).
+       HSL policzone ze zrodlowego heksa: 54 96.8% 75.5%. */
+    --ring: 54 96.8% 75.5%;
 
     /* ── Tertiary — amber/gold ── */
     --star: 45 100% 51%;
@@ -176,6 +178,45 @@ All colors MUST be HSL.
   background: #f8fafc !important;
 }
 
+/* ── FOCUS I ZAZNACZENIE = KOLORY MARKI, nie systemowy niebieski ──────────────
+   iOS maluje domyslnie na niebiesko TRZY rzeczy, ktorych zaden token Tailwinda nie
+   dotyka: kursor w polu tekstowym (`caret-color`), podswietlenie zaznaczonego tekstu
+   (`::selection`) i natywne kontrolki - checkbox, radio, suwak (`accent-color`).
+   To wlasnie ten niebieski widac na telefonie po wejsciu w pole.
+
+   ⚠️ Nie wszystko moze byc ZOLTE. Zolty marki #FDF184 na bieli ma ~1,1:1:
+     * zaznaczenie tekstu - zolty JEST wlasciwy: to tlo, a tekst zostaje prawie czarny,
+       wiec czyta sie jak zakreslacz (kontrast liczy sie miedzy tekstem a tlem),
+     * kursor i ptaszek w checkboxie - zolte byłyby NIEWIDOCZNE (2 px kreska na bieli),
+       wiec ida pomaranczem marki. To nadal koniec z niebieskim, tylko czytelny.
+
+   Pierscien focusu jest zolty (token `--ring`), ale sam na bieli tez by znikal - dlatego
+   jego OFFSET (wewnetrzna obwodka Tailwinda) jest brazowy. Razem czytaja sie jak zolty
+   focus z definicja, widoczny na kazdym tle. Obwodka ma 1 px, nie 2 - przy dwoch brazowy
+   przewazal i pierscien czytal sie jako brazowy z zoltym halo, a ma byc odwrotnie.
+   ⚠️ Regula stoi POZA `@layer`, wiec wygrywa z `ring-offset-background` z utilities -
+   warstwowane style zawsze przegrywaja z niewarstwowanymi. */
+*:focus-visible { --tw-ring-offset-width: 1px; --tw-ring-offset-color: #5B2C06; }
+
+/* ⛔ NIEBIESKI PIERSCIEN WEBKITA (zgloszenie Nat 2026-09-17 - trzecie zgloszenie tej samej
+   rzeczy). Token `--ring` i offset wyzej dotycza WYLACZNIE elementow, ktore maja klasy
+   `focus-visible:ring-*` - czyli komponentow shadcn. Zwykly `<button>` (pigulki zakladek,
+   wiersze ustawien, guziki w arkuszach) nie ma ich wcale, wiec WebKit malowal mu swoj
+   systemowy `outline: auto -webkit-focus-ring-color` - i to jest ten niebieski.
+   ⚠️ `:focus` gasimy, bo iOS ustawia go po ZWYKLYM TAPNIECIU; `:focus-visible` zostaje
+   z brazowym obrysem marki - brazowy dziala na bieli, na zoltym (10:1) i na peachy, czyli
+   na wszystkich tlach, na ktorych stoja nasze akcje (prosba Nat: "na zoltych akcjach po
+   prostu stroke w kolorze brazowym").
+   ⚠️ Regula siedzi w `@layer base`, a NIE poza warstwami jak linia wyzej - dzieki temu
+   `focus-visible:outline-none` z komponentow shadcn (warstwa utilities) nadal wygrywa
+   i te komponenty zostaja przy swoim zoltym pierscieniu, bez drugiego obrysu na wierzchu. */
+@layer base {
+  *:focus { outline: none; }
+  *:focus-visible { outline: 2px solid #5B2C06; outline-offset: 2px; }
+}
+::selection { background: #FDF184; color: #0E0E0E; }
+html, body { caret-color: #EE5307; accent-color: #EE5307; }
+
 /* Native-app feel: disable text selection + iOS tap highlight globally.
    Inputs/textareas/contenteditable opt back in. */
 html, body {
@@ -196,30 +237,101 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
   user-select: text;
 }
 
-/* Ekran startowy: znak spontaway "rysuje sie" od lewej (SplashDraw). Maska przycina ten
-   pomaranczowy prostokat do ksztaltu znaku, wiec kolor wchodzi w litere jak pociagniecie. */
-@keyframes splash-draw {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
+/* Ekran startowy: znak spontaway "rysuje sie" od lewej (SplashDraw). Jedzie przeslona w kolorze
+   tla - zsuwa sie w prawo i odslania litere, ktora caly czas tam jest. Sam `transform`, wiec
+   animacja idzie po GPU i nie walczy z watkiem glownym w najciezszym momencie startu. */
+@keyframes splash-wipe {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
+/* Gwiazdka z nowego logo ZAPALA SIE na koncu rysowania (prosba Nat 2026-09-15). Wchodzi mala
+   i przekrecona, przestrzeliwuje skale i siada na miejscu - to ma byc blysk nagrody za
+   dojechanie "S" do konca, a nie kolejny element, ktory sie wsuwa.
+   Krycie skacze do pelnego juz na 18 % - dalej pracuje sama skala. Dluzsze przenikanie
+   trzymaloby gwiazdke w bladym pomaranczu przez pol animacji, a znak ma byc kryjacy. */
+@keyframes splash-star-pop {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-40deg); }
+  18%  { opacity: 1; transform: scale(0.72) rotate(-18deg); }
+  60%  { opacity: 1; transform: scale(1.14) rotate(7deg); }
+  82%  { opacity: 1; transform: scale(0.96) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* Po zapaleniu gwiazdka oddycha, dopoki aplikacja sie laduje - to jedyny element, ktory po
+   zlozeniu znaku nadal mowi "pracuje". Plytko i wolno, zeby nie przyciagac wzroku.
+   ⛔ SAMA SKALA, zero `opacity` - patrz reguła pod spodem. */
+@keyframes splash-star-breath {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.06); }
 }
 
 /* Oddech znaku na ekranie startowym (SplashPulse). Wolno i plytko - ma sygnalizowac prace,
-   a nie przyciagac wzrok. Krzywa ease-in-out po obu stronach, zeby nie bylo "tetnienia". */
+   a nie przyciagac wzrok. Krzywa ease-in-out po obu stronach, zeby nie bylo "tetnienia".
+   ⛔ ZAKAZ `opacity` W ANIMACJACH ZNAKU (prosba Nat 2026-09-15: „chce zeby S bylo w jednolitym
+   kolorze pomaranczowym #F75708"). Do 15.09 puls chodzil 0,72 -> 1 krycia, a #F75708 przy 72 %
+   na bialym tle to (249,134,77) - bladszy pomarancz, ktory w kolko wraca do pelnego. Zaden
+   gradient nie byl nigdzie zadeklarowany, ale wlasnie tak to wygladalo. Znak ma byc ZAWSZE
+   kryjacy; ruch niesie sama skala. Dotyczy tez `splash-star-breath` wyzej. Jedyny dozwolony
+   wyjatek to WEJSCIE gwiazdki (`splash-star-pop`) - tam krycie idzie 0 -> 1 raz i zostaje na 1. */
 @keyframes splash-pulse {
-  0%, 100% { transform: scale(1);     opacity: 0.72; }
-  50%      { transform: scale(1.075); opacity: 1; }
+  0%, 100% { transform: scale(1);     }
+  50%      { transform: scale(1.055); }
 }
-.animate-splash-pulse { animation: splash-pulse 1.6s ease-in-out infinite; }
+.animate-splash-pulse { animation: splash-pulse 1.8s ease-in-out infinite; }
 
-/* Szacunek dla ustawienia "ogranicz ruch" - zostaje sam znak, bez pulsowania. */
+/* Szacunek dla ustawienia "ogranicz ruch" - zostaje sam ZLOZONY znak, bez ruchu. `!important`
+   jest tu konieczne: SplashDraw ustawia `animation` inline (czasy licza sie w JS), a zwykla
+   deklaracja z arkusza przegralaby ze stylem inline. */
 @media (prefers-reduced-motion: reduce) {
   .animate-splash-pulse { animation: none; opacity: 1; }
+  .splash-wipe { animation: none !important; transform: translateX(100%) !important; }
+  .splash-star, .splash-star-breath { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
 
 /* Unoszenie grafiki wizytowki na ekranie dla lokali (Auth, businessMode - wariant C2 z Figmy,
    prosba Nat 2026-09-14). Wolno i plytko: karta ma "oddychac", a nie skakac. Osobne
    przesuniecie zamiast scale, zeby zdjecie nie tracilo ostrosci. Na tablecie/telefonie ta sama
    animacja, tylko mniejszy skok (patrz .biz-float--sm). */
+/* GWIAZDKI PRZY GRAFICE HERO na landingu B2C (prosba Nat 2026-09-17): delikatny obrot
+   i oddech skali, zeby kompozycja zylas, ale nie odciagala wzroku od naglowka.
+   ⚠️ Dwie instancje maja ROZNY czas i ujemne opoznienie - przy tej samej animacji obie
+   gwiazdki chodzilyby w idealnym zegarku i czytalyby sie jako jeden mechanizm, a nie
+   jako dwa niezalezne akcenty. Ujemne opoznienie startuje druga w polowie cyklu, wiec
+   nie ma tez wspolnego "skoku" na wejsciu.
+   ⛔ Sam `transform` - zadnego `opacity`. Pomaranczowy znak marki ma byc zawsze kryjacy
+   (ta sama regula, co przy animacjach splashu). */
+/* DUZE SERCE po podwojnym tapnieciu w zdjecie galerii (prosba Nat 2026-09-17).
+   Wchodzi z przestrzeleniem skali i gasnie - gest ma dac natychmiastowa odpowiedz,
+   ale nie zostac na ekranie. Krycie animujemy swiadomie: to element ULOTNY, a nie
+   znak marki (zakaz `opacity` dotyczy animacji znaku spontaway na splashu). */
+@keyframes photo-like-burst {
+  0%   { transform: translate(-50%, -50%) scale(0.25); opacity: 0; }
+  18%  { transform: translate(-50%, -50%) scale(1.18); opacity: 1; }
+  38%  { transform: translate(-50%, -50%) scale(0.94); opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1.02); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.12); opacity: 0; }
+}
+.animate-photo-like-burst { animation: photo-like-burst 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  /* Bez ruchu serce tylko mignie - sam sygnal zostaje, znika skakanie skali. */
+  .animate-photo-like-burst { animation: photo-like-burst 600ms linear forwards; }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { transform: rotate(-10deg) scale(0.9); }
+  50%      { transform: rotate(10deg) scale(1.1); }
+}
+.animate-star-twinkle { animation: star-twinkle 5.5s ease-in-out infinite; will-change: transform; }
+.animate-star-twinkle-alt { animation: star-twinkle 7.5s ease-in-out infinite -2.6s; will-change: transform; }
+/* Trzeci wariant doszedl razem z trzecia gwiazdka na hero (2026-09-17). ⚠️ Czasy sa
+   niepodzielne wzgledem siebie (5,5 / 7,5 / 6,4 s) i kazdy ma inne przesuniecie fazy -
+   dwie gwiazdki chodzace rowno czytaja sie jak jeden mrugajacy element, a nie jak tlo. */
+.animate-star-twinkle-slow { animation: star-twinkle 6.4s ease-in-out infinite -4.1s; will-change: transform; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-star-twinkle, .animate-star-twinkle-alt, .animate-star-twinkle-slow { animation: none; }
+}
+
 @keyframes biz-float {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-14px); }

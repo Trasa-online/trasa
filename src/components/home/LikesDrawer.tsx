@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
-import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
+import { X, Heart, ThumbsDown } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
@@ -82,7 +83,7 @@ function PlaceRow({
         className="absolute inset-y-0 right-0 flex items-center justify-end px-5 bg-destructive"
         style={{ opacity: deleteReveal, width: `${Math.max(56, Math.abs(offsetX))}px` }}
       >
-        <Trash2 className="h-5 w-5 text-white" />
+        <BrandTrash className="h-5 w-5 text-white" />
       </div>
 
       {/* Row content */}

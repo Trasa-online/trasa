@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Send, Loader2, Check, Mic, MicOff } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Mic, MicOff } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -252,7 +253,7 @@ const EditPlan = () => {
         {isDone && (
           <div className="flex flex-col items-center py-6 gap-4">
             <div className="h-12 w-12 rounded-full bg-foreground flex items-center justify-center">
-              <Check className="h-6 w-6 text-background" />
+              <BrandCheck className="h-6 w-6 text-background" />
             </div>
             <p className="text-sm text-muted-foreground text-center">{t("edit_plan.updated")}</p>
             <Button onClick={() => navigate("/")} className="rounded-full px-6">

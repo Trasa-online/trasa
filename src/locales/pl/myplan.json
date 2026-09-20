@@ -83,7 +83,7 @@
   "empty": {
     "saved": "Nie masz jeszcze zapisanych miejsc. Polub miejsca w eksploracji, żeby dodać je tu jednym tapem."
   },
-  "intro": "Trasa to Twój plan wyjazdu: miejsca w kolejności, które zostały odwiedzone.",
+  "intro": "Trasa to Twój plan podróży: miejsca w kolejności, które zostały odwiedzone.",
   "save_aside": "Miejsca poza trasą możesz zapisać, żeby wrócić do nich później.",
   "search": {
     "unavailable": "Wyszukiwarka miejsc jest chwilowo niedostępna. Spróbuj później.",
@@ -103,7 +103,7 @@
   },
   "reorder_hint": "Przeciągnij, by zmienić kolejność",
   "toast": {
-    "trip_failed": "Nie udało się utworzyć wyjazdu",
+    "trip_failed": "Nie udało się utworzyć planu",
     "route_failed": "Nie udało się utworzyć trasy",
     "places_failed": "Nie udało się zapisać miejsc",
     "save_failed": "Nie udało się zapisać zmian",
@@ -127,7 +127,7 @@
   },
   "clear": "Wyczyść",
   "back": "Wróć",
-  "trip_name_city": "Wyjazd do {{city}}",
+  "trip_name_city": "Plan: {{city}}",
   "drafts": {
     "empty_hint": "Zapisz trasę innego użytkownika w Eksploracji, a użyjesz jej tutaj jako bazy.",
     "empty": "Nie masz obecnie żadnych zapisanych roboczych tras.",
@@ -141,7 +141,7 @@
   "start": {
     "empty_drafts": "Robocze trasy",
     "empty_saved": "Brak zapisanych tras",
-    "new_trip": "Nowy wyjazd",
+    "new_trip": "Nowy plan",
     "start_fresh": "Zacznij od nowa"
   },
   "compose": {
@@ -153,14 +153,14 @@
     "map_alt": "Mapa miejsc",
     "keep_one": "Nie zgub tego miejsca",
     "save_changes": "Zapisz zmiany",
-    "save_trip": "Zapisz wyjazd",
+    "save_trip": "Zapisz plan",
     "pick_dates": "Wybierz daty dla trasy",
     "pick_min": "Zaznacz przynajmniej jedno miejsce do trasy",
     "saved_few": "Zapisano {{count}} miejsca",
     "saved_many": "Zapisano {{count}} miejsc",
     "keep_few": "Nie zgub {{count}} miejsc",
     "keep_many": "Nie zgub {{count}} miejsc",
-    "new_trip": "Nowy wyjazd",
+    "new_trip": "Nowy plan",
     "add_place_tile": "Dodaj miejsce",
     "your_saved": "Twoje zapisane miejsca"
   }

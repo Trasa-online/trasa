@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, Lock, Pipette } from "lucide-react";
+import { Pipette } from "lucide-react";
+import { BrandLock, BrandCheck } from "@/components/BrandIcon";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
 import { haptics } from "@/hooks/useHaptics";
-import { AVATAR_FRAMES, DEFAULT_FRAME_COLOR, FRAME_SWATCHES, isAvatarFrame, isFrameColor, type AvatarFrameId } from "@/lib/avatarFrames";
+import { AVATAR_FRAMES, DEFAULT_FRAME_COLOR, FRAME_SWATCHES, isAvatarFrame, isFrameColor, type AvatarFrameId, frameHasFixedColor } from "@/lib/avatarFrames";
 import AvatarFrame from "@/components/profile/AvatarFrame";
 import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
 import { avatarFrameKey } from "@/lib/avatarFrameLoader";
@@ -60,6 +61,8 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
   const [draft, setDraft] = useState<string | null>(null);
   const color = draft ?? savedColor;
   const customColor = !FRAME_SWATCHES.includes(color.toUpperCase());
+  // Wybrana nakladka rysuje sie wlasnymi kolorami -> wybor koloru nizej nie ma sensu.
+  const fixedColor = frameHasFixedColor(isAvatarFrame(me?.avatar_frame) ? me!.avatar_frame as any : null);
 
   const invalidateAll = () => {
     // Wszystkie miejsca, ktore czytaja profil, maja zobaczyc zmiane od razu.
@@ -134,9 +137,11 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const options: { id: AvatarFrameId | null; label: string; reward?: boolean }[] = [
+  const options: { id: AvatarFrameId | null; label: string; reward?: boolean; gift?: boolean }[] = [
     { id: null, label: t("frames.none") },
-    ...AVATAR_FRAMES.map((f) => ({ id: f.id as AvatarFrameId | null, label: t(f.labelKey), reward: f.reward })),
+    // Prezenty widzi TYLKO obdarowany - patrz `gift` w AVATAR_FRAMES.
+    ...AVATAR_FRAMES.filter((f) => !f.gift || !isLocked(f.id))
+      .map((f) => ({ id: f.id as AvatarFrameId | null, label: t(f.labelKey), reward: f.reward, gift: f.gift })),
   ];
 
   return (
@@ -162,8 +167,9 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
                     {o.label}
-                    {o.reward && <span className="rounded-full bg-[#FDF184] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#5B2C06]">{t("frames.reward")}</span>}
+                    {(o.reward || o.gift) && <span className="rounded-full bg-[#FDF184] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#5B2C06]">{t(o.gift ? "frames.gift" : "frames.reward")}</span>}
                   </span>
+                  {o.gift && <span className="block text-[12px] text-muted-foreground">{t("frames.gift_hint")}</span>}
                   {o.reward && u && (
                     <span className="block text-[12px] text-muted-foreground">
                       {locked ? t("frames.locked_hint", { invited: u.invited, goal: u.goal }) : t("frames.unlocked_hint")}
@@ -171,10 +177,10 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                   )}
                 </span>
                 {locked ? (
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary"><Lock className="h-3.5 w-3.5 text-muted-foreground" /></span>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary"><BrandLock className="h-3.5 w-3.5 text-muted-foreground" /></span>
                 ) : (
                   <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${active ? "border-primary bg-primary text-white" : "border-border"}`}>
-                    {active && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                    {active && <BrandCheck className="h-3.5 w-3.5" strokeWidth={3} />}
                   </span>
                 )}
               </button>
@@ -182,7 +188,12 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
           })}
         </div>
 
-        {/* Kolor nakladki: szybkie kolory + pipeta (systemowa paleta, dowolny kolor). */}
+        {/* Kolor nakladki: szybkie kolory + pipeta (systemowa paleta, dowolny kolor).
+            ⛔ Chowamy CALY blok dla nakladek z wlasnymi kolorami (banan, tecza) - one pipety
+            nie czytaja, wiec zostawiony na ekranie wybor obiecywalby zmiane, ktora nigdy nie
+            nastapi. Ustawienie koloru zostaje zapisane i wraca, gdy user wybierze nakladke
+            jednokolorowa. */}
+        {!fixedColor && (<>
         <p className="mt-5 text-sm font-bold text-foreground">{t("frames.color")}</p>
         <p className="text-xs text-muted-foreground">{t("frames.color_desc")}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2.5">
@@ -197,7 +208,7 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                 className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-transform active:scale-90 ${active ? "border-foreground" : "border-transparent"}`}
                 style={{ backgroundColor: hex }}
               >
-                {active && <Check className="h-4 w-4 text-white drop-shadow" strokeWidth={3} />}
+                {active && <BrandCheck className="h-4 w-4 text-white drop-shadow" strokeWidth={3} />}
               </button>
             );
           })}
@@ -222,6 +233,8 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
             />
           </span>
         </div>
+
+        </>)}
 
         {/* Awatar bazowy z palety - NA DOLE, pod nakladkami i kolorem. */}
         <div className="mt-6">

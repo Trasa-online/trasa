@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useTranslation, Trans } from "react-i18next";
 import { usePostHog } from "@posthog/react";
+import { isInternalAnalyticsAccount } from "@/lib/internalAccounts";
 import { isHardcodedAdmin } from "@/lib/admins";
 import { isNative } from "@/lib/platform";
 import WelcomeDeck from "@/components/auth/WelcomeDeck";
@@ -210,8 +211,12 @@ const Auth = () => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      posthog.identify(data.user!.id, { email: data.user!.email });
-      posthog.capture("user_signed_in", { business_mode: businessMode });
+      // Konto zespolu: wylacz capture zamiast identify (lib/internalAccounts).
+      if (isInternalAnalyticsAccount(data.user!.email)) posthog.opt_out_capturing();
+      else {
+        posthog.identify(data.user!.id, { email: data.user!.email });
+        posthog.capture("user_signed_in", { business_mode: businessMode });
+      }
 
       // Check for business profile (covers both businessMode and regular login for biz accounts).
       // Hardcoded admins (Nat, Tomek) loguja sie konsumencko mimo posiadania biz profilu -
@@ -465,7 +470,7 @@ const Auth = () => {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="twoj@email.pl"
-                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -476,7 +481,7 @@ const Auth = () => {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <button
@@ -624,7 +629,10 @@ const Auth = () => {
                         <input
                           type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
                           placeholder={t("bizland.hero_email_placeholder")} aria-label={t("fields.email")}
-                          className="flex-1 h-14 rounded-full bg-white border border-[#EAD9A8] px-5 text-[15px] text-slate-900
+                          // ⛔ `flex-1` TYLKO od `sm`: kontener jest na telefonie kolumna, a w kolumnie
+                          // flex-1 steruje WYSOKOSCIA, nie szerokoscia - `h-14` przegrywalo z
+                          // `flex-basis: 0%` i pole zgniatalo sie do 20 px (zgloszenie Nat 2026-09-15).
+                          className="w-full shrink-0 sm:flex-1 h-14 rounded-full bg-white border border-[#EAD9A8] px-5 text-[15px] text-slate-900
                                      placeholder:text-[#8A8079] outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                         />
                         <button type="submit" disabled={loading}
@@ -681,37 +689,34 @@ const Auth = () => {
             </section>
 
             {/* ── USP w stylu landingu B2C (prośba Nat 2026-09-14): żółte karty, nagłówek
-                   w Sigmarze na pomarańczowo, pod nim krótkie zdanie w brązie. Środkowa karta
-                   ma tytuł NAD grafiką - ten sam rytm co w makiecie marketingowej.
+                   w Sigmarze na pomarańczowo, pod nim krótkie zdanie w brązie.
+                   KOLEJNOSC WE WSZYSTKICH KARTACH: najpierw grafika, pod nia tytul i copy
+                   (prosba Nat 2026-09-15). Wczesniej srodkowa karta miala tytul NAD grafika
+                   za makieta marketingowa - w rzedzie trzech kart czytalo sie to jak blad
+                   skladu, bo wzrok skakal gora-dol-gora.
                    Grafiki: mockupy z landingu B2C - pokazują, co podróżny robi z lokalem. ── */}
             <section className="mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-12 py-10 sm:py-14 lg:py-16">
               <ul className="grid gap-4 sm:gap-5 md:grid-cols-3">
                 {([
-                  { img: "/mockup_odkrywaj.png", t: "usp1", flip: false },
-                  { img: "/mockup_listy.png", t: "usp2", flip: true },
-                  { img: "/mockup_dziel_sie.png", t: "usp3", flip: false },
-                ] as const).map((u) => {
-                  const head = (
-                    <div>
+                  { img: "/mockup_odkrywaj.png", t: "usp1" },
+                  { img: "/mockup_listy.png", t: "usp2" },
+                  { img: "/mockup_dziel_sie.png", t: "usp3" },
+                ] as const).map((u) => (
+                  <li key={u.img} className="rounded-[32px] bg-[#FDF184] p-6 sm:p-7 flex flex-col gap-5">
+                    {/* Stała wysokość kadru - trzy mockupy mają różne proporcje i bez tego
+                        rząd kart byłby poszarpany. */}
+                    <div className="h-[168px] sm:h-[180px] flex items-center justify-center">
+                      <img src={u.img} alt={t(`bizland.${u.t}_alt`)} loading="lazy"
+                        className="max-h-full max-w-full w-auto object-contain select-none" draggable={false} />
+                    </div>
+                    <div className="mt-auto">
                       <h2 className="font-brand text-primary leading-[1.15] text-[21px] lg:text-[25px] whitespace-pre-line">
                         {t(`bizland.${u.t}_title`)}
                       </h2>
                       <p className="mt-2 text-[14px] leading-snug text-[#5B2C06]/85">{t(`bizland.${u.t}_body`)}</p>
                     </div>
-                  );
-                  return (
-                    <li key={u.img} className="rounded-[32px] bg-[#FDF184] p-6 sm:p-7 flex flex-col gap-5">
-                      {u.flip && head}
-                      {/* Stała wysokość kadru - trzy mockupy mają różne proporcje i bez tego
-                          rząd kart byłby poszarpany. */}
-                      <div className="h-[168px] sm:h-[180px] flex items-center justify-center">
-                        <img src={u.img} alt={t(`bizland.${u.t}_alt`)} loading="lazy"
-                          className="max-h-full max-w-full w-auto object-contain select-none" draggable={false} />
-                      </div>
-                      {!u.flip && <div className="mt-auto">{head}</div>}
-                    </li>
-                  );
-                })}
+                  </li>
+                ))}
               </ul>
             </section>
         </>

@@ -2,11 +2,15 @@ import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-// Toast u GORY ekranu jako biala pigulka (prosba Nat 2026-09-11, wzor: Pinterest "Saved to
+// Toast u GORY ekranu jako BIALA pigulka (prosba Nat 2026-09-11, wzor: Pinterest "Saved to
 // Profile [View]"): tekst po lewej, po prawej mala CIEMNA pigulka z akcja ("Cofnij" / "Zobacz").
 // Akcje juz istnieja w wywolaniach (deferDelete, zapis, publikacja) - tu dostaja tylko ksztalt.
 // Pozycja: pod notchem / dynamic island (safe-area-top + 12 px). Wczesniej toast siedzial nad
 // dolnym paskiem nawigacji i przy otwartym arkuszu ginal pod nim.
+//
+// ⛔ Zolta wersja (tlo #FDF184, brazowy guzik) byla PROBOWANA 15.09.2026 i odrzucona tego
+// samego dnia - wracamy do bieli. Nie proponuj jej ponownie bez wyraznej prosby.
+
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <>

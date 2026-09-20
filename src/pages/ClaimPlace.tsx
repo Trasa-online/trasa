@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Check, ArrowLeft, MapPin } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { BrandCheck, BrandPin } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -142,7 +143,7 @@ const ClaimPlace = () => {
     return (
       <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6 gap-5">
         <div className="h-14 w-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center">
-          <Check className="h-7 w-7 text-green-600" strokeWidth={3} />
+          <BrandCheck className="h-7 w-7 text-green-600" strokeWidth={3} />
         </div>
         <div className="text-center max-w-sm">
           <h1 className="text-xl font-black text-[#0E0E0E] mb-2">{t("claim.thanks_title")}</h1>
@@ -187,7 +188,7 @@ const ClaimPlace = () => {
           <p className="text-xs font-bold text-primary uppercase tracking-widest mb-2">{t("claim.intro_eyebrow")}</p>
           <h1 className="text-3xl lg:text-4xl font-black text-[#0E0E0E] leading-tight">{place.place_name}</h1>
           <p className="text-sm text-[#979797] flex items-center justify-center gap-1.5 mt-2">
-            <MapPin className="h-3.5 w-3.5" />
+            <BrandPin className="h-3.5 w-3.5" />
             {place.address || place.city}
           </p>
         </div>

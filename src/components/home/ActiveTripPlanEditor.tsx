@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, Map as MapIcon, Info, Check, Pencil, RotateCcw } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Plus, List, RotateCcw } from "lucide-react";
+import { BrandMap, BrandTrash, BrandCheck, BrandGlobe, BrandInfo, BrandPencil } from "@/components/BrandIcon";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -101,7 +102,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
           <button onClick={onUp} disabled={isFirst} aria-label={t("editor.move_up")} className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
           <button onClick={onDown} disabled={isLast} aria-label={t("editor.move_down")} className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
         </div>
-        <button onClick={onRemove} aria-label={t("editor.remove_place")} className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
+        <button onClick={onRemove} aria-label={t("editor.remove_place")} className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><BrandTrash className="h-4 w-4" /></button>
       </div>
       {noteNode && <div className="px-0.5">{noteNode}</div>}
     </Reorder.Item>
@@ -704,7 +705,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               aria-label={t("editor.remove_place")}
               className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
             >
-              <Trash2 className="h-4 w-4" />
+              <BrandTrash className="h-4 w-4" />
             </button>
           ) : (
             <span
@@ -776,7 +777,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           {/* Guzik Google -> wizytowka miejsca (zamiast odhaczania) */}
           <button onClick={() => openDetail(pin)} aria-label={t("editor.open_place")} className="h-9 w-9 rounded-full bg-white border border-border/50 shadow-sm flex items-center justify-center active:scale-90"><GoogleG className="h-4 w-4" /></button>
           {editable && (
-            <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("editor.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+            <button onClick={() => removeWorkingPin(pin.id)} aria-label={t("editor.remove_place")} className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><BrandTrash className="h-4 w-4" /></button>
           )}
         </div>
       </div>
@@ -812,14 +813,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             className={`h-8 w-8 flex items-center justify-center rounded-full transition-colors active:scale-90 ${infoOpen ? "bg-orange-100 text-orange-700" : "bg-secondary text-muted-foreground"}`}
             aria-label={t("editor.edit_hint_aria")}
           >
-            <Info className="h-4 w-4" />
+            <BrandInfo className="h-4 w-4" />
           </button>
           <button
             onClick={() => setEditMode((o) => !o)}
             className={`h-8 w-8 flex items-center justify-center rounded-full transition-colors active:scale-90 ${editMode ? "bg-orange-100 text-orange-700" : "bg-secondary text-muted-foreground"}`}
             aria-label={t("editor.edit_plan_aria")}
           >
-            <Pencil className="h-4 w-4" />
+            <BrandPencil className="h-4 w-4" />
           </button>
           {/* Usuwanie trasy obok edycji (przeniesione z naglowka dashboardu). */}
           {onDelete && (
@@ -829,7 +830,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               aria-label={t("editor.delete_route_aria")}
               className="h-8 w-8 flex items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-destructive transition-colors active:scale-90 disabled:opacity-50"
             >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandTrash className="h-4 w-4" />}
             </button>
           )}
         </div>
@@ -839,7 +840,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               <List className="h-4 w-4" />
             </button>
             <button onClick={() => setPlanView("map")} aria-label={t("editor.view_map")} className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "map" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-              <MapIcon className="h-4 w-4" />
+              <BrandMap className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -912,7 +913,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-trasa-teal flex items-center justify-center shrink-0">
-                <Check className="h-5 w-5 text-trasa-teal-ink" />
+                <BrandCheck className="h-5 w-5 text-trasa-teal-ink" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("skip.title", { place: skipPromptPin.place_name })}</p>
@@ -921,7 +922,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             </div>
             <div className="flex flex-col gap-2">
               <button onClick={confirmSkipWasThere} className="w-full py-3.5 rounded-full bg-[#0E0E0E] text-white font-bold text-sm flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform">
-                <Check className="h-4 w-4" /> {t("skip.yes")}
+                <BrandCheck className="h-4 w-4" /> {t("skip.yes")}
               </button>
               <button onClick={confirmSkipNotYet} className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform">
                 {t("skip.no")}
@@ -968,7 +969,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           >
             <div className="flex items-start gap-3">
               <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                <Globe className="h-5 w-5 text-primary" />
+                <BrandGlobe className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">{t("share.title")}</p>

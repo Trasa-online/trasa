@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { checkPlaceLimit, isPlaceLimitError, placeLimitToast, type PlaceLimitKind } from "@/lib/placeLimits";
 import { useQuery } from "@tanstack/react-query";
-import { X, Plus, Check, ChevronRight, ChevronDown, Search, Loader2, Map as MapIcon } from "lucide-react";
+import { X, Plus, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
+import { BrandMap, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,13 +44,16 @@ interface Props {
   countries?: string[] | null;          // zasieg krajowy wyjazdu/listy (2026-09-10) - ma pierwszenstwo
   existingPlaces?: PlaceForList[];      // miejsca JUŻ w tej trasie/liście - pokazane u góry (info)
   onAdd: (places: PlaceForList[]) => Promise<void> | void;   // zapis (pins.insert / addPlaceToList)
+  // Limit miejsc (wyjazd 100 / kolekcja 30, 2026-09-20): `current` = ile juz jest. Sprawdzane
+  // PRZED wysylka - baza i tak odrzuci nadmiar (trigger), ale user ma dostac liczbe, nie "nie udalo sie".
+  limit?: { kind: PlaceLimitKind; current: number };
 }
 
 // Drawer "Dodaj nowe miejsce" (redesign 2026-08-21). Dodaje miejsca do ISTNIEJACEJ trasy/listy.
 // Domyslnie: siatka Twoich zapisanych + kafelek "Dodaj nowe miejsce" (fokus na wyszukiwarke).
 // Wpisanie frazy (>=2 znaki) -> Google Places (proxy) -> klik wyniku = nowy zaznaczony kafelek +
 // odblokowanie "Dalej". "Dalej" zapisuje wybrane miejsca (onAdd).
-export default function AddPlaceSheet({ open, onClose, city, countries, existingPlaces, onAdd }: Props) {
+export default function AddPlaceSheet({ open, onClose, city, countries, existingPlaces, onAdd, limit }: Props) {
   const { t } = useTranslation("route");
   const { user } = useAuth();
   const [selected, setSelected] = useState<PlaceForList[]>([]);
@@ -194,11 +199,21 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
 
   const isSel = (p: PlaceForList) => selected.some((s) => keyOf(s) === keyOf(p));
   const toggle = (p: PlaceForList) => setSelected((prev) => prev.some((s) => keyOf(s) === keyOf(p)) ? prev.filter((s) => keyOf(s) !== keyOf(p)) : [...prev, p]);
-  const pickGoogle = (p: PlaceForList) => {
+  // Wybor miejsca Z WYNIKOW WYSZUKIWANIA. Dziala jak zaznaczanie, nie jak "dodaj i wyjdz":
+  // ⛔ NIE czysc tu `query`. Do 2026-09-16 bylo tu `setQuery("")` ("powrot do siatki - nowy
+  // kafelek zaznaczony") i przez to po wybraniu JEDNEGO wyniku cala lista znikala, a user
+  // wracal na poczatek arkusza. Zeby dodac drugie miejsce z tej samej frazy, musial wpisac ja
+  // od nowa. Zgloszenie testerki (2026-09-16): "chcialabym kilka od razu wybrac, a nie moge,
+  // bo po wybraniu jednej od razu mnie resetuje i wracam na poczatek".
+  // Ponowne tapniecie ODZNACZA - inaczej pomylkowego wyboru nie dalo sie cofnac bez
+  // zamykania arkusza (wiersz pokazywal ptaszka, ale klik nic nie robil).
+  const pickGoogle = (p: PlaceForList, addOnly = false) => {
     haptics.light();
-    setManual((prev) => prev.some((m) => keyOf(m) === keyOf(p)) ? prev : [p, ...prev]);
-    setSelected((prev) => prev.some((s) => keyOf(s) === keyOf(p)) ? prev : [...prev, p]);
-    setQuery("");   // powrot do siatki - nowy kafelek zaznaczony
+    const drop = !addOnly && selected.some((s) => keyOf(s) === keyOf(p));
+    setManual((prev) => drop ? prev.filter((m) => keyOf(m) !== keyOf(p))
+      : prev.some((m) => keyOf(m) === keyOf(p)) ? prev : [p, ...prev]);
+    setSelected((prev) => drop ? prev.filter((s) => keyOf(s) !== keyOf(p))
+      : prev.some((s) => keyOf(s) === keyOf(p)) ? prev : [...prev, p]);
   };
 
   // Siatka: dodane z Google (manual) + zapisane, dedup po nazwie, bez tych juz w trasie.
@@ -219,8 +234,13 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
     return out;
   }, [manual, savedPlaces, existingNameSet]);
 
+  // Ile poleci po tapnieciu "Dodaj". Liczba stoi na guziku, bo przy wybieraniu kilku miejsc
+  // z dlugiej listy zaznaczone wiersze wyjezdzaja poza ekran i nie wiadomo, ile ich jest.
+  const addLabel = selected.length ? `${t("common:buttons.add")} (${selected.length})` : t("common:buttons.add");
+
   const doAdd = async () => {
     if (!selected.length || adding) return;
+    if (limit && !checkPlaceLimit(limit.kind, limit.current, selected.length)) { haptics.error(); return; }
     setAdding(true);
     haptics.light();
     try {
@@ -230,7 +250,8 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
       onClose();
     } catch (e: any) {
       haptics.error();
-      toast.error(t("add_place.failed"));
+      const lim = isPlaceLimitError(e);
+      if (lim) placeLimitToast(lim, limit?.current ?? 0); else toast.error(t("add_place.failed"));
     } finally { setAdding(false); }
   };
 
@@ -282,11 +303,11 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
         <GoogleGlyph className="h-[18px] w-[18px]" />
       </button>
       {opts.added ? (
-        <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>
+        <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><BrandCheck className="h-3.5 w-3.5 stroke-[3]" /></span>
       ) : (
         <button onClick={opts.onToggle} aria-label={opts.selected ? t("add_place.remove") : t("add_place.add_to_route")}
           className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-          {opts.selected ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+          {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>
       )}
     </div>
@@ -304,7 +325,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
           <h2 className="text-[18px] font-semibold text-foreground truncate">{t("add_place.title")}</h2>
           <button onClick={doAdd} disabled={!selected.length || adding}
             className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 ${selected.length && !adding ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
-            {adding ? "..." : t("common:buttons.add")}
+            {adding ? "..." : addLabel}
           </button>
         </div>
 
@@ -315,7 +336,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
         <div className="px-5 pt-1 pb-2 shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <BrandSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("add_place.placeholder")}
               className="w-full h-12 rounded-xl bg-secondary/60 border border-border/60 pl-10 pr-11 text-base text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-orange-500/30" />
             {query && (
@@ -332,7 +353,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
               aria-label={t("map_picker.title")}
               className="h-12 w-12 shrink-0 rounded-xl bg-secondary/60 border border-border/60 flex items-center justify-center active:scale-90 transition-transform"
             >
-              <MapIcon className="h-5 w-5 text-foreground" />
+              <BrandMap className="h-5 w-5 text-foreground" />
             </button>
           </div>
         </div>
@@ -432,7 +453,9 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
 
     {/* Miejsce wybrane z mapy wpada w te sama sciezke, co wynik wyszukiwarki (pickGoogle),
         wiec od razu jest zaznaczone i odblokowuje "Dodaj". */}
-    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => pickGoogle(p)} />
+    {/* Z mapy zawsze DODAJEMY (`addOnly`) - tapniecie pinezki to intencja "chce to miejsce",
+        a nie przelacznik; odznacza sie na liscie w arkuszu. */}
+    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => pickGoogle(p, true)} />
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
     <PlaceSwiperDetail
       open={!!detailPlace} onOpenChange={(o) => { if (!o) { setDetailPlace(null); setDetailCtx(null); } }} place={detailPlace}

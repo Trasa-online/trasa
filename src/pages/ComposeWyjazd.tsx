@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
-import { ArrowLeft, Search, Plus, X, ChevronDown, Calendar as CalendarIcon, List, GalleryHorizontalEnd, Loader2, ArrowRight, Trash2, Maximize2, GripVertical, UserPlus, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, ChevronDown, List, GalleryHorizontalEnd, Loader2, ArrowRight, Maximize2, GripVertical } from "lucide-react";
+import { BrandCalendar, BrandTrash, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import InviteFriendsSheet from "@/components/route/InviteFriendsSheet";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { avatarSrc } from "@/lib/avatar";
@@ -158,14 +159,14 @@ function SortableComposeRow({ it, idx, onOpen, onRemove, selected, onToggle }: {
         aria-label={selected ? t("aria.exclude") : t("aria.add_to_route")}
         className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${selected ? "bg-primary text-white" : "border-2 border-border text-transparent"}`}
       >
-        <Check className="h-4 w-4" strokeWidth={3} />
+        <BrandCheck className="h-4 w-4" strokeWidth={3} />
       </button>
       <button
         onClick={onRemove}
         aria-label={t("aria.delete_place")}
         className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-muted-foreground active:scale-90 transition-transform shrink-0"
       >
-        <Trash2 className="h-4 w-4" />
+        <BrandTrash className="h-4 w-4" />
       </button>
     </Reorder.Item>
   );
@@ -597,7 +598,13 @@ export default function ComposeWyjazd() {
       try {
         const res = await inviteUsersToRoute({ id, city: city ?? null, title: name.trim() || null, group_session_id: groupSessionId }, nav.inviteeIds, user.id);
         if (res.ok && res.sessionId) setGroupSessionId(res.sessionId);
-      } catch (e: any) { console.warn("[ComposeWyjazd] invite failed:", e?.message ?? e); }
+        // ⚠️ Porazka wracala tu jako `{ ok: false }` i nie byla nigdzie pokazywana - user nie
+        // mial skad wiedziec, ze zaproszenia nie poszly (patrz `CreateFlowSheet`).
+        if (!res.ok) { console.warn("[ComposeWyjazd] invite failed:", res.error); toast.error(t("social:invite.failed")); }
+      } catch (e: any) {
+        console.warn("[ComposeWyjazd] invite threw:", e?.message ?? e);
+        toast.error(t("social:invite.failed"));
+      }
     }
     // "Miejsca nie przepadaja": odznaczeni kandydaci (poza trasa) NIE bedacy juz w zapisanych usera
     // -> popup zaproponuje zapis do Ogolne / nowej listy. Popup dopina navigate (finishNavigation).
@@ -746,7 +753,7 @@ export default function ComposeWyjazd() {
             className="flex-1 min-w-0 rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/60" />
           <button onClick={() => setDateSheet(true)}
             className={`shrink-0 h-[50px] rounded-2xl bg-secondary flex items-center gap-2 px-3.5 active:scale-95 transition-transform ${dateLabel ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-            <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+            <BrandCalendar className="h-5 w-5 text-muted-foreground" />
             {dateLabel && <span className="text-sm whitespace-nowrap">{dateLabel}</span>}
           </button>
         </div>
@@ -757,7 +764,7 @@ export default function ComposeWyjazd() {
         {/* Wyszukiwarka */}
         <div className="px-4 pt-3">
           <div className="relative">
-            <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <BrandSearch className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
@@ -846,7 +853,7 @@ export default function ComposeWyjazd() {
                     {/* Toggle "w trasie" (lewy-gorny), kosz (prawy-gorny). */}
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleInTrip(it.key); }} aria-label={isInTrip(it.key) ? t("aria.exclude") : t("aria.add_to_route")}
                       className={`absolute top-2 left-2 h-8 w-8 rounded-full flex items-center justify-center active:scale-90 transition-transform ${isInTrip(it.key) ? "bg-primary text-white" : "bg-white/85 border border-black/10 text-transparent"}`}>
-                      <Check className="h-4 w-4" strokeWidth={3} />
+                      <BrandCheck className="h-4 w-4" strokeWidth={3} />
                     </span>
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); setConfirmRemove({ key: it.key, name: it.place_name }); }} aria-label={t("aria.delete_place")}
                       className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/45 backdrop-blur text-white flex items-center justify-center active:scale-90 transition-transform">
@@ -946,7 +953,7 @@ export default function ComposeWyjazd() {
           <button onClick={() => confirm(nav.mode !== "future")} disabled={creating}
             className="flex-1 h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : (nav.mode === "future"
-              ? <>{t("compose.save_trip")} <Check className="h-4 w-4" /></>
+              ? <>{t("compose.save_trip")} <BrandCheck className="h-4 w-4" /></>
               : <>{t("go_suggestions")}<ArrowRight className="h-4 w-4" /></>)}
           </button>
         </div>

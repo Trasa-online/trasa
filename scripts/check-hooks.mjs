@@ -64,12 +64,59 @@ for (const file of walkDir(path.join(ROOT, "src"))) {
     ts.forEachChild(node, visit);
   };
   visit(src);
+
+  // ── Hook PO EARLY-RETURNIE ────────────────────────────────────────────────
+  // Drugi ksztalt tego samego bledu (zgloszenie Nat 2026-09-15): hook stoi w dobrej
+  // funkcji, ale PONIZEJ `if (isLoading) return ...`. Skladnia poprawna, tsc i build
+  // przechodza, a React przy pierwszym renderze liczy mniej hookow niz przy drugim
+  // i wywala caly ekran ("Rendered fewer hooks than expected").
+  const returnsEarly = (st) => {
+    if (ts.isReturnStatement(st)) return true;
+    if (ts.isIfStatement(st) && !st.elseStatement) {
+      const th = st.thenStatement;
+      if (ts.isReturnStatement(th)) return true;
+      if (ts.isBlock(th) && th.statements.length && th.statements.every((x) => ts.isReturnStatement(x))) return true;
+    }
+    return false;
+  };
+  const scanBody = (fn) => {
+    const name = ownerName(fn);
+    if (!isComponentOrHook(name)) return;
+    const body = fn.body;
+    if (!body || !ts.isBlock(body)) return;
+    let seenReturn = null;
+    for (const st of body.statements) {
+      if (seenReturn) {
+        let hit = null;
+        const look = (n) => {
+          if (hit) return;
+          // Hook w zagniezdzonej funkcji to JEJ sprawa - liczy sie tylko cialo tego komponentu.
+          if (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n) || ts.isMethodDeclaration(n)) return;
+          if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && /^use[A-Z]/.test(n.expression.text)) { hit = n; return; }
+          ts.forEachChild(n, look);
+        };
+        look(st);
+        if (hit) {
+          const { line } = src.getLineAndCharacterOfPosition(hit.getStart(src));
+          const { line: rl } = src.getLineAndCharacterOfPosition(seenReturn.getStart(src));
+          errors.push(`${rel}:${line + 1}: ${hit.expression.text}() PO wyjsciu z komponentu "${name}" (return w linii ${rl + 1})`);
+        }
+      } else if (returnsEarly(st)) {
+        seenReturn = st;
+      }
+    }
+  };
+  const visitFns = (node) => {
+    if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node)) scanBody(node);
+    ts.forEachChild(node, visitFns);
+  };
+  visitFns(src);
 }
 
 if (errors.length) {
   console.error(`\nhooki: ${errors.length} problemow\n`);
   for (const e of errors) console.error("  x " + e);
-  console.error("\nHook wolamy TYLKO w ciele komponentu albo wlasnego hooka - inaczej React #321 w locie.");
+  console.error("\nHook wolamy TYLKO w ciele komponentu albo wlasnego hooka i ZAWSZE nad kazdym\n`return` - inaczej React wywala sie w locie (#321 / zmienna liczba hookow).");
   process.exit(1);
 }
 console.log("hooki: ok");

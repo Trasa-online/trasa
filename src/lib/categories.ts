@@ -22,6 +22,7 @@ export const MAIN_CATEGORIES: MainCategory[] = [
     subcategories: [
       { id: 'restaurant', label: 'Restauracja', emoji: '🍴' },
       { id: 'cafe',       label: 'Kawiarnia',   emoji: '☕' },
+      { id: 'bakery',     label: 'Piekarnia',   emoji: '🥐' },
       { id: 'bar',        label: 'Bar / Pub',   emoji: '🍺' },
     ],
   },
@@ -85,6 +86,92 @@ export const MAIN_CATEGORIES: MainCategory[] = [
   },
 // i18n-ignore-end
 ];
+
+// ── Reguly wyboru kategorii przez lokal (decyzja Nat 2026-09-14) ─────────────
+// Lokal wybiera 1-2 ROWNORZEDNE kategorie glowne (bez "dodatkowej", bez hierarchii)
+// i 1-3 podkategorie LACZNIE, po minimum jednej do KAZDEJ wybranej glownej.
+// Limit dwoch pilnuje panel, nie baza - wyjatki z trzema tozsamosciami dodawane sa recznie.
+
+export const MAX_MAIN_CATEGORIES = 2;
+export const MAX_SUBCATEGORIES = 3;
+
+export interface CategorySelection {
+  mains: string[];
+  subs: string[];
+}
+
+/** Puste `errors` = wybor da sie zapisac. Kolejnosc bledow = kolejnosc pokazywania w panelu. */
+export const validateCategorySelection = ({ mains, subs }: CategorySelection): string[] => {
+  const errors: string[] = [];
+  const known = new Set(MAIN_CATEGORIES.map(c => c.id));
+
+  if (mains.length === 0) errors.push("no_main");
+  if (mains.length > MAX_MAIN_CATEGORIES) errors.push("too_many_mains");
+  if (mains.some(m => !known.has(m))) errors.push("unknown_main");
+  if (new Set(mains).size !== mains.length) errors.push("duplicate_main");
+
+  if (subs.length === 0) errors.push("no_sub");
+  if (subs.length > MAX_SUBCATEGORIES) errors.push("too_many_subs");
+  if (new Set(subs).size !== subs.length) errors.push("duplicate_sub");
+
+  // Kazda podkategoria musi nalezec do JEDNEJ z wybranych glownych...
+  const orphan = subs.filter(sub => {
+    const parent = getMainCategoryFor(sub);
+    return !parent || !mains.includes(parent.id);
+  });
+  if (orphan.length) errors.push("orphan_sub");
+
+  // ...i kazda wybrana glowna musi miec przynajmniej jedna podkategorie.
+  const covered = new Set(subs.map(sub => getMainCategoryFor(sub)?.id).filter(Boolean) as string[]);
+  if (mains.some(m => !covered.has(m))) errors.push("main_without_sub");
+
+  return errors;
+};
+
+/** Kategorie glowne wynikajace z wybranych podkategorii - zrodlo prawdy przy zapisie. */
+export const mainsFromSubs = (subs: string[]): string[] => {
+  const out: string[] = [];
+  for (const sub of subs) {
+    const id = getMainCategoryFor(sub)?.id;
+    if (id && !out.includes(id)) out.push(id);
+  }
+  return out;
+};
+
+/**
+ * Odczyt tolerancyjny na oba ksztalty danych. Dopoki main_category i secondary_category
+ * nie znikna z bazy, wiersz moze miec jedno albo drugie - call site nie powinien o tym wiedziec.
+ */
+export const readMainCategories = (row: {
+  main_categories?: string[] | null;
+  main_category?: string | null;
+  secondary_category?: string | null;
+} | null | undefined): string[] => {
+  if (!row) return [];
+  if (row.main_categories?.length) return row.main_categories.filter(Boolean);
+  const legacy = [row.main_category, row.secondary_category].filter(Boolean) as string[];
+  return [...new Set(legacy)];
+};
+
+/**
+ * Wartosc z bazy -> ID podkategorii. `business_profiles.subcategories` trzyma historycznie
+ * MIESZANKE: gdzieniegdzie id ("cafe"), gdzieniegdzie polska ETYKIETE ("Kawiarnia") - zaleznie
+ * od tego, w ktorym roku i ktorym ekranem lokal byl zakladany. Panel czyta i zapisuje wylacznie
+ * id, wiec przy wczytaniu normalizujemy; wartosci nierozpoznanej NIE wyrzucamy (null = zostaw
+ * ja w spokoju, zamiast po cichu skasowac komus kategorie).
+ */
+export const normalizeSubcategoryId = (value: string | null | undefined): string | null => {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  for (const main of MAIN_CATEGORIES) {
+    for (const sub of main.subcategories) {
+      if (sub.id.toLowerCase() === lower) return sub.id;
+      if (sub.label.toLowerCase() === lower) return sub.id;
+    }
+  }
+  return null;
+};
 
 export const getSubcategoryIds = (mainCategoryId: string): string[] => {
   const cat = MAIN_CATEGORIES.find(c => c.id === mainCategoryId);
@@ -166,6 +253,8 @@ const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
   concept_store: ["concept_store", "store", "shopping"],
   wine_shop: ["wine_shop", "liquor_store"],
   bookshop: ["bookshop", "book_store", "library"],
+  // Piekarnia lapie tez cukiernie - w bazie zyja obie formy, a dla goscia to ta sama polka.
+  bakery: ["bakery", "pastry", "patisserie", "dessert"],
   // Sklepy vintage i z drugiej reki. Google nie ma typu "vintage", wiec lapiemy
   // warianty, ktore realnie wpadaja do bazy. CELOWO bez generycznego "store"/"shopping" -
   // to by wciagnelo do filtra kazdy sklep.

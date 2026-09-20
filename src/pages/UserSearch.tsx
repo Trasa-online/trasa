@@ -7,7 +7,8 @@ import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "@/components/social/FollowButton";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
@@ -70,7 +71,7 @@ export default function UserSearch() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1 flex items-center gap-2 bg-muted rounded-2xl px-3 h-10">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             type="text"
             value={query}

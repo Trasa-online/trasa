@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { BrandPin } from "@/components/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { avatarSrc } from "@/lib/avatar";
 
@@ -75,7 +75,7 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
 
         {/* City badge - top right */}
         <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
-          <MapPin className="h-3 w-3 text-white/80" />
+          <BrandPin className="h-3 w-3 text-white/80" />
           <span className="text-white text-xs font-medium">{plan.city}</span>
         </div>
 

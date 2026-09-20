@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useTranslation } from "react-i18next";
@@ -103,7 +104,7 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
     return (
       <div className="text-center py-12">
         <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-          <Check className="h-8 w-8 text-blue-600" />
+          <BrandCheck className="h-8 w-8 text-blue-600" />
         </div>
         <h3 className="text-2xl font-black text-foreground mb-2">{t("onepager.form.done_title")}</h3>
         <p className="text-slate-500 max-w-xs mx-auto">{t("onepager.form.done_desc")}</p>
@@ -116,7 +117,7 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
       {selectedPlan && (
         <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border border-blue-200 rounded-2xl">
           <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-blue-600 shrink-0" />
+            <BrandCheck className="h-4 w-4 text-blue-600 shrink-0" />
             <span className="text-sm text-blue-700 font-semibold">{t("onepager.form.selected_plan")} <strong>{selectedPlan}</strong></span>
           </div>
           <button type="button" onClick={() => onPlanChange(null)} className="text-blue-400 hover:text-blue-600 text-xs">{t("onepager.form.change")}</button>
@@ -126,26 +127,26 @@ function BizForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; 
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.name_label")}</label>
         <input required value={placeName} onChange={e => setPlaceName(e.target.value)}
           placeholder={t("onepager.form.name_placeholder")}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.email_label")}</label>
         <input required type="email" value={email} onChange={e => setEmail(e.target.value)}
           placeholder={t("onepager.form.email_placeholder")}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.phone_label")} <span className="font-normal text-slate-400">{t("onepager.form.optional")}</span></label>
         <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
           placeholder={t("onepager.form.phone_placeholder")}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-foreground mb-1.5">{t("onepager.form.message_label")} <span className="font-normal text-slate-400">{t("onepager.form.optional")}</span></label>
         <textarea value={message} onChange={e => setMessage(e.target.value)}
           placeholder={t("onepager.form.message_placeholder")}
           rows={3}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
       </div>
       <button type="submit" disabled={loading}
         className="w-full rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200 disabled:opacity-60">
@@ -245,7 +246,7 @@ export default function BusinessOnePager() {
                 <ul className="flex flex-col gap-2 flex-1 mb-4">
                   {tier.features.map((f, j) => (
                     <li key={j} className="flex items-start gap-2">
-                      <Check className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+                      <BrandCheck className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" strokeWidth={2.5} />
                       <span className={`text-xs leading-snug ${f.bold ? "font-bold text-foreground" : "text-muted-foreground"}`}>
                         {t(f.key)}
                       </span>

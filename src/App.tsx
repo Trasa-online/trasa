@@ -3,12 +3,13 @@ import { useTranslation } from "react-i18next";
 import SpontawayLanding from "./pages/SpontawayLanding";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
-import { useNativePush } from "@/hooks/useNativePush";
+import { useNativePush, consumePendingPushUrl } from "@/hooks/useNativePush";
 import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import { useAppResume } from "@/hooks/useAppResume";
 import { useNotificationsLive } from "@/hooks/useNotificationsLive";
@@ -17,7 +18,10 @@ import i18n from "@/i18n";
 import { useEdgeSwipeBack } from "@/hooks/useEdgeSwipeBack";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import PermissionPrimerSheet from "@/components/permissions/PermissionPrimerSheet";
+import KeyboardDismissButton from "@/components/layout/KeyboardDismissButton";
+import FrameGiftSheet from "@/components/profile/FrameGiftSheet";
 import { businessPanelPath } from "@/lib/businessRedirect";
+import { fetchMyVenues, pickVenue } from "@/lib/businessVenues";
 import { TrasaLogo } from "@/components/TrasaLogo";
 import { OnboardingProvider } from "@/components/OnboardingGuide";
 import UpdateGate from "@/components/UpdateGate";
@@ -470,7 +474,9 @@ function RootPage() {
   }
   // Onboarding v3 = coach-overlay na realnych ekranach (OnboardingProvider), nie osobny route.
   // Ekran startowy = Eksploracja (/eksploruj): jedyny widok odkrywania (IA 2026-09-13).
-  return <Navigate to="/eksploruj" replace />;
+  // Wyjatek: apka wystartowala z tapnietego PUSHA - wtedy ekranem startowym jest jego cel,
+  // inaczej to przekierowanie nadpisywalo nawigacje z pusha (patrz useNativePush).
+  return <Navigate to={consumePendingPushUrl() ?? "/eksploruj"} replace />;
 }
 
 function RouteTracker() {
@@ -555,7 +561,12 @@ function SplashController() {
   const done = bootDone && minElapsed;
 
   useEffect(() => {
-    const t = setTimeout(() => setMinElapsed(true), 500);
+    // 1500 zamiast 500 (prosba Nat 2026-09-17): podpis "Stworzone w Polsce" u dolu ma byc
+    // do przeczytania. `SplashDraw` trzyma swoj czas sam (HOLD_MS), ale `SplashPulse` -
+    // wariant kolejnych startow w ciagu 12 h - nie ma zadnej animacji do odczekania i bez
+    // tego mrugal na pol sekundy. ⚠️ To DOLNA granica, nie gorna: ekran i tak znika dopiero,
+    // gdy boot jest gotowy.
+    const t = setTimeout(() => setMinElapsed(true), 1500);
     return () => clearTimeout(t);
   }, []);
 
@@ -595,12 +606,14 @@ function SplashController() {
           .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
         if (adminRow) return;
 
-        const { data: bp } = await (supabase as any)
-          .from("business_profiles").select("place_id, id, is_draft").eq("owner_user_id", user.id).maybeSingle();
-        // Draft profile (z /biznes/start, jeszcze nie upgraded) NIE wymusza redirectu -
-        // user moze przyjsc na strone konsumencka mimo niedokonczonego draftu.
-        if (bp?.is_draft) return;
-        if (bp?.id) navigate(await businessPanelPath(user.id, bp), { replace: true });
+        // ⚠️ NIE `.maybeSingle()`: wlasciciel moze miec KILKA lokali, a przy dwoch wierszach
+        // PostgREST oddaje blad zamiast wiersza - taki lokal nie trafialby do panelu wcale.
+        const venues = await fetchMyVenues();
+        const bp = pickVenue(venues);
+        // Szkic (z /biznes/start, jeszcze nie dokonczony) NIE wymusza redirectu - user moze
+        // przyjsc na strone konsumencka mimo niedokonczonego szkicu.
+        if (!bp || bp.is_draft) return;
+        navigate(await businessPanelPath(user.id, bp), { replace: true });
       } finally {
         setBootDone(true);
       }
@@ -665,7 +678,7 @@ function BusinessGuard() {
       location.pathname.startsWith("/admin") ||
       location.pathname === "/auth" ||
       location.pathname.startsWith("/set-password") ||
-      location.pathname === "/settings" ||
+      location.pathname.startsWith("/settings") ||
       location.pathname === "/moj-profil"
     ) return;
 
@@ -678,12 +691,13 @@ function BusinessGuard() {
         .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
       if (adminRow) return;
 
-      const { data: bp } = await (supabase as any)
-        .from("business_profiles").select("place_id, id, is_draft").eq("owner_user_id", user.id).maybeSingle();
-      // Draft profile NIE wymusza redirectu - jezeli user nie dokonczyl flow
-      // upgrade z /biznes/start, to nie blokujemy mu apki konsumenckiej.
-      if (bp?.is_draft) return;
-      if (bp?.id) navigate(await businessPanelPath(user.id, bp), { replace: true });
+      // Jak wyzej: lista lokali, nie pojedynczy wiersz.
+      const venues = await fetchMyVenues();
+      const bp = pickVenue(venues);
+      // Szkic NIE wymusza redirectu - nie blokujemy apki konsumenckiej komus,
+      // kto nie dokonczyl zakladania lokalu.
+      if (!bp || bp.is_draft) return;
+      navigate(await businessPanelPath(user.id, bp), { replace: true });
     })();
   }, [user, location.pathname]);
 
@@ -773,18 +787,7 @@ function PlanRoute() {
   return <PlanWizard />;
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Po wlaczeniu internetu po offline - automatyczny refetch wszystkich
-      // aktywnych queries. Bez tego user widzial bialy ekran / "brak miejsc"
-      // dopoki nie zrobil page reload (test Network edge cases / airplane mode).
-      refetchOnReconnect: "always",
-      retry: 2,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-    },
-  },
-});
+
 
 function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -827,9 +830,13 @@ const App = () => (
         <AuthDrawer />
         {/* Arkusz "miekkiego pytania" o zgody systemowe (push/lokalizacja) - lib/permissionPrompts. */}
         <PermissionPrimerSheet />
+        {/* Prezent-nakladka wita sie z obdarowanym RAZ, przy pierwszym uruchomieniu po nadaniu. */}
+        <FrameGiftSheet />
         {/* Zdalna brama minimalnej wersji (native) - patrz UpdateGate. Renderuje sie NAD
             wszystkim (z-200), tylko gdy build jest ponizej progu z app_config. */}
         {isNative && <UpdateGate />}
+        {/* Plywajacy guzik "schowaj klawiature" nad klawiatura - tylko natywka. */}
+        {isNative && <KeyboardDismissButton />}
         <OnboardingProvider>
         <MaintenanceGate>
         <WebWaitlistGate>
@@ -861,6 +868,9 @@ const App = () => (
               Na web zostaje (testowy flow sesji grupowej odblokowany w WebWaitlistGate). */}
           <Route path="/create" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
+          {/* Ustawienia = hub z podstronami (kierunek B, 2026-09-17). Kazda podstrona ma
+              WLASNY adres, wiec gest wstecz i historia dzialaja bez dodatkowej logiki. */}
+          <Route path="/settings/:section" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/statystyki" element={<RequireAuth><Stats /></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />

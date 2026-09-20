@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Trash2 } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 
 // Wiersz z gestem przesunięcia w LEWO -> usunięcie (jak w natywnych listach iOS). Blokada
 // kierunku: pierwszy znaczacy ruch decyduje czy to swipe poziomy (delete) czy scroll pionowy
@@ -50,7 +50,7 @@ export default function SwipeToDeleteRow({
     <div className="relative overflow-hidden rounded-2xl">
       {/* Tlo usuwania (odslania sie przy przeciaganiu) */}
       <div className="absolute inset-y-0 right-0 flex items-center justify-end pr-6 bg-destructive rounded-2xl" style={{ width: Math.max(0, -dx) + 16 }}>
-        <Trash2 className="h-5 w-5 text-white shrink-0" />
+        <BrandTrash className="h-5 w-5 text-white shrink-0" />
       </div>
       <div
         className="relative"

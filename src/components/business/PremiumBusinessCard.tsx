@@ -16,17 +16,22 @@
 
 import { type ReactNode, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { BrandStar } from "@/components/BrandStar";
+import { fetchPlaceStarCount, placeStarsKey } from "@/lib/placeStars";
+import posthog from "posthog-js";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { createPortal } from "react-dom";
 import { mainCategoryLabel, subcategoryLabelLocalized, parentMainOfSub } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import type { PlaceUserNote } from "@/lib/placeNotes";
 import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { API_BASE } from "@/lib/platform";
-import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText, Instagram, Facebook, MapPin, Bookmark, Heart, ImagePlus } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, FileText, Instagram, Facebook, Heart, ImagePlus } from "lucide-react";
+import { BrandGlobe } from "@/components/BrandIcon";
 import type { LikeState } from "@/lib/placePhotoSocial";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { parseISO, isValid, formatDistanceToNow, format, startOfMonth, addMonths } from "date-fns";
@@ -34,6 +39,8 @@ import { dateLocale } from "@/lib/dateLocale";
 import RouteMap from "@/components/RouteMap";
 import { supabase } from "@/integrations/supabase/client";
 import { avatarSrc } from "@/lib/avatar";
+import TranslatableText from "@/components/TranslatableText";
+import { useQuery } from "@tanstack/react-query";
 import { instagramUrl, facebookUrl } from "@/lib/social";
 import type {
   PremiumBusinessData,
@@ -408,7 +415,10 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
               className="absolute bottom-3 right-3 z-30 h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.18)] flex items-center justify-center active:scale-90 transition-transform"
               aria-label={t("add")}
             >
-              <Bookmark className={cn("h-[19px] w-[19px] text-[#F0A583]", saved && "fill-[#F0A583]")} strokeWidth={2.2} />
+              {/* Brandowa zakladka ze STANEM (prosba Nat 2026-09-15): pusty kontur = miejsce
+                  nigdzie nie zapisane, pelna = zapisane. Wczesniej lucide `Bookmark`, ktorego
+                  cienki kontur przy 19 px praktycznie nie roznil sie od wypelnienia. */}
+              <BrandBookmark filled={!!saved} className="h-[19px] w-[19px] text-[#F0A583]" />
             </button>
           )}
           {photos.length > 1 && (
@@ -462,6 +472,18 @@ function HeroPhotoCarousel({ photos, placeName, category, onExpand, onClose, loa
 }
 
 // ─── Section renderers ────────────────────────────────────────────────────────
+
+// Zdarzenia wizytowki lokalu. Panel biznesowy pokazuje z nich liczby („klikniecia
+// w kontakt", „otwarcia menu"), wiec KAZDE musi niesc `place_id` - bez niego nie da sie
+// przypisac ruchu do lokalu i licznik stoi na zerze.
+//
+// ⚠️ Do 15.09.2026 telefon i strona byly zwyklymi <a> bez zadnego zdarzenia: afordancja
+// istniala, a panel przez 90 dni pokazywal 0 klikniec w kontakt. Dodajac tu nowa akcje
+// lokalu (rezerwacja, mapa, social), dopisz jej zdarzenie razem z nia.
+function trackPlaceEvent(placeId: string | null | undefined, event: string, props?: Record<string, unknown>) {
+  if (!placeId) return;
+  try { posthog.capture(event, { place_id: placeId, ...props }); } catch { /* analityka nie moze psuc UI */ }
+}
 
 interface SectionProps {
   data: PremiumBusinessData;
@@ -689,6 +711,32 @@ function EventsSection({ data, referenceDate, routeAvatars }: SectionProps & { r
   );
 }
 
+// "WYROZNIONE" - ile osob dalo temu lokalowi gwiazdke "topki" (prosba Nat 2026-09-16).
+// ⛔ TYLKO wizytowka premium. Na wizytowce w stanie zero tej sekcji NIE MA (decyzja Nat):
+//    tam nie ma jeszcze o czym mowic, a pusty spoleczny dowod dziala przeciwko lokalowi.
+// Zero tez sie nie renderuje - licznik pojawia sie dopiero, gdy ktos faktycznie wyroznil.
+// Gwiazdka to INLINE svg (`BrandStar`), nie maska CSS - regula z CLAUDE.md.
+function StarredSection({ data }: SectionProps) {
+  const { t } = useTranslation("wizytowka");
+  const { data: count = 0 } = useQuery({
+    queryKey: placeStarsKey(data.name),
+    enabled: !!data.name,
+    staleTime: 5 * 60_000,
+    queryFn: () => fetchPlaceStarCount(data.name),
+  });
+  if (!count) return null;
+  return (
+    <div className="flex items-center gap-2.5 pt-1">
+      <span className="h-8 w-8 rounded-full bg-[#FDF184] flex items-center justify-center shrink-0">
+        <BrandStar filled className="h-[18px] w-[18px] text-primary" />
+      </span>
+      <span className="text-sm font-semibold text-foreground leading-snug">
+        {t("starred_by", { count })}
+      </span>
+    </div>
+  );
+}
+
 function TagsSection({ data, max }: SectionProps & { max?: number }) {
   if (!data.tags?.length) return null;
   const visible = max ? data.tags.slice(0, max) : data.tags;
@@ -815,7 +863,7 @@ function PostsSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (
 
 // Kafelek menu-PDF z podgladem pierwszej strony (renderowany client-side przy wyswietlaniu).
 // Fallback do ikony+"Otworz PDF" gdy render sie nie powiedzie (np. pdf.js na starszym iOS).
-function PdfMenuTile({ url, label, className }: { url: string; label: string; className: string }) {
+function PdfMenuTile({ url, label, className, onOpen }: { url: string; label: string; className: string; onOpen?: () => void }) {
   const [img, setImg] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -826,7 +874,7 @@ function PdfMenuTile({ url, label, className }: { url: string; label: string; cl
     return () => { cancelled = true; };
   }, [url]);
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className={cn(className, "relative flex flex-col items-center justify-center gap-2")}>
+    <a onClick={onOpen} href={url} target="_blank" rel="noopener noreferrer" className={cn(className, "relative flex flex-col items-center justify-center gap-2")}>
       {img ? (
         <>
           <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -861,6 +909,7 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
               <PdfMenuTile
                 key={idx}
                 url={url}
+                onOpen={() => trackPlaceEvent(data.id, "place_menu_opened", { format: "pdf" })}
                 label={t("open_pdf", { label: sectionLabel })}
                 className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl bg-muted snap-center overflow-hidden border border-border/40 active:opacity-95"
               />
@@ -869,7 +918,10 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
           return (
             <button
               key={idx}
-              onClick={() => onPhotoExpand(imageOnly, imageOnly.indexOf(url))}
+              onClick={() => {
+                trackPlaceEvent(data.id, "place_menu_opened", { format: "photo" });
+                onPhotoExpand(imageOnly, imageOnly.indexOf(url));
+              }}
               className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl overflow-hidden bg-muted snap-center active:opacity-95"
               aria-label={t("expand_labeled", { label: sectionLabel.toLowerCase(), index: idx + 1 })}
             >
@@ -985,6 +1037,7 @@ function ContactButtonsSection({ data }: SectionProps) {
     <div className="flex gap-2">
       {data.phone && (
         <a
+          onClick={() => trackPlaceEvent(data.id, "place_phone_clicked")}
           href={`tel:${data.phone}`}
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
         >
@@ -994,17 +1047,18 @@ function ContactButtonsSection({ data }: SectionProps) {
       )}
       {data.website && (
         <a
+          onClick={() => trackPlaceEvent(data.id, "place_website_clicked")}
           href={data.website}
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
         >
-          <Globe className="h-4 w-4" />
+          <BrandGlobe className="h-4 w-4" />
           {t("website")}
         </a>
       )}
       {ig && (
-        <a href={ig} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Instagram">
+        <a onClick={() => trackPlaceEvent(data.id, "place_social_clicked", { network: "instagram" })} href={ig} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label="Instagram">
           <Instagram className="h-4 w-4" />
         </a>
       )}
@@ -1039,6 +1093,10 @@ export interface PremiumBusinessCardProps {
   hideReviews?: boolean;
   hideHours?: boolean;
   hidePosts?: boolean;
+  /** Wizytowka PREMIUM (`business_profiles.is_premium`). Odblokowuje sekcje "Wyróżnione".
+   *  ⛔ Wizytowka w STANIE ZERO jej nie dostaje (decyzja Nat 2026-09-16) - ten sam komponent
+   *  obsluguje oba przypadki, wiec bez tej flagi sekcja wyciekalaby na kazde miejsce. */
+  premium?: boolean;
   hideContact?: boolean;
   // Slots - call site dodaje custom rendery (header z close button, footer z CTA Like/Skip)
   footer?: ReactNode;
@@ -1080,6 +1138,7 @@ const PremiumBusinessCard = ({
   hideMenu,
   hideHours,
   hidePosts,
+  premium,
   hideContact,
   footer,
   header,
@@ -1191,6 +1250,10 @@ const PremiumBusinessCard = ({
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
 
+            {/* Wyroznienia od userow - stoi NAD "Od użytkowników", bo to ten sam rodzaj
+                sygnalu (co spolecznosc zrobila z tym miejscem), tylko jednym zdaniem. */}
+            {premium && <StarredSection data={data} />}
+
             {/* "Od użytkowników" - tresci od spolecznosci, POD cennikiem/menu (prosba Nat 2026-08-31):
                 miniatury zdjec wgranych do miejsca (tylko wizytowka z kontem biznesowym - w wizytowce
                 "zero" te zdjecia sa po prostu w galerii) + notki z opublikowanych tras i publicznych list.
@@ -1216,7 +1279,7 @@ const PremiumBusinessCard = ({
                   <div className="space-y-3">
                     {userNotes.map((n) => (
                       <div key={n.key} className="bg-muted/50 rounded-2xl px-3.5 py-3">
-                        <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{n.note}</p>
+                        <TranslatableText text={n.note} className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words" />
                         <div className="flex items-center gap-2 mt-2">
                           <img src={avatarSrc(n.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-secondary" />
                           <span className="text-[12px] font-semibold text-muted-foreground truncate">{n.username ?? "Użytkownik"}</span>

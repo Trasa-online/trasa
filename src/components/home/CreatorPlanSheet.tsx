@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { MapPin, ExternalLink, Clock } from "lucide-react";
+import { ExternalLink, Clock } from "lucide-react";
+import { BrandPin } from "@/components/BrandIcon";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import type { CreatorPlan, CreatorPlaceItem } from "./CreatorPlanCard";
@@ -81,7 +82,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
                     </span>
                   )}
                   <span className="flex items-center gap-1 text-white/60 text-xs">
-                    <MapPin className="h-3 w-3" />
+                    <BrandPin className="h-3 w-3" />
                     {plan.city}
                   </span>
                 </div>

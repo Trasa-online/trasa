@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, Loader2, Share2, Bookmark, ListChecks } from "lucide-react";
+import { Plus, Loader2, Bookmark, ListChecks } from "lucide-react";
+import { BrandShare, BrandCheck } from "@/components/BrandIcon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -120,7 +121,7 @@ export default function SavePlaceSheet({
         await removePlaceFromList(l.id, place.place_name);
         setOverride((prev) => new Map(prev).set(l.id, false));
         toast.success(t("save_sheet.removed_from", { title: l.title }), {
-          action: { label: "Cofnij", onClick: async () => {
+          action: { label: t("common:buttons.undo"), onClick: async () => {
             await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
             setOverride((prev) => new Map(prev).set(l.id, true));
             invalidate();
@@ -199,7 +200,7 @@ export default function SavePlaceSheet({
             <span className="block text-base font-bold text-foreground truncate leading-tight">{l.title}</span>
           </span>
           <span className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", inList ? "text-orange-500" : "text-foreground")}>
-            {busyId === l.id ? <Loader2 className="h-5 w-5 animate-spin" /> : inList ? <Check className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-6 w-6" strokeWidth={2} />}
+            {busyId === l.id ? <Loader2 className="h-5 w-5 animate-spin" /> : inList ? <BrandCheck className="h-5 w-5" strokeWidth={2.5} /> : <Plus className="h-6 w-6" strokeWidth={2} />}
           </span>
         </button>
       </div>
@@ -260,7 +261,7 @@ export default function SavePlaceSheet({
                 <p className="text-xs text-muted-foreground leading-tight">{t("save.all_saved_hint")}</p>
               </div>
               <span className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-orange-500">
-                <Check className="h-5 w-5" strokeWidth={2.5} />
+                <BrandCheck className="h-5 w-5" strokeWidth={2.5} />
               </span>
             </div>
             {displayLists.map(renderRow)}
@@ -270,7 +271,7 @@ export default function SavePlaceSheet({
         {/* Stopka: Udostępnij to miejsce */}
         <div className="shrink-0 px-5 pt-2 pb-safe-4">
           <button type="button" onClick={onShare} disabled={placeShare.loading} className="w-full h-12 rounded-2xl bg-orange-100 text-foreground font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-70">
-            {placeShare.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}{t("save_sheet.share")}</button>
+            {placeShare.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrandShare className="h-4 w-4" />}{t("save_sheet.share")}</button>
         </div>
 
         {/* Arkusz udostepniania z karta miejsca (nad tym arkuszem - z-95). */}

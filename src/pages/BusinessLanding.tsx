@@ -36,12 +36,12 @@ function BusinessWaitlist({ source }: { source: string }) {
       <input
         type="email" required value={email} onChange={e => setEmail(e.target.value)}
         placeholder={t("landing.waitlist.email_placeholder")}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-300"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-ring"
       />
 
       <label className="flex items-start gap-2.5 text-left cursor-pointer select-none px-1">
         <input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-300 cursor-pointer shrink-0" />
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-primary focus:ring-ring cursor-pointer shrink-0" />
         <span className="text-[11px] text-slate-500 leading-snug">
           {t("landing.waitlist.consent")}
           <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">{t("landing.waitlist.privacy_link")}</a>.

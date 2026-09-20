@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 // Reuzywalny pull-to-refresh oparty o touch events (dziala w natywnym WebView
@@ -13,14 +13,23 @@ export function PullToRefresh({
   className,
   children,
   onScroll,
+  scrollRef,
 }: {
   onRefresh: () => Promise<void> | void;
   className?: string;
   children: ReactNode;
   /** Pozycja scrolla wewnetrznego kontenera (scroller jest tutaj, nie u rodzica). */
   onScroll?: (scrollTop: number) => void;
+  /** Wystawia scrollowany element na zewnatrz - scroller jest TUTAJ, wiec bez tego
+   *  rodzic nie ma czego podac np. do `useScrollRestore`. */
+  scrollRef?: React.MutableRefObject<HTMLDivElement | null>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!scrollRef) return;
+    scrollRef.current = ref.current;
+    return () => { scrollRef.current = null; };
+  }, [scrollRef]);
   const startY = useRef<number | null>(null);
   const startX = useRef<number>(0);
   // Kierunek gestu ustalany RAZ na gest: "v" pionowy (pull), "h" poziomy (scroll w
@@ -77,6 +86,9 @@ export function PullToRefresh({
       ref={ref}
       // min-h-0: scroller jest flex-childem (flex-1) - bez tego rosnie do wysokosci
       // contentu i overflow-y:auto sie NIE wlacza (na native iOS = brak scrolla).
+      // Glowny scroller ekranu - tapniecie w gorna belke przewija wlasnie ten element
+      // (patrz src/lib/scrollTop.ts).
+      data-scroll-main
       className={`min-h-0 ${className ?? ""}`}
       style={{ overflowY: "auto" }}
       onTouchStart={onTouchStart}

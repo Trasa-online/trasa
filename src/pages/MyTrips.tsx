@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { moveManyToTrash, invalidateContentLists } from "@/lib/trash";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { BrandTrash } from "@/components/BrandIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
@@ -119,7 +120,7 @@ const MyTrips = () => {
     toast.success(t("trips.deleted", { city: trip.city }), {
       duration: 5000,
       action: {
-        label: "Cofnij",
+        label: t("common:buttons.undo"),
         onClick: () => {
           undone = true;
           queryClient.setQueryData(["active-routes", user?.id], previousRoutes);
@@ -130,13 +131,10 @@ const MyTrips = () => {
     setTimeout(async () => {
       if (undone) return;
       try {
-        for (const route of trip.routes) {
-          await supabase.from("pins").delete().eq("route_id", route.id);
-          await supabase.from("routes").delete().eq("id", route.id);
-        }
-        if (trip.routes[0]?.folder_id) {
-          await supabase.from("route_folders").delete().eq("id", trip.routes[0].folder_id);
-        }
+        // Do KOSZA, nie DELETE (2026-09-15). Folder ZOSTAJE: gdyby zniknal, odzyskane trasy
+        // wrocilyby z wiszacym folder_id i rozsypanym grupowaniem.
+        await moveManyToTrash("trip", trip.routes.map((r: any) => r.id));
+        invalidateContentLists();
       } catch {
         queryClient.setQueryData(["active-routes", user?.id], previousRoutes);
         toast.error(t("toast_delete_error"));
@@ -229,7 +227,7 @@ const MyTrips = () => {
                               className="absolute top-3 right-3 p-1 rounded-2xl text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
                               aria-label={t("delete_aria")}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <BrandTrash className="h-3.5 w-3.5" />
                             </button>
                           </div>
                           {trip.routes

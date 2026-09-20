@@ -11,6 +11,9 @@ export interface PinPhoto {
   url: string;
   avatar_url: string | null;
   username: string | null;
+  /** "public" | "friends" - kto widzi to zdjecie (migracja 20260917b). Bramkuje je RLS,
+   *  wiec ta wartosc sluzy WYLACZNIE do pokazania plakietki i stanu przelacznika. */
+  visibility: string;
 }
 
 const nkey = (s: string) => String(s ?? "").toLowerCase().trim();
@@ -18,7 +21,7 @@ const nkey = (s: string) => String(s ?? "").toLowerCase().trim();
 // Wszystkie zdjecia miejsc trasy + profil autora (avatar/username).
 export async function fetchPinPhotos(routeId: string): Promise<PinPhoto[]> {
   const { data, error } = await (supabase as any)
-    .from("pin_photos").select("id, route_id, place_name, user_id, url, created_at")
+    .from("pin_photos").select("id, route_id, place_name, user_id, url, visibility, created_at")
     .eq("route_id", routeId).order("created_at", { ascending: true });
   if (error) { console.error("[pinPhotos] fetch:", error.message); return []; }
   const rows = (data ?? []) as any[];
@@ -30,6 +33,7 @@ export async function fetchPinPhotos(routeId: string): Promise<PinPhoto[]> {
   }
   return rows.map((r) => ({
     id: r.id, route_id: r.route_id, place_name: r.place_name, user_id: r.user_id, url: r.url,
+    visibility: r.visibility ?? "public",
     avatar_url: r.user_id ? (byId.get(r.user_id)?.avatar_url ?? null) : null,
     username: r.user_id ? (byId.get(r.user_id)?.username ?? null) : null,
   }));

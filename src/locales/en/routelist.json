@@ -53,7 +53,8 @@
     "name_failed": "Could not change the name",
     "name_not_allowed": "This name contains a word we don't allow",
     "photo_deleted": "Photo deleted",
-    "auto_visited": "Marked as visited"
+    "auto_visited": "Marked as visited",
+    "photo_failed": "Could not add the photo. Please try again."
   },
   "cta": {
     "add_place": "Add new place",
@@ -66,7 +67,9 @@
     "rename_list": "Rename collection",
     "list_actions": "Collection actions",
     "list_theme": "Collection background",
-    "list_scope": "Country and city"
+    "list_scope": "Country and city",
+    "list_people": "People in the collection",
+    "list_privacy": "Privacy"
   },
   "fallback_title": "Collection of places",
   "photo": "Photo",
@@ -94,7 +97,18 @@
     "yellow": "Yellow",
     "gold": "Gold",
     "orange": "Orange",
-    "brown": "Brown"
+    "brown": "Brown",
+    "cream": "Cream",
+    "sand": "Sand",
+    "sage": "Sage",
+    "moss": "Moss",
+    "teal": "Teal",
+    "sky": "Sky",
+    "denim": "Denim",
+    "plum": "Plum",
+    "wine": "Wine",
+    "custom": "Custom colour",
+    "custom_hint": "Pick from the palette"
   },
   "scope": {
     "title": "Country and city",
@@ -105,5 +119,49 @@
     "save": "Save",
     "saved": "Country and city saved",
     "save_failed": "We could not save the country and city"
+  },
+  "people": {
+    "title": "People in the collection",
+    "desc_owner": "Invited people can add places to this collection. They can only remove what they added themselves.",
+    "desc_member": "You co-create this collection. You can add places and remove the ones you added yourself.",
+    "current": "Co-creators",
+    "add": "Add people",
+    "remove": "Remove from the collection",
+    "added": "Added to the collection",
+    "removed": "Removed from the collection",
+    "add_failed": "Could not add. Try again.",
+    "remove_failed": "Could not remove. Try again.",
+    "user_fallback": "User",
+    "add_confirm_one": "Add {{count}} person",
+    "add_confirm_other": "Add {{count}} people",
+    "added_count_one": "Added {{count}} person to the collection",
+    "added_count_other": "Added {{count}} people to the collection",
+    "leave": "Leave",
+    "leave_confirm_title": "Leave this collection?",
+    "leave_confirm_desc": "You will stop co-creating it. The places, notes and photos you added stay.",
+    "leave_cta": "Leave collection",
+    "left": "You left the collection",
+    "leave_failed": "Could not leave the collection. Try again."
+  },
+  "privacy": {
+    "title": "Collection privacy",
+    "desc": "You decide who can see it. Co-creators always can.",
+    "public_label": "Public",
+    "public_desc": "Visible in Explore and via the link. Anyone can save it.",
+    "private_label": "Only me",
+    "private_desc": "Disappears from Explore and the link stops working. Stays with you and your co-creators.",
+    "private_warn_one": "{{count}} person has it saved and will lose access.",
+    "private_warn_other": "{{count}} people have it saved and will lose access.",
+    "chip": "Private",
+    "now_public": "Collection is public",
+    "now_private": "Collection is private",
+    "undo": "Undo",
+    "save_failed": "Could not change privacy. Please try again."
+  },
+  "visitors": {
+    "title": "Who has been here",
+    "starred": "Starred",
+    "visited": "Visited",
+    "empty": "Nobody has checked this place off yet."
   }
 }

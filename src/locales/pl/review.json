@@ -60,12 +60,12 @@
   "gallery": {
     "add": "Dodaj",
     "tap_hint": "Dotknij zdjęcia, żeby zobaczyć je w pełni i ustawić okładkę wpisu.",
-    "empty": "Brak zdjęć w galerii wyjazdu. Dodaj je najpierw w sekcji „Zdjęcia z wyjazdu\" albo dodaj nowe powyżej.",
+    "empty": "Brak zdjęć w galerii planu. Dodaj je najpierw w sekcji „Zdjęcia z podróży\" albo dodaj nowe powyżej.",
     "empty_editable": "Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia.",
     "hint": "Dodaj zdjęcia z całej podróży",
     "go": "Przejdź do Galerii",
-    "title": "Zdjęcia z wyjazdu",
-    "already_here": "Zdjęcia dodane w trakcie wyjazdu są już tutaj - możesz dołożyć kolejne."
+    "title": "Zdjęcia z podróży",
+    "already_here": "Zdjęcia dodane w trakcie planu są już tutaj - możesz dołożyć kolejne."
   },
   "tabs": {
     "places": "Miejsca",
@@ -111,8 +111,8 @@
   "confirm": {
     "remove_place": "Czy na pewno chcesz usunąć {{name}} z planu dnia?",
     "place_this": "to miejsce",
-    "finish_desc": "Wyjazd trafi do Twoich wspomnień i do eksploracji. Do tego momentu możesz go swobodnie edytować.",
-    "finish_title": "Zakończyć wyjazd?"
+    "finish_desc": "Plan trafi do Twoich wspomnień i do eksploracji. Do tego momentu możesz go swobodnie edytować.",
+    "finish_title": "Zakończyć plan?"
   },
   "cta": {
     "back": "Wstecz",
@@ -121,7 +121,7 @@
     "save_changes": "Zapisz zmiany",
     "close_edit_mode": "Zamknij tryb edycji",
     "cancel": "Anuluj",
-    "finish_trip": "Zakończ wyjazd",
+    "finish_trip": "Zakończ plan",
     "edit_trip": "Edytuj trasę"
   },
   "toast": {
@@ -143,8 +143,8 @@
     "cover_set_error": "Nie udało się ustawić okładki",
     "route_needs_place": "Trasa musi mieć co najmniej jedno miejsce",
     "generic_error": "Coś poszło nie tak",
-    "finished_no_cover": "Wyjazd zapisany we wspomnieniach. Dodaj zdjęcia lub okładkę, żeby pojawił się w eksploracji.",
-    "finished": "Wyjazd zakończony i zapisany we wspomnieniach",
+    "finished_no_cover": "Plan zapisany we wspomnieniach. Dodaj zdjęcia lub okładkę, żeby pojawił się w eksploracji.",
+    "finished": "Plan zakończony i zapisany we wspomnieniach",
     "date_saved": "Zapisano datę",
     "dates_removed": "Usunięto daty",
     "place_removed": "Usunięto miejsce",
@@ -152,7 +152,7 @@
   },
   "share": {
     "text": "Zobacz moją trasę w spontaway",
-    "qr": "Udostępnij wyjazd kodem QR",
+    "qr": "Udostępnij plan kodem QR",
     "invite": "Zaproś znajomych do trasy",
     "link": "Udostępnij link"
   },
@@ -195,7 +195,7 @@
   "photo": {
     "for_place": "Zdjęcia do miejsca",
     "add_new": "Dodaj nowe zdjęcie",
-    "from_gallery": "Z galerii wyjazdu",
+    "from_gallery": "Z galerii planu",
     "for_places": "Zdjęcia do miejsc",
     "yours": "Twoje zdjęcie",
     "new": "Nowe zdjęcie",

@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { BrandCheck } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 
 // Wiersz wyboru miasta w sheecie "Filtry" (Eksploracja). Zastapil selektor miast z gornej
@@ -31,7 +31,7 @@ export default function CityFilterRow({
         )}
       >
         <span>{text}</span>
-        {on && <Check className="h-3.5 w-3.5" />}
+        {on && <BrandCheck className="h-3.5 w-3.5" />}
       </button>
     );
   };

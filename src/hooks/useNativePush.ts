@@ -11,6 +11,43 @@ let registeredForUser: string | null = null;
 let listenersAttached = false;
 // Capture'uje aktualny navigate (zeby push action mial dostep do nawigacji)
 let currentNavigate: ((url: string) => void) | null = null;
+// Cel z ostatniego tapnietego pusha. Przy ZIMNYM starcie nawigacja z pusha sciga sie ze
+// startowym przekierowaniem apki (RootPage `/` -> `/eksploruj`): retained event z natywki
+// przychodzi po podpieciu listenera, czyli w tej samej chwili, w ktorej boot dopiero ustala
+// ekran startowy. Kto wygra, zalezy od kolejnosci mikrotaskow i round-tripow do natywki -
+// a przegrana wyglada jak "push nic nie otworzyl". Dlatego cel zyje tu, a RootPage pyta o
+// niego PRZED wyborem ekranu startowego (`consumePendingPushUrl`), a `openPushUrl` sprawdza
+// po chwili, czy adres faktycznie sie utrzymal, i w razie czego nawiguje raz jeszcze.
+let pendingPushUrl: string | null = null;
+
+/** RootPage: cel pusha zamiast domyslnego ekranu startowego (jednorazowo). */
+export function consumePendingPushUrl(): string | null {
+  const u = pendingPushUrl;
+  pendingPushUrl = null;
+  return u;
+}
+
+/** Docelowy hash (bez `#`) zaczyna sie od `url` - porownujemy sciezke z query, bez state. */
+const atUrl = (url: string) => window.location.hash.replace(/^#/, "").startsWith(url);
+
+function openPushUrl(url: string) {
+  pendingPushUrl = url;
+  if (currentNavigate) currentNavigate(url);
+  // Dwie proby PO nawigacji: 600 ms lapie przekierowanie startowe, 2000 ms - wolniejszy boot
+  // (Suspense + zapytanie o sesje). Gdy adres sie utrzymal, cel jest juz zuzyty i nic sie
+  // nie dzieje; user, ktory w te 2 s sam gdzies poszedl, zostaje tam, gdzie poszedl, bo
+  // powtorka idzie TYLKO gdy stoimy na ekranie startowym (`/` albo `/eksploruj`).
+  for (const ms of [600, 2000]) {
+    setTimeout(() => {
+      if (pendingPushUrl !== url || atUrl(url)) { if (atUrl(url)) pendingPushUrl = null; return; }
+      const here = window.location.hash.replace(/^#/, "");
+      if (here === "" || here === "/" || here.startsWith("/eksploruj")) {
+        console.log("[NativePush] push url lost to boot redirect - retrying", url);
+        currentNavigate?.(url);
+      }
+    }, ms);
+  }
+}
 // Cache user.id zeby callback registration mial do czego zapisac token
 let currentUserId: string | null = null;
 
@@ -56,9 +93,11 @@ async function attachListeners(PushNotifications: any) {
   await PushNotifications.addListener("pushNotificationActionPerformed", (action: { notification: { data?: Record<string, unknown> } }) => {
     const data = action.notification.data ?? {};
     const url = (data as any).url;
-    if (typeof url === "string" && url.startsWith("/") && currentNavigate) {
+    if (typeof url === "string" && url.startsWith("/") && !url.startsWith("//")) {
       console.log("[NativePush] action -> navigate", url);
-      currentNavigate(url);
+      openPushUrl(url);
+    } else {
+      console.warn("[NativePush] action without usable url:", JSON.stringify(data).slice(0, 200));
     }
   });
   console.log("[NativePush] all listeners attached (module-level, persistent)");

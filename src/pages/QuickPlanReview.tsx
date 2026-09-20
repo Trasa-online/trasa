@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, GripVertical, Loader2, MapPin } from "lucide-react";
+import { ArrowLeft, GripVertical, Loader2 } from "lucide-react";
+import { BrandPin } from "@/components/BrandIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -198,7 +199,7 @@ const QuickPlanReview = () => {
                 </p>
                 {pin.address && (
                   <p className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">
-                    <MapPin className="h-3 w-3 shrink-0" />{pin.address}
+                    <BrandPin className="h-3 w-3 shrink-0" />{pin.address}
                   </p>
                 )}
                 {pin.hasSuperLike && (

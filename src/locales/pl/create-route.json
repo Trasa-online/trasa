@@ -12,32 +12,25 @@
   "must_visit_label": "Chcę odwiedzić",
   "must_visit_placeholder": "Szukaj miejsca...",
   "must_visit_hint": "Np. konkretna restauracja, muzeum albo zabytek. AI uwzględni je w planie.",
-  "pick_date_desc": "Wybierz jeden dzień albo zakres. Przy kilku dniach rozłożysz miejsca na dni już w wyjeździe.",
+  "pick_date_desc": "Wybierz jeden dzień albo zakres. Przy kilku dniach rozłożysz miejsca na dni już w planie.",
   "no_saved_places": "Nie masz jeszcze zapisanych miejsc. Wyszukaj miejsce powyżej albo zapisuj je w eksploracji.",
   "search_unavailable": "Wyszukiwarka chwilowo niedostępna. Wybierz z zapisanych.",
   "toast": {
-    "trip_failed": "Nie udało się utworzyć wyjazdu",
+    "trip_failed": "Nie udało się utworzyć planu",
     "list_failed": "Nie udało się utworzyć kolekcji",
     "list_created": "Kolekcja utworzona"
   },
   "invite": {
-    "trip_desc": "Twórz wyjazdy razem z innymi",
+    "trip_desc": "Twórz plany razem z innymi",
     "list_desc": "Twórz kolekcje razem z innymi",
-    "to_trip": "Dodaj osoby do wyjazdu",
+    "to_trip": "Dodaj osoby do planu",
     "to_list": "Dodaj osoby do kolekcji",
     "cta": "Dodaj osoby"
   },
   "skip_dates": "Pomiń - dodam daty później",
   "skip_city": "Pomiń - kolekcja bez miasta",
   "your_saved_places": "Twoje zapisane miejsca",
-  "trip_kind": {
-    "past_desc": "Dodaj wspomnienie",
-    "title": "Jaki to wyjazd?",
-    "future_desc": "Zaplanuj wyjazd",
-    "past": "Przeszły",
-    "future": "Przyszły"
-  },
-  "past_trip": "Przeszły wyjazd",
+  "past_trip": "Przeszły plan",
   "aria": {
     "add_to_list": "Dodaj do kolekcji",
     "remove_from_list": "Usuń z kolekcji",
@@ -56,7 +49,7 @@
   "create": "Utwórz",
   "skip": "Pomiń",
   "list_name_city": "Kolekcja miejsc {{city}}",
-  "trip_name_city": "Wyjazd do {{city}}",
+  "trip_name_city": "Plan: {{city}}",
   "cover": {
     "empty": "Dodaj miejsca do kolekcji albo wgraj własne zdjęcie, żeby ustawić okładkę.",
     "reset": "Wróć do domyślnej okładki",
@@ -72,11 +65,11 @@
   },
   "kind": {
     "list": "Kolekcja",
-    "trip": "Wyjazd"
+    "trip": "Plan"
   },
   "country": {
     "title": "Dokąd jedziecie?",
-    "title_list": "Skąd są te miejsca?",
+    "title_list": "Wybierz kraj",
     "hint": "Wybierz kraj lub kilka krajów. To ustawia zasięg wyszukiwarki miejsc.",
     "hint_list": "Wybierz kraj lub kilka. Możesz to zmienić później.",
     "search": "Szukaj kraju",
@@ -92,11 +85,28 @@
       "oceania": "Oceania"
     }
   },
-  "trip_name_default": "Nowy wyjazd",
+  "trip_name_default": "Nowy plan",
   "naming": {
     "collection_in": "Kolekcja miejsc {{place}}",
     "collection_plain": "Kolekcja miejsc: {{place}}",
-    "trip_to": "Wyjazd {{place}}",
-    "trip_plain": "Wyjazd: {{place}}"
-  }
+    "trip_to": "Plan podróży {{place}}",
+    "trip_plain": "Plan: {{place}}"
+  },
+  "city": {
+    "title_list": "Wybierz miasto",
+    "hint_list": "Możesz pominąć - kolekcja zostanie przy samym kraju.",
+    "placeholder": "Wpisz miasto"
+  },
+  "name": {
+    "title_list": "Nazwa kolekcji",
+    "hint_list": "Podpowiadamy nazwę z wybranego miejsca. Możesz ją zmienić."
+  },
+  "days_row_title": "Ile dni?",
+  "days_row_desc": "Rozpisz plan na dni, nawet bez terminu",
+  "days_row_less": "Mniej dni",
+  "days_row_more": "Więcej dni",
+  "days_step_desc": "Dodaj albo usuń dni. Daty możesz dopisać później - wtedy to one wyznaczą długość planu.",
+  "days_row_value_one": "{{count}} dzień",
+  "days_row_value_few": "{{count}} dni",
+  "days_row_value_many": "{{count}} dni"
 }

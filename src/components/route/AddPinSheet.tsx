@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { Search, Loader2, MapPin, Plus, Heart, Tag, PenLine, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, Heart, Tag, PenLine, ArrowLeft } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -194,7 +195,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
     { id: "liked", label: t("add_pin.tab_liked"), icon: <Heart className="h-3.5 w-3.5" />, count: availableLiked.length },
-    { id: "search", label: t("add_pin.tab_search"), icon: <Search className="h-3.5 w-3.5" /> },
+    { id: "search", label: t("add_pin.tab_search"), icon: <BrandSearch className="h-3.5 w-3.5" /> },
     { id: "category", label: t("add_pin.tab_category"), icon: <Tag className="h-3.5 w-3.5" /> },
     { id: "manual", label: t("add_pin.tab_manual"), icon: <PenLine className="h-3.5 w-3.5" /> },
   ];
@@ -351,7 +352,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
           {tab === "search" && (
             <>
               <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <BrandSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
                   value={query}
@@ -445,7 +446,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                             className="w-full flex items-start gap-3 p-3 rounded-full bg-muted/40 active:scale-[0.98] transition-all text-left"
                           >
                             <div className="flex-shrink-0 h-9 w-9 rounded-full bg-muted flex items-center justify-center">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              <BrandPin className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-foreground truncate">{place.place_name}</p>

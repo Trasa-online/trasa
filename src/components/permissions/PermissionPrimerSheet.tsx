@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, ChevronRight, Settings2 } from "lucide-react";
+import { ChevronRight, Settings2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { BrandIcon } from "@/components/BrandIcon";
+import { BrandIcon, BrandBell } from "@/components/BrandIcon";
 import { isNative } from "@/lib/platform";
 import { haptics } from "@/hooks/useHaptics";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ import {
 
 function KindGlyph({ kind, className = "h-8 w-8" }: { kind: PermKind; className?: string }) {
   return kind === "push"
-    ? <Bell className={className} strokeWidth={2.2} />
+    ? <BrandBell className={className} strokeWidth={2.2} />
     : <BrandIcon src="/Ikona_Miejsca.svg" className={className} />;
 }
 
@@ -110,7 +110,7 @@ export function PushNudgeCard({ className, open = true }: { className?: string; 
       className={cn("flex items-center gap-3 rounded-2xl bg-[#FDF184] px-4 py-3 text-left active:scale-[0.99] transition-transform", className)}
     >
       <span className="h-10 w-10 shrink-0 rounded-full bg-white/70 text-[#5B2C06] flex items-center justify-center">
-        <Bell className="h-5 w-5" strokeWidth={2.2} />
+        <BrandBell className="h-5 w-5" strokeWidth={2.2} />
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm font-bold text-[#5B2C06]">{t("permissions.push.bell.title")}</span>

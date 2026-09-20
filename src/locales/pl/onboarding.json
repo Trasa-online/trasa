@@ -101,7 +101,7 @@
     "title": "W jakim celu chcesz używać spontaway?",
     "discover": "Odkrywać nowe miejsca w mieście",
     "inspiration": "Szukać inspiracji na wyjścia",
-    "plan_trips": "Planować wyjazdy i weekendy",
+    "plan_trips": "Planować podróże i weekendy",
     "save_places": "Zapisywać ulubione miejsca",
     "with_friends": "Podróżować ze znajomymi",
     "desc": "Możesz zaznaczyć kilka.",
@@ -137,7 +137,7 @@
   "guide": {
     "create_desc": "Guzikiem „+” tworzysz własną trasę z ulubionych miejsc. Twoja trasa trafia do Eksploracji, żeby inni mogli się nią zainspirować.",
     "places_desc": "Tu przeglądasz pojedyncze miejsca, jedno po drugim: kawiarnie, restauracje, bary, miejsca kultury i natury.",
-    "trips_desc": "Tu przeglądasz wyjazdy i kolekcje miejsc od podróżnych z całego świata. Wejdź w dowolny kafelek, żeby zobaczyć miejsca i zainspirować się do własnego.",
+    "trips_desc": "Tu przeglądasz plany i kolekcje miejsc od podróżnych z całego świata. Wejdź w dowolny kafelek, żeby zobaczyć miejsca i zainspirować się do własnego.",
     "create_title": "Twórz własne trasy",
     "places_title": "Zakładka Miejsca",
     "trips_title": "Zakładka Eksploracja",
@@ -146,7 +146,7 @@
     "next": "Dalej",
     "done": "Gotowe",
     "profile_title": "Zakładka Profil",
-    "profile_desc": "Tu są Twoje wyjazdy i kolekcje, zapisane od innych, wyróżnione miejsca i ustawienia. Stąd też zaprosisz znajomych."
+    "profile_desc": "Tu są Twoje plany i kolekcje, zapisane od innych, wyróżnione miejsca i ustawienia. Stąd też zaprosisz znajomych."
   },
   "profile": {
     "title": "Twój profil w spontaway",

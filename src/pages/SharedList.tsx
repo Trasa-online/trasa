@@ -1,16 +1,20 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import TranslatableText from "@/components/TranslatableText";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteWithUndo } from "@/lib/trash";
 import { useScreenshot } from "@/hooks/useScreenshot";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MapPin, ArrowLeft, Bookmark, Building2, Trash2, Share2, Plus, Camera, Loader2, X, Pencil, MoreHorizontal, Palette, ChevronLeft, Flag } from "lucide-react";
+import { ArrowLeft, Bookmark, Building2, Camera, ChevronLeft, Loader2, MoreHorizontal, Plus, X } from "lucide-react";
+import { BrandFlag, BrandShare, BrandTrash, BrandLock, BrandGlobe, BrandPencil, BrandNote, BrandPin, BrandPalette, BrandUsers } from "@/components/BrandIcon";
 import { mapWithLimit } from "@/lib/imageCompression";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
+import { scrollTopTapProps } from "@/lib/scrollTop";
 import { scopeCountries, scopeLabel } from "@/lib/tripScope";
 import { addPlaceToList, type PlaceForList } from "@/lib/placeLists";
 import { useShare } from "@/hooks/useShare";
@@ -47,12 +51,25 @@ import { fetchVisitedKeys, toggleVisited } from "@/lib/placeVisits";
 import { haptics } from "@/hooks/useHaptics";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
-import { deferDelete } from "@/lib/deferDelete";
 import ListThemeSheet from "@/components/lists/ListThemeSheet";
 import ListScopeSheet from "@/components/lists/ListScopeSheet";
+import ListPrivacySheet from "@/components/lists/ListPrivacySheet";
+import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
+import { ParticipantsRow } from "@/components/route/ParticipantsRow";
+import PeopleSheet from "@/components/route/PeopleSheet";
+import { fetchCollectionMembers, collectionMembersKey, removeCollectionMember } from "@/lib/collectionInvite";
+import { fetchCollectionStars, collectionStarsKey, setCollectionStar, starKey } from "@/lib/collectionStars";
+import { invalidateContentLists } from "@/lib/trash";
+import PlaceVisitorsSheet from "@/components/lists/PlaceVisitorsSheet";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
+
+import PlaceNotes from "@/components/route/PlaceNotes";
+import { fetchCollectionNotes, saveCollectionNote, collectionNotesKey } from "@/lib/collectionNotes";
+import { fetchCollectionPhotos, addCollectionPhoto, removeCollectionPhoto, photosByPlace, collectionPhotoKey, collectionPhotosKey } from "@/lib/collectionPhotos";
+import { notesByPlace, placeNoteKey } from "@/lib/placeNotes";
 import { AuthorPill, HighlightChips } from "@/components/route/TripHeaderChips";
 import { listTheme } from "@/lib/listThemes";
-import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
+import { BrandBookmark } from "@/components/BrandBookmark";
 
 // Widok LISTY miejsc (polecajki) - UI/UX 1:1 z widokiem trasy (SharedRoute), ale zasilany z
 // discovery_collections/discovery_items. Lista NIE jest trasa (brak kolejnosci-planu), ale
@@ -99,6 +116,9 @@ export default function SharedList() {
   const [themeOpen, setThemeOpen] = useState(false);
   // Kraj / miasto kolekcji - zmiana przez autora z menu "..." (prosba Nat 2026-09-14).
   const [scopeOpen, setScopeOpen] = useState(false);
+  // Wspoltworcy kolekcji - dodawanie osob JUZ PO utworzeniu (prosba Nat 2026-09-15).
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   // Zmiana nazwy listy (prosba Nat 2026-09-08). Edycja NA MIEJSCU, tak jak nazwa wyjazdu -
   // osobny arkusz do jednego pola tylko mnozylby kroki.
   const [editingName, setEditingName] = useState(false);
@@ -143,10 +163,22 @@ export default function SharedList() {
   // zrobionego zdjecia, wiec karta pojawia sie PO nim i user robi drugi zrzut - z karta.
   useScreenshot(() => setShareCardOpen(true), !shareCardOpen);
 
+  // Zapis MOJEJ notki (2026-09-15). ⛔ NIE piszemy juz w `discovery_items.short_desc` - to
+  // pole trzyma notke wlasciciela i aktualizuje je `propagate_place_note` z triggera. Dwa
+  // punkty zapisu rozjechalyby notke wlasciciela z jego wierszem w `discovery_item_notes`.
   const saveItemNote = async (item: any, value: string) => {
-    const { error } = await (supabase as any).from("discovery_items").update({ short_desc: value || null }).eq("id", item.id);
-    if (error) { toast.error(t("toast.note_failed")); return; }
-    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+    if (!user) return;
+    const ok = await saveCollectionNote(id!, user.id, item.place_name, value);
+    if (!ok) { toast.error(t("toast.note_failed")); return; }
+    // ⛔ Uniewazniamy WSZYSTKIE kolekcje, nie tylko biezaca. Notka o miejscu jest JEDNA na
+    // (user, miejsce) i baza rozsiewa ja po pozostalych kolekcjach triggerem - sprawdzone na
+    // prodzie. Ale cache o tym nie wie: `collectionNotesKey(id)` czysci tylko ten jeden widok,
+    // a sasiednia kolekcja trzyma swoja odpowiedz przez `staleTime` 30 s i pokazuje pusto.
+    // Tak wygladalo zgloszenie testerki "notatki nie przenosza sie miedzy kolekcjami" - dane
+    // BYLY przeniesione, tylko ekran pokazywal stare. Prefiks bez id lapie wszystkie klucze.
+    queryClient.invalidateQueries({ queryKey: ["collection-notes"] });
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items"] });
+    queryClient.invalidateQueries({ queryKey: ["place-notes"] });
     if (value.trim()) void markVisitedAuto(item);
   };
 
@@ -183,8 +215,11 @@ export default function SharedList() {
         return supabase.storage.from("route-images").getPublicUrl(path).data?.publicUrl ?? null;
       });
       urls.push(...added.filter((u): u is string => !!u));
+      // `images[]` zostaje dla okladek kafelkow i mostu do place_photos. Wspoltworca moze
+      // nie miec prawa do UPDATE na cudzej pozycji - to NIE jest blad, bo zrodlem prawdy dla
+      // widoku sa teraz `discovery_item_photos` nizej.
       const { error: upErr } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
-      if (upErr) { toast.error(t("toast.photo_add_failed")); return; }
+      if (upErr) console.warn("[SharedList] images[] nie zaktualizowane (zapewne wspoltworca):", upErr.message);
       // Zdjecie zyje tez w galerii MIEJSCA (place_photos) - inaczej widac je tylko na tej liscie,
       // a wizytowka miejsca i okladki w innych widokach o nim nie wiedza (zgloszenie Nat 2026-08-28).
       const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
@@ -211,20 +246,47 @@ export default function SharedList() {
       await Promise.all(fresh.map((photoUrl) => linkPhotoToPlace({
         userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl,
       })));
-      queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+      // Z AUTOREM - to z tego bierze sie awatar przy miniaturze i prawo do skasowania.
+      // ⚠️ To JEDYNY zapis, ktory widzi wspoltworca: `images[]` wyzej jest dla niego zamkniete
+      // przez RLS (moze edytowac tylko WLASNE pozycje). Jesli ten zapis padnie, zdjecie znika
+      // bez sladu - i tak wygladal blad "jako uczestnik nie moge dodawac zdjec" (Nat 2026-09-16):
+      // upload sie udawal, oba zapisy po cichu odpadaly, a UI nie mial czego pokazac.
+      const saved = await Promise.all(fresh.map((photoUrl) => addCollectionPhoto(id!, item.place_name, user.id, photoUrl)));
+      const failed = saved.filter((r) => !r.ok);
+      if (failed.length) {
+        console.error("[SharedList] zdjecie nie zapisane:", failed[0]?.error);
+        toast.error(t("toast.photo_failed"));
+      }
+      // ⛔ Prefiks bez id: zdjecie miejsca rozchodzi sie na WSZYSTKIE moje kolekcje z tym
+      // miejscem (trigger `trg_dip_spread`, migracja 20260916h), wiec czyszczenie samego
+      // biezacego widoku zostawialoby sasiednie kolekcje ze starym stanem - dokladnie tak
+      // wygladalo zgloszenie "zdjecia nie przenosza sie miedzy kolekcjami".
+      queryClient.invalidateQueries({ queryKey: ["collection-photos"] });
+      queryClient.invalidateQueries({ queryKey: ["shared-list-items"] });
       // Zdjecie z miejsca = bylem tam - odhaczamy automatycznie (patrz markVisitedAuto).
       if (fresh.length) void markVisitedAuto(item);
+    } catch (e: any) {
+      // Bez tego `catch` kazdy wyjatek w tym ciagu (upload, moderacja, zapis) konczyl sie
+      // niezlapana obietnica: spinner gasl i nie dzialo sie NIC - ani zdjecia, ani komunikatu.
+      console.error("[SharedList] addItemPhotos:", e?.message ?? e);
+      toast.error(t("toast.photo_failed"));
     } finally { setUploadingItem(null); }
   };
 
   // Kasowalo BEZ SLOWA - ani toasta, ani drogi powrotu (zgloszenie Nat 2026-09-09). Plik
   // w Storage zostaje, zmieniamy tylko tablice `images` i wiersz galerii miejsca, wiec
   // "Cofnij" przywraca komplet.
-  const removeItemPhoto = async (item: any, url: string) => {
+  const removeItemPhoto = async (item: any, url: string, photoId?: string) => {
     const before: string[] = Array.isArray(item.images) ? item.images : [];
     const urls = before.filter((u: string) => u !== url);
+    // Wiersz z autorem (zrodlo prawdy dla widoku). RLS wpuszcza autora zdjecia i wlasciciela.
+    if (photoId) {
+      const ok = await removeCollectionPhoto(photoId);
+      if (!ok) { toast.error(t("toast.photo_delete_failed")); return; }
+      queryClient.invalidateQueries({ queryKey: ["collection-photos"] });
+    }
     const { error } = await (supabase as any).from("discovery_items").update({ images: urls }).eq("id", item.id);
-    if (error) { toast.error(t("toast.photo_delete_failed")); return; }
+    if (error && !photoId) { toast.error(t("toast.photo_delete_failed")); return; }
     const placeKey = placeKeyOf({ googlePlaceId: item.google_place_id ?? null, placeName: item.place_name });
     // Zdejmij tez z galerii miejsca (tylko wlasny wiersz - cudze zdjecia miejsca zostaja).
     if (user) await unlinkPhotoFromPlace({ userId: user.id, placeKey, photoUrl: url });
@@ -236,6 +298,9 @@ export default function SharedList() {
           void (async () => {
             await (supabase as any).from("discovery_items").update({ images: before }).eq("id", item.id);
             if (user) await linkPhotoToPlace({ userId: user.id, placeKey, placeName: item.place_name, city: item.city ?? col?.city ?? null, photoUrl: url });
+            // Wiersz z autorem odtwarzamy na nowo (stary `id` juz nie istnieje).
+            if (user) await addCollectionPhoto(id!, item.place_name, user.id, url);
+            queryClient.invalidateQueries({ queryKey: ["collection-photos"] });
             queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
             queryClient.invalidateQueries({ queryKey: ["place-photos"] });
           })();
@@ -248,24 +313,14 @@ export default function SharedList() {
     if (!user || !id) return;
     setDeleting(true);
     try {
-      // Commit ODROCZONY o okno "Cofnij" - kasujemy kolekcje RAZEM z pozycjami, wiec po fakcie
-      // nie da sie tego zlozyc z powrotem; jedyne uczciwe cofniecie to nie wykonac usuniecia.
-      // Ten sam wzorzec, co przy usuwaniu listy z profilu (TravelerProfile).
-      const refresh = () => {
-        queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
-        queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-      };
+      // Do KOSZA OD RAZU + "Cofnij" w toascie (2026-09-15). Pozycje kolekcji zostaja,
+      // wiec przywrocona kolekcja wraca z miejscami. `deleteWithUndo` samo odswieza
+      // wszystkie listy - wczesniej ten ekran pamietal tylko o dwoch swoich kluczach.
       setAskDelete(false);
       goBackOr(navigate, "/moj-profil");
-      deferDelete({
+      void deleteWithUndo("list", id, {
         message: t("toast.list_deleted"),
-        commit: async () => {
-          await (supabase as any).from("discovery_items").delete().eq("collection_id", id);
-          const { error } = await (supabase as any).from("discovery_collections").delete().eq("id", id).eq("user_id", user.id);
-          if (error) { toast.error(t("toast.list_delete_failed")); return; }
-          refresh();
-        },
-        onUndo: refresh,
+        failMessage: t("toast.list_delete_failed"),
       });
     } catch (e: any) {
       toast.error(t("toast.list_delete_failed"));
@@ -280,7 +335,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, countries, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status, theme")
+        .select("id, title, city, countries, description, user_id, author_name, author_avatar, cover_url, tags, is_public, list_status, theme, saves_count")
         .eq("id", id as string)
         .maybeSingle();
       return data as any;
@@ -302,19 +357,38 @@ export default function SharedList() {
 
   // Gwiazdka kolekcji (discovery_items.is_top, migracja 20260913b) - BEZ LIMITU (decyzja Nat
   // 2026-09-13; od 2026-09-14 wyjazdy tak samo, patrz src/lib/topPlaces.ts).
-  const toggleTopItem = async (item: any) => {
-    const next = !item.is_top;
-    haptics.light();
-    queryClient.setQueryData(["shared-list-items", id], (old: any[] | undefined) =>
-      (old ?? []).map((p) => (p.id === item.id ? { ...p, is_top: next } : p)));
-    const { error } = await (supabase as any).from("discovery_items").update({ is_top: next }).eq("id", item.id);
-    if (error) {
-      console.error("[SharedList] top toggle:", error.message);
-      queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+  // Gwiazdka PER UCZESTNIK (2026-09-20, `discovery_item_stars`): kazdy z kolekcji wyroznia
+  // sam, `discovery_items.is_top` (= gwiazdka wlasciciela) trzyma trigger w bazie. Optymistycznie
+  // w cache gwiazdek; is_top w cache pozycji NIE ruszamy - i tak liczymy z gwiazdek.
+  const { data: stars = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionStarsKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchCollectionStars(id!),
+  });
+  const starsByPlace = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const st of stars as { user_id: string; place_name: string }[]) {
+      const k = starKey(st.place_name);
+      const arr = m.get(k);
+      if (arr) { if (!arr.includes(st.user_id)) arr.push(st.user_id); } else m.set(k, [st.user_id]);
     }
+    return m;
+  }, [stars]);
+  const toggleTopItem = async (item: any) => {
+    if (!user || !id) return;
+    const k = starKey(item.place_name);
+    const next = !(starsByPlace.get(k) ?? []).includes(user.id);
+    haptics.light();
+    queryClient.setQueryData(collectionStarsKey(id), (old: any[] | undefined) => next
+      ? [...(old ?? []), { user_id: user.id, place_name: item.place_name }]
+      : (old ?? []).filter((st) => !(st.user_id === user.id && starKey(st.place_name) === k)));
+    const ok = await setCollectionStar(id, user.id, item.place_name, next);
+    if (!ok) toast.error(t("common:errors.generic"));
+    queryClient.invalidateQueries({ queryKey: collectionStarsKey(id) });
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     queryClient.invalidateQueries({ queryKey: ["starred-places"] });
   };
-
 
   // "Gdzie juz bylem" (zgloszenie z testow 2026-09-08). Stan nalezy do OGLADAJACEGO, nie do
   // listy - odhaczenie na CUDZEJ zapisanej liscie nie moze jej zmieniac wszystkim. Klucz to
@@ -339,6 +413,30 @@ export default function SharedList() {
     },
   });
 
+  // ODWIEDZINY WSZYSTKICH UCZESTNIKOW (zgloszenie testerki 2026-09-16). `place_visits` jest
+  // prywatne (RLS: tylko swoje wiersze), wiec slad wspoltworcow idzie waskim SECDEF RPC
+  // `list_collection_visits` - wylacznie miejsca z TEJ kolekcji i wylacznie jej uczestnicy
+  // (migracja 20260916f). Moje wlasne odwiedziny czytam dalej wprost (`visitedKeys`), bo to
+  // one sterują przelacznikiem i musza sie odswiezac natychmiast, bez czekania na RPC.
+  const { data: allVisits = EMPTY_ARRAY } = useQuery({
+    queryKey: ["collection-visits", id],
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("list_collection_visits", { p_collection_id: id });
+      if (error) { console.warn("[SharedList] collection visits:", error.message); return []; }
+      return (data ?? []) as { user_id: string; place_key: string }[];
+    },
+  });
+  const visitorsByPlace = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const v of allVisits as { user_id: string; place_key: string }[]) {
+      const arr = m.get(v.place_key);
+      if (arr) { if (!arr.includes(v.user_id)) arr.push(v.user_id); } else m.set(v.place_key, [v.user_id]);
+    }
+    return m;
+  }, [allVisits]);
+
   const handleToggleVisited = async (it: any) => {
     if (!user) return;
     const key = visitKeyOf(it);
@@ -352,6 +450,9 @@ export default function SharedList() {
     haptics.light();
     const now = await toggleVisited(user.id, was, { placeKey: key, placeName: it.place_name, city: it.city ?? (col as any)?.city ?? null });
     if (now === was) queryClient.invalidateQueries({ queryKey: ["place-visits", user.id, id] });
+    // Slad grupowy idzie z serwera, wiec po kazdym przelaczeniu musi sie przeliczyc -
+    // inaczej moj awatar nie pojawilby sie w pigulce az do wejscia w kolekcje od nowa.
+    queryClient.invalidateQueries({ queryKey: ["collection-visits", id] });
   };
 
   // #2/#3: zdjecia userow dodane do miejsc tej listy w wizytowkach (place_photos). Sluza jako
@@ -381,6 +482,94 @@ export default function SharedList() {
       return data as any;
     },
   });
+
+  // MOJ awatar do edytora notki: dymek nad edytorem nalezy do mnie, wiec musi pokazywac
+  // mnie, a nie autora kolekcji (przy wspoltworzeniu to dwie rozne osoby).
+  const { data: me } = useQuery({
+    queryKey: ["profile-mini", user?.id],
+    enabled: !!user?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("profiles").select("username, avatar_url").eq("id", user!.id).maybeSingle();
+      return data as { username: string | null; avatar_url: string | null } | null;
+    },
+  });
+
+  // ⛔ TE DWA HOOKI MUSZA STAC TU, NAD `if (isLoading) return ...` (linia nizej w pliku).
+  // Wyladowaly pierwotnie obok `isOwner`, czyli PO early-returnach - przez co przy pierwszym
+  // renderze (kolekcja jeszcze sie laduje) Reactowi ubywalo hookow i cala strona sie
+  // wywalala na "Cos sie zacielo" zaraz po utworzeniu kolekcji (zgloszenie Nat 2026-09-15).
+  // Ta sama pulapka, co przy hurtowym wstawianiu `t` (memory feedback_i18n_t_shadowing_pitfall):
+  // ani tsc, ani build tego nie lapia.
+  //
+  // WSPOLTWORCY: zaproszeni moga DODAWAC miejsca, a edytowac i usuwac tylko to, co sami
+  // dodali (`discovery_items.added_by`) - tak samo mowia polityki RLS w bazie.
+  // ⛔ TEN SAM klucz co w `CollectionPeopleSheet`, wiec MUSI zwracac ten sam ksztalt danych.
+  // Wczesniej stalo tu `queryFn` mapujace od razu na tablice id - i kto pierwszy wypelnil
+  // cache, ten narzucal ksztalt drugiemu: arkusz dostawal tablice stringow zamiast obiektow
+  // i kazdy wspoltworca wyswietlal sie jako "Użytkownik" bez awatara (zgloszenie Nat
+  // 2026-09-15). Przeksztalcenie robi teraz `select`, ktore NIE dotyka cache.
+  const { data: members = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionMembersKey(id),
+    // Bez `!!user`: wspoltworcow PUBLICZNEJ kolekcji widzi tez niezalogowany (migracja
+    // 20260915k). Wczesniej belka pokazywala sklad wylacznie wlascicielowi i czlonkom.
+    enabled: !!id,
+    staleTime: 60_000,
+    queryFn: () => fetchCollectionMembers(id!),
+  });
+  // `select` juz tu nie ma: belka potrzebuje awatarow i nickow wspoltworcow, wiec trzymamy
+  // PELNE wiersze (queryFn i tak dociaga profile), a same id liczymy obok.
+  const memberIds = useMemo(() => (members as any[]).map((m) => m.user_id), [members]);
+  // Wspoltworcy do belki: bez wlasciciela (stoi juz jako autor) i bez wierszy bez nicku,
+  // ktorych i tak nie da sie pokazac ani otworzyc.
+  const coAuthors = useMemo(
+    () => (members as any[]).filter((m) => m.user_id !== col?.user_id && m.username),
+    [members, col?.user_id],
+  );
+  // Wszyscy uczestnicy (wlasciciel + wspoltworcy) - do "wyroznili wszyscy" i arkusza "kto tu byl".
+  const participantIds = useMemo(
+    () => Array.from(new Set([col?.user_id, ...(members as any[]).map((m) => m.user_id)].filter(Boolean))) as string[],
+    [members, col?.user_id],
+  );
+  const participantById = useMemo(() => {
+    const m = new Map<string, { id: string; username: string | null; avatar_url: string | null; avatar_frame?: string | null; avatar_frame_color?: string | null }>();
+    if (col?.user_id) m.set(col.user_id, { id: col.user_id, username: (author as any)?.username ?? col.author_name ?? null, avatar_url: (author as any)?.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color });
+    for (const mem of members as any[]) if (mem?.user_id) m.set(mem.user_id, { id: mem.user_id, username: mem.username ?? null, avatar_url: mem.avatar_url ?? null, avatar_frame: mem.avatar_frame, avatar_frame_color: mem.avatar_frame_color });
+    return m;
+  }, [members, col?.user_id, col?.author_name, col?.author_avatar, author]);
+  // Awatary do pigulki "odwiedzone": autor + wspoltworcy. Innych osob w tej mapie nie ma
+  // i byc nie moze - RPC oddaje slad wylacznie uczestnikow kolekcji.
+  // ⛔ TEN HOOK MUSI STAC NAD early-returnami (bramka `npm run hooks:check` zlapala go po
+  //    nich przy pierwszym podejsciu - ta sama pulapka, co przy widoku kolekcji 2026-09-15).
+  const avatarByUser = useMemo(() => {
+    const m = new Map<string, string | null>();
+    if ((col as any)?.user_id) m.set((col as any).user_id, (author as any)?.avatar_url ?? (col as any)?.author_avatar ?? null);
+    for (const mem of members as any[]) if (mem?.user_id) m.set(mem.user_id, mem.avatar_url ?? null);
+    return m;
+  }, [members, (col as any)?.user_id, (author as any)?.avatar_url, (col as any)?.author_avatar]);
+  const [allPeopleOpen, setAllPeopleOpen] = useState(false);
+  // Arkusz "kto tu byl" spod zoltej pigulki "odwiedzone" (prosba Nat 2026-09-20).
+  const [visitorsFor, setVisitorsFor] = useState<any | null>(null);
+  const [askLeave, setAskLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  // Notki WSZYSTKICH uczestnikow: RLS wpuszcza kazdego, kto widzi kolekcje, wiec czytelnik
+  // publicznej kolekcji tez widzi caly watek - tak samo, jak przy opublikowanym wyjezdzie.
+  const { data: allNotes = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionNotesKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchCollectionNotes(id!),
+  });
+  const notesFor = notesByPlace(allNotes as any[]);
+  // Zdjecia uczestnikow przy miejscach - kazde z awatarem autora (prosba Nat 2026-09-15).
+  // Ten sam hook-porzadek co notki: NAD early-returnami.
+  const { data: allPhotos = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionPhotosKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchCollectionPhotos(id!),
+  });
+  const photosFor = photosByPlace(allPhotos as any[]);
 
   // Licznik wyswietlen (dedup per-urzadzenie, jak SharedRoute).
   useEffect(() => {
@@ -533,12 +722,42 @@ export default function SharedList() {
   const cityLabel = col.city || scopeLabel(col) || "";
   const authorName = author?.first_name || author?.username || col.author_name || t("someone");
   const isOwner = !!user && col.user_id === user.id;
+  const isMember = !!user && (memberIds as string[]).includes(user.id);
+  // Wlasciciel i wspoltworca. Ten sam warunek rzadzi TRZEMA rzeczami naraz: dodawaniem miejsc,
+  // notek i zdjec. Nazywal sie `canAddPlaces` i przez to brzmial wezej, niz dzialal - a arkusze
+  // obslugujace te akcje wisialy pod `isOwner` (patrz komentarz przy ukrytym inpucie nizej).
+  const canContribute = isOwner || isMember;
+  const canEditItem = (it: any) => isOwner || (isMember && it?.added_by === user?.id);
+  // MOJ awatar idzie pierwszy - swoj slad czlowiek szuka najpierw.
+  const visitorAvatars = (key: string): string[] | undefined => {
+    const ids = visitorsByPlace.get(key);
+    if (!ids?.length) return undefined;
+    const mine = user?.id;
+    const ordered = mine && ids.includes(mine) ? [mine, ...ids.filter((x) => x !== mine)] : ids;
+    return ordered.map((uid) => avatarByUser.get(uid) ?? null).filter((v): v is string => v !== undefined) as string[];
+  };
   const placesCountLabel = t("places_count", { count: items.length });
 
 
   // Guzik "Udostepnij" pokazuje KARTE do zrzutu ekranu (szablon listy). Wysylka linku zostaje
   // pod dlugim przytrzymaniem - ekran z kanalami i eksportem obrazu to osobny temat.
   const handleShare = () => setShareCardOpen(true);
+  // Opuszczenie kolekcji przez wspoltworce (RLS pozwala kasowac wlasny wiersz czlonkostwa).
+  // Po wyjsciu wracamy tam, skad user przyszedl: kolekcja prywatna staje sie dla niego
+  // niewidoczna, a publiczna przestaje byc "jego" - w obu razach widok nie ma po co zostac.
+  const handleLeave = async () => {
+    if (!user || !id) return;
+    setLeaving(true);
+    const ok = await removeCollectionMember(id, user.id);
+    setLeaving(false);
+    if (!ok) { haptics.error(); toast.error(t("people.leave_failed")); return; }
+    haptics.success();
+    setAskLeave(false);
+    queryClient.invalidateQueries({ queryKey: collectionMembersKey(id) });
+    invalidateContentLists();
+    toast.success(t("people.left"));
+    goBackOr(navigate, "/moj-profil?tab=listy");
+  };
   const handleShareLink = () => { void share({ title: col.title || cityLabel || t("common:fallback.list"), url: buildShareUrl(`/lista/${col.id}`) }); };
 
   // Wlasciciel dodaje miejsca do listy (drawer jak w wyjazdach): batch insert do discovery_items.
@@ -567,7 +786,7 @@ export default function SharedList() {
     queryClient.invalidateQueries({ queryKey: ["place-photos"] });
     const { id: _id, ...rest } = item;
     toast.success(t("toast.place_deleted"), {
-      action: { label: "Cofnij", onClick: async () => {
+      action: { label: t("common:buttons.undo"), onClick: async () => {
         await (supabase as any).from("discovery_items").insert({ ...rest });
         await restorePlacePhotos(gone);
         queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
@@ -619,20 +838,38 @@ export default function SharedList() {
     <div>
       {rows.map((pin: any, idx: number) => {
         const i = offset + idx;
-        const noteText = (pin.short_desc ?? "").trim();
-        const photos: string[] = Array.isArray(pin.images) ? pin.images : [];
+        // Zdjecia przy miejscu Z AUTOREM. Zrodlem sa `discovery_item_photos`; stara tablica
+        // `images[]` dokladana jest tylko dla pozycji sprzed migracji (backfill przepisal
+        // istniejace, ale nowa pozycja dodana starym kodem moze jeszcze trafic do tablicy).
+        const rowPhotos = photosFor.get(collectionPhotoKey(pin.place_name)) ?? [];
+        const legacy: string[] = (Array.isArray(pin.images) ? pin.images : [])
+          .filter((u: string) => !rowPhotos.some((rp: any) => rp.url === u));
+        const photos: { id?: string; url: string; user_id?: string | null; avatar_url?: string | null }[] =
+          [...rowPhotos.map((rp: any) => ({ id: rp.id, url: rp.url, user_id: rp.user_id, avatar_url: rp.avatar_url })),
+           ...legacy.map((u: string) => ({ url: u }))];
         const busy = uploadingItem === pin.id;
         // Notka (auto-zapis, bez headera) + zdjecia miejsca. Widz: read-only. Slot renderowany
         // tylko gdy jest tresc lub jestem wlascicielem. Uklad wspolny z wyjazdami (PlaceNoteEditor).
-        const hasContent = !!noteText || photos.length > 0 || isOwner;
+        const mine = canEditItem(pin);
+        // Moja notka jedzie do edytora, cudze pod spodem jako dymki z awatarem autora -
+        // dokladnie ten sam uklad, co przy miejscu w wyjezdzie (PlaceNotes).
+        const placeNotes = notesFor.get(placeNoteKey(pin.place_name)) ?? [];
+        const myNote = (placeNotes.find((n: any) => n.user_id === user?.id)?.note ?? "").trim();
+        const othersCount = placeNotes.filter((n: any) => n.user_id !== user?.id).length;
+        // Wspoltworca moze pisac WLASNA notke przy KAZDYM miejscu - takze przy cudzym.
+        // `mine` rzadzi usuwaniem pozycji i zdjec, notka ma szerszy krag autorow.
+        const canWriteNote = canContribute;
+        const hasContent = !!myNote || othersCount > 0 || photos.length > 0 || canWriteNote;
         const note = hasContent ? (
           <div className="space-y-2.5 mt-0.5">
             {/* Notka wyglada TAK SAMO jak na wyjezdzie: szary dymek + awatar autora w prawym-dolnym
                 rogu (prosba Nat 2026-08-30). Autor = wlasciciel listy.
                 Pigulki "Edytuj notkę" i "Zdjęcie" zniknely stad razem z wyjazdami (2026-09-10) -
                 obie akcje siedza w menu przy miejscu. */}
-            <PlaceNoteEditor note={noteText} editable={isOwner} showAvatar avatarUrl={author?.avatar_url ?? col.author_avatar}
+            <PlaceNoteEditor note={myNote} editable={canWriteNote} showAvatar avatarUrl={me?.avatar_url ?? author?.avatar_url ?? col.author_avatar}
               onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
+            {/* Notki POZOSTALYCH uczestnikow - moja jest juz w edytorze wyzej. */}
+            <PlaceNotes notes={placeNotes as any} excludeUserId={user?.id ?? null} />
             {/* Wgrywanie trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
             {busy && (
               <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
@@ -642,18 +879,28 @@ export default function SharedList() {
             {/* Zdjecia miejsca (2:3) - dodane przez wlasciciela listy. */}
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {photos.map((url) => (
-                  <div key={url} className="relative w-[76px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
-                    {/* Klik w zdjecie = pelnoekranowy podglad. */}
-                    {/* Kafelek 76 px -> miniatura; podglad pelnoekranowy bierze oryginal. */}
-                    <StoredImage
-                      url={url} size={76} role="button"
-                      onClick={() => setPhotoViewer({ urls: photos.map((u: string) => resolveStored(u) ?? u), idx: photos.indexOf(url) })}
-                      className="w-full h-full object-cover active:opacity-90 transition-opacity"
-                    />
-                    {isOwner && <button onClick={() => removeItemPhoto(pin, url)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
-                  </div>
-                ))}
+                {photos.map((ph, pi) => {
+                  // Kasuje AUTOR zdjecia albo wlasciciel kolekcji - tak samo mowi RLS.
+                  const canDropPhoto = isOwner || (!!ph.user_id && ph.user_id === user?.id) || (!ph.id && mine);
+                  return (
+                    <div key={ph.id ?? ph.url} className="relative w-[76px] aspect-[2/3] shrink-0 rounded-xl overflow-hidden bg-muted">
+                      {/* Klik w zdjecie = pelnoekranowy podglad. */}
+                      {/* Kafelek 76 px -> miniatura; podglad pelnoekranowy bierze oryginal. */}
+                      <StoredImage
+                        url={ph.url} size={76} role="button"
+                        onClick={() => setPhotoViewer({ urls: photos.map((x) => resolveStored(x.url) ?? x.url), idx: pi })}
+                        className="w-full h-full object-cover active:opacity-90 transition-opacity"
+                      />
+                      {/* Awatar autora w lewym-dolnym rogu - zeby bylo wiadomo, kto co wrzucil
+                          (prosba Nat 2026-09-15). Ten sam jezyk, co przy notkach i w wyjezdzie. */}
+                      {ph.user_id && (
+                        <img src={avatarSrc(ph.avatar_url ?? null)} alt="" aria-hidden
+                          className="absolute bottom-1 left-1 h-5 w-5 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
+                      )}
+                      {canDropPhoto && <button onClick={() => removeItemPhoto(pin, ph.url, ph.id)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -663,24 +910,40 @@ export default function SharedList() {
         return (
           <RoutePlaceRow
             key={pin.id}
-            pin={{ ...pin, category: catOf(pin), photo_url: pinCover(pin) }}
+            // ⛔ `tags: []` - STARE kolekcje maja `discovery_items.tags` (pigulki z czasow
+            // przebudowy list 2026-08-17) i wiersz miejsca renderowal je pod nazwa. Nowe
+            // kolekcje ich nie zapisuja, wiec ta sama lista wygladala inaczej zaleznie od
+            // tego, kiedy powstala (prosba Nat 2026-09-15, zeby je zdjac). Kolumna ZOSTAJE
+            // w bazie - powrot to skasowanie tej jednej linii.
+            // ⚠️ Tagi miejsca w WYJEZDZIE (`pins.tags`) to co innego i zostaja.
+            pin={{ ...pin, tags: [], category: catOf(pin), photo_url: pinCover(pin) }}
             index={i}
             categoryLabel={categoryLabel(catOf(pin))}
             onOpen={() => openDetail(pin)}
             onGoogle={() => openGoogle(pin)}
             onSave={!isOwner ? () => toggleSaveBookmark(pin) : undefined}
+            /* Usuwanie i edycja: wlasciciel wszystkiego, wspoltworca tylko swojego wkladu. */
             saved={isSaved(pin.place_name)}
-            onDelete={isOwner ? () => handleDeleteItem(pin) : undefined}
+            onDelete={mine ? () => handleDeleteItem(pin) : undefined}
             deleteLabel={t("remove_from_list")}
             // Gwiazdka "topki" takze na liscie (prosba Nat 2026-09-13) - ten sam wiersz i ta
             // sama logika, co na wyjezdzie: jedna gwiazdka, kolejny wybor ja PRZENOSI.
-            isTop={!!pin.is_top}
-            onToggleTop={isOwner ? () => void toggleTopItem(pin) : undefined}
-            menuExtras={isOwner ? [
+            /* Od 2026-09-20 gwiazdka jest PER UCZESTNIK: przy nazwie stoi, gdy wyroznil
+               KTOKOLWIEK; guzik pokazuje MOJ stan; wyroznic moze kazdy z kolekcji, nie tylko
+               wlasciciel pozycji. `is_top` z bazy zostaje zapasem dla kolekcji bez gwiazdek w tabeli. */
+            isTop={(starsByPlace.get(starKey(pin.place_name))?.length ?? 0) > 0 || (!!pin.is_top && !starsByPlace.has(starKey(pin.place_name)))}
+            topByMe={!!user && (starsByPlace.get(starKey(pin.place_name)) ?? []).includes(user.id)}
+            topCount={starsByPlace.get(starKey(pin.place_name))?.length ?? 0}
+            topAll={(starsByPlace.get(starKey(pin.place_name))?.length ?? 0) >= participantIds.length && participantIds.length > 0}
+            onToggleTop={canContribute && user ? () => void toggleTopItem(pin) : undefined}
+            onVisitedTap={() => setVisitorsFor(pin)}
+            /* Notke i zdjecie moze dodac KAZDY uczestnik, takze przy cudzym miejscu -
+               `mine` rzadzi tylko usuwaniem samej pozycji z kolekcji. */
+            menuExtras={canWriteNote ? [
               {
                 key: "note",
-                label: noteText ? t("route:note.edit") : t("route:note.add"),
-                icon: <Pencil className="h-4 w-4" />,
+                label: myNote ? t("route:note.edit") : t("route:note.add"),
+                icon: <BrandNote className="h-4 w-4" />,
                 onClick: () => setNoteItem(pin),
               },
               {
@@ -690,8 +953,16 @@ export default function SharedList() {
                 onClick: () => { itemPhotoTarget.current = pin; itemPhotoInputRef.current?.click(); },
               },
             ] : undefined}
-            onToggleVisited={isOwner && user ? () => handleToggleVisited(pin) : undefined}
-            visited={isOwner ? visitedKeys.has(visitKeyOf(pin)) : authorVisitedKeys.has(visitKeyOf(pin))}
+            /* ⛔ NIE `isOwner`: odhaczyc "byłem tu" moze KAZDY uczestnik kolekcji (zgloszenie
+               testerki 2026-09-16). Odwiedziny sa prywatne i naleza do osoby, nie do kolekcji,
+               wiec kazdy przelacza WYLACZNIE swoj slad. */
+            onToggleVisited={canContribute && user ? () => handleToggleVisited(pin) : undefined}
+            /* Pigulka pojawia sie, gdy byl tu KTOKOLWIEK z uczestnikow; etykieta w menu
+               ("byłem" / "nie byłem") chodzi po MOIM sladzie. Na cudzej kolekcji bez
+               wspoltworcow zostaje slad autora - dokladnie jak dotad. */
+            visited={(visitorAvatars(visitKeyOf(pin))?.length ?? 0) > 0 || (isOwner ? visitedKeys.has(visitKeyOf(pin)) : authorVisitedKeys.has(visitKeyOf(pin)))}
+            visitedByMe={visitedKeys.has(visitKeyOf(pin))}
+            visitedAvatars={visitorAvatars(visitKeyOf(pin))}
             // Awatar w pigulce "odwiedzone" ZAWSZE: na cudzej liscie autora, na wlasnej moj
             // (autor listy = ja) - makieta Nat 2026-09-13.
             visitedAvatar={author?.avatar_url ?? col.author_avatar ?? null}
@@ -723,25 +994,40 @@ export default function SharedList() {
           kolekcja ma na kafelku w eksploracji, wiec wejscie z siatki nie zmienia tozsamosci.
           Guziki zostaja biale (czytelne na kazdym z 9 kolorow palety), a pigulka autora
           dostaje biale tlo zamiast peachy - na jasnych motywach peachy zlewalo sie z belka. */}
-      <div className="shrink-0 px-5 pb-2.5" style={{ backgroundColor: listTheme(col.theme, col.id).bg, paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      {/* Tapniecie w belke = powrot na gore listy miejsc (odruch z iOS); guziki w srodku
+          (wstecz, udostepnij, "...") dzialaja normalnie. */}
+      <div {...scrollTopTapProps()} className="shrink-0 px-5 pb-2.5" style={{ backgroundColor: listTheme(col.theme, col.id).bg, paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">
               <ChevronLeft className="h-5 w-5 text-foreground" strokeWidth={2.4} />
             </button>
             {/* Awatar + username WYSRODKOWANE (#5 - przeniesione ze skraju). Miasto/liczba miejsc -> pod tytul. */}
-            <div className="flex-1 min-w-0 flex justify-center">
+            {/* Autor + WSPOLTWORCY (prosba Nat 2026-09-15: "awatar i handle osob, ktore rowniez
+                sa w danej kolekcji"). Rzad sie ZAWIJA: miedzy guzikiem wstecz a akcja zostaje
+                ~280 px, wiec trzy pigulki obok siebie by sie nie zmiescily, a poziomy scroll
+                w belce gryzlby sie z gestami. Przy zero wspoltworcach wyglada jak dotad. */}
+            <ParticipantsRow
+              className="flex-1 justify-center"
+              others={coAuthors as any}
+              onOpenAll={() => setAllPeopleOpen(true)}
+              /* Przy wspoltworcach KAZDE tapniecie w belke uczestnikow otwiera arkusz skladu
+                 (tam "Opusc" dla uczestnika, prosba Nat 2026-09-20); profil jest w arkuszu
+                 jedno tapniecie dalej. Kolekcja jednoosobowa: pigulka autora dalej = profil. */
+              onOpenPerson={() => setAllPeopleOpen(true)}
+              author={<>
               {/* Autor jako pigulka (redesign 2026-09-13, TripHeaderChips) - awatar z ramka zostaje. */}
               {author?.username ? (
                 <AuthorPill src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
-                  className="!bg-white" onClick={() => navigate(`/profil/${author.username}`)} />
+                  className="!bg-white" onClick={() => (coAuthors.length ? setAllPeopleOpen(true) : navigate(`/profil/${author.username}`))} />
               ) : (
                 <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-3.5 font-semibold text-foreground">
                   <img src={avatarSrc(col.author_avatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
                   <span className="truncate text-[14px]">{authorName}</span>
                 </span>
               )}
-            </div>
+              </>}
+            />
             {/* Polubien list NIE MA (decyzja Nat 2026-09-01) - zostaje sam zapis listy, ktory
                 niesie realna intencje i buduje powiadomienia o nowych miejscach. Udostepnianie
                 w belce po prawej, dla kazdego (prosba Nat 2026-09-13; wczesniej przy tytule /
@@ -751,7 +1037,7 @@ export default function SharedList() {
             {!isOwner ? (
               <ReportContentSheet targetType="collection" targetId={col.id} trigger={(open) => (
                 <button onClick={open} aria-label={t("social:submit")} className="h-9 w-9 shrink-0 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center text-foreground/70 active:scale-90 transition-transform">
-                  <Flag className="h-5 w-5" strokeWidth={2} />
+                  <BrandFlag className="h-5 w-5" strokeWidth={2} />
                 </button>
               )} />
             ) : (
@@ -773,16 +1059,30 @@ export default function SharedList() {
                     disabled={savingName}
                     className="gap-2.5 py-2.5"
                   >
-                    <Pencil className="h-4 w-4" />{t("aria.rename_list")}
+                    <BrandPencil className="h-4 w-4" />{t("aria.rename_list")}
+                  </DropdownMenuItem>
+                  {/* Prywatnosc stoi OBOK "Osoby w kolekcji", bo obie pozycje odpowiadaja na to
+                      samo pytanie: kto ma do tego dostep. Ikona niesie stan AKTUALNY, zeby nie
+                      trzeba bylo otwierac arkusza, zeby sprawdzic, czy kolekcja jest publiczna.
+                      ⛔ Prywatna "Ogolne" (`to_visit`) nie dostaje tej pozycji - jest prywatna
+                      z definicji i nie ma czego przelaczac. */}
+                  {col.list_status !== "to_visit" && (
+                    <DropdownMenuItem onSelect={() => setPrivacyOpen(true)} className="gap-2.5 py-2.5">
+                      {col.is_public ? <BrandGlobe className="h-4 w-4" /> : <BrandLock className="h-4 w-4" />}
+                      {t("aria.list_privacy")}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onSelect={() => setPeopleOpen(true)} className="gap-2.5 py-2.5">
+                    <BrandUsers className="h-4 w-4" />{t("aria.list_people")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setScopeOpen(true)} className="gap-2.5 py-2.5">
-                    <MapPin className="h-4 w-4" />{t("aria.list_scope")}
+                    <BrandPin className="h-4 w-4" />{t("aria.list_scope")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setThemeOpen(true)} className="gap-2.5 py-2.5">
-                    <Palette className="h-4 w-4" />{t("aria.list_theme")}
+                    <BrandPalette className="h-4 w-4" />{t("aria.list_theme")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setAskDelete(true)} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                    <Trash2 className="h-4 w-4" />{t("aria.delete_list")}
+                    <BrandTrash className="h-4 w-4" />{t("aria.delete_list")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -791,7 +1091,7 @@ export default function SharedList() {
       </div>
 
       {/* Obszar scrolla - #3: BEZ okladki tla listy (spojne z widokiem trasy). */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-44">
+      <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-44">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -808,7 +1108,20 @@ export default function SharedList() {
                 className="flex-1 min-w-0 text-2xl font-black text-foreground leading-tight bg-transparent border-b-2 border-primary outline-none"
               />
             ) : (
-              <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+              /* Tapniecie w nazwe otwiera jej zmiane - ten sam skrot, co w wyjezdzie
+                 (zgloszenie testerki 2026-09-16). Nazwe kolekcji zmienia WLASCICIEL, wiec
+                 wspoltworca i gosc widza zwykly naglowek. */
+              isOwner ? (
+                <button
+                  onClick={() => { haptics.light(); setNameVal(col.title || ""); setEditingName(true); }}
+                  className="flex-1 min-w-0 text-left active:opacity-60 transition-opacity"
+                  aria-label={t("aria.rename_list")}
+                >
+                  <span className="block text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</span>
+                </button>
+              ) : (
+                <h1 className="flex-1 text-2xl font-black text-foreground leading-tight">{col.title || cityLabel}</h1>
+              )
             )}
             {/* a) Ikony jak na wyjazdach: udostepnij / usun. Olowek usuniety (prosba Nat 2026-09-01,
                 tak samo jak wczesniej na wyjezdzie) - ten widok JEST edycja: miejsca, notki i
@@ -826,10 +1139,16 @@ export default function SharedList() {
           {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
               TripHeaderChips) - wczesniej szara linia z ikonami. */}
           {/* "7 / 15 miejsc": odwiedzone przez OGLADAJACEGO na wlasnej liscie, przez AUTORA na cudzej. */}
+          {/* ⚠️ Chip "Prywatna" nie jest ozdoba: przelacznik, ktorego stanu nie widac na ekranie,
+              zmusza do otwierania menu za kazdym razem, zeby sprawdzic, czy kolekcja jest jeszcze
+              schowana. Widza go wylacznie ci, ktorzy prywatna kolekcje w ogole otworza, czyli
+              autor i wspoltworcy. Prywatnej "Ogolne" nie oznaczamy - tam prywatnosc to nie stan
+              do sprawdzenia, tylko definicja. */}
           <HighlightChips className="mt-3" city={cityLabel} placesCount={items.length}
             visitedCount={(items as any[]).filter((it) => (isOwner ? visitedKeys : authorVisitedKeys).has(visitKeyOf(it))).length}
-            starredCount={(items as any[]).filter((it) => it.is_top).length} />
-          {col.description && <p className="text-[15px] text-foreground/80 leading-relaxed mt-3">{col.description}</p>}
+            starredCount={(items as any[]).filter((it) => it.is_top).length}
+            privateLabel={!col.is_public && col.list_status !== "to_visit" ? t("privacy.chip") : null} />
+          {col.description && <TranslatableText text={col.description} className="text-[15px] text-foreground/80 leading-relaxed mt-3" />}
         </div>
 
         {/* Jeden widok: miejsca. Zakladka Galeria usunieta (decyzja Nat 2026-09-01). */}
@@ -849,8 +1168,33 @@ export default function SharedList() {
           <>
             <ListThemeSheet open={themeOpen} onOpenChange={setThemeOpen} listId={col.id} current={col.theme} title={col.title || t("fallback_title")} />
             <ListScopeSheet open={scopeOpen} onOpenChange={setScopeOpen} listId={col.id} current={col} />
+            {col.list_status !== "to_visit" && (
+              <ListPrivacySheet open={privacyOpen} onOpenChange={setPrivacyOpen} listId={col.id}
+                isPublic={!!col.is_public} savesCount={(col as any).saves_count ?? 0} />
+            )}
+            {user && <CollectionPeopleSheet open={peopleOpen} onOpenChange={setPeopleOpen} collectionId={col.id} ownerId={col.user_id} currentUserId={user.id} />}
           </>
         )}
+        {/* "+N" w belce - pelna lista uczestnikow do ODCZYTU, dostepna dla kazdego, kto widzi
+            kolekcje (zarzadzanie skladem zostaje w menu "..." u wlasciciela). Do 2026-09-16
+            arkusz siedzial w bloku `isOwner` powyzej mimo tego komentarza, wiec "+N" w belce
+            bylo martwe dla wspoltworcow i gosci - czyli dla wszystkich, ktorym mialo sluzyc. */}
+        <PeopleSheet
+          open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.title")}
+          author={author?.username ? { id: col.user_id, username: author.username, avatar_url: author.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color } : null}
+          /* `Participant.id`, a wiersz czlonka ma `user_id` - bez mapowania "Opusc" nie znajdowal
+             wlasnego wiersza (zlapane renderem 2026-09-20). */
+          others={(coAuthors as any[]).map((m) => ({ ...m, id: m.user_id })) as any}
+          leave={user && isMember && !isOwner ? { userId: user.id, label: t("people.leave"), onLeave: () => setAskLeave(true) } : undefined}
+        />
+        <PlaceVisitorsSheet
+          open={!!visitorsFor}
+          onOpenChange={(o) => { if (!o) setVisitorsFor(null); }}
+          placeName={visitorsFor?.place_name ?? ""}
+          visitorIds={visitorsFor ? (visitorsByPlace.get(visitKeyOf(visitorsFor)) ?? []) : []}
+          starredIds={visitorsFor ? (starsByPlace.get(starKey(visitorsFor.place_name)) ?? []) : []}
+          people={participantById}
+        />
         {shareCardOpen && (
         <ShareCardList
           title={col.title || t("fallback_title")}
@@ -861,6 +1205,9 @@ export default function SharedList() {
           authorId={col.user_id}
           authorFrame={author?.avatar_frame}
           authorFrameColor={author?.avatar_frame_color}
+          collectionId={col.id}
+          theme={col.theme}
+          visitedCount={(items as any[]).filter((it) => (isOwner ? visitedKeys : authorVisitedKeys).has(visitKeyOf(it))).length}
           onClose={() => setShareCardOpen(false)}
           onShare={handleShareLink}
           shareUrl={buildShareUrl(`/lista/${col.id}`)}
@@ -889,17 +1236,19 @@ export default function SharedList() {
         {/* Udostepnianie = zolte kolko z brazowa ikona, bezposrednio na prawo od glownego guzika
             (prosba Nat 2026-09-13) - u wlasciciela obok "Dodaj nowe miejsce", u goscia obok zapisu. */}
         <div className="flex items-center gap-2">
-          {isOwner ? (
+          {canContribute ? (
             <button onClick={() => setAddPlaceOpen(true)} className="flex-1 min-w-0 py-3 rounded-full border border-border bg-background text-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
               <Plus className="h-4 w-4" />{t("cta.add_place")}</button>
           ) : (
             <button onClick={toggleSave} className="flex-1 min-w-0 py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-              <BrandIcon src={SAVE_ICON} className="h-4 w-4" />{saved ? t("toast.list_saved") : t("cta.save_list")}
+              {/* Zakladka PUSTA dopoki nie zapisane, PELNA po zapisie (prosba Nat 2026-09-15) -
+                  `BrandIcon` rysuje maske, wiec zawsze byla pelna i nie niosla stanu. */}
+              <BrandBookmark filled={saved} className="h-4 w-4" />{saved ? t("toast.list_saved") : t("cta.save_list")}
             </button>
           )}
           <button onClick={handleShare} onContextMenu={(e) => { e.preventDefault(); handleShareLink(); }} aria-label={t("aria.share")}
             className="h-11 w-11 shrink-0 rounded-full bg-[#FDF184] flex items-center justify-center active:scale-90 transition-transform">
-            <Share2 className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
+            <BrandShare className="h-5 w-5 text-[#5B2C06]" strokeWidth={2.2} />
           </button>
         </div>
       </div>
@@ -915,8 +1264,17 @@ export default function SharedList() {
       />
 
       {/* Wybor zdjecia dla KONKRETNEJ pozycji listy (akcja z menu przy wierszu). Cel w refie,
-          zeby nie mnozyc ukrytych inputow przy kazdym wierszu. */}
-      {isOwner && (
+          zeby nie mnozyc ukrytych inputow przy kazdym wierszu.
+          ⛔ `canContribute`, NIE `isOwner`. Do 2026-09-16 stalo tu `isOwner` - i wspoltworca
+          widzial pomaranczowe kolko aparatu (to chodzi po `canWriteNote`), ale `itemPhotoInputRef`
+          nie wskazywal NICZEGO, wiec `?.click()` byl cichym no-opem. Zadnego arkusza, zadnego
+          bledu, zero reakcji apki: dokladnie tak wygladalo "jako uczestnik nie moge dodawac
+          zdjec do miejsc" (zgloszenie Nat). Baza byla caly czas w porzadku - RLS wpuszcza
+          czlonka i do storage, i do `discovery_item_photos` (sprawdzone na prodzie).
+          ⚠️ REGULA: warunek renderowania ukrytego inputu / arkusza MUSI byc ten sam, co warunek
+          pokazania guzika, ktory go otwiera. Rozjazd tych dwoch nie wywala sie ani w tsc, ani
+          w buildzie - objawia sie martwym guzikiem u czesci userow. */}
+      {canContribute && (
         <input ref={itemPhotoInputRef} type="file" accept="image/*" multiple className="hidden"
           onChange={(e) => {
             const files = e.target.files;
@@ -927,7 +1285,11 @@ export default function SharedList() {
           }} />
       )}
 
-      {isOwner && (
+      {/* Ten sam rozjazd, co przy zdjeciach: dolne CTA "Dodaj nowe miejsce" pokazuje sie pod
+          `canContribute`, wiec arkusz musi istniec pod tym samym warunkiem. Pod `isOwner`
+          wspoltworca tapal guzik i nic sie nie otwieralo. RLS pozwala mu dodac pozycje
+          (`discovery_items_member_insert`, sprawdzone na prodzie). */}
+      {canContribute && (
         <AddPlaceSheet
           open={addPlaceOpen}
           onClose={() => setAddPlaceOpen(false)}
@@ -940,12 +1302,27 @@ export default function SharedList() {
             google_place_id: it.google_place_id ?? null, rating: it.rating ?? null,
           }))}
           onAdd={handleAddPlacesToList}
+          limit={{ kind: "collection_places", current: items.length }}
         />
       )}
 
       <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => !o && setSavePlace(null)} place={savePlace} city={col.city ?? ""} />
 
       {/* Potwierdzenie usuniecia listy - nieodwracalne. */}
+      <AlertDialog open={askLeave} onOpenChange={(o) => { if (!o && !leaving) setAskLeave(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("people.leave_confirm_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("people.leave_confirm_desc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={leaving}>{t("common:buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleLeave(); }} disabled={leaving}>
+              {t("people.leave_cta")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -140,7 +140,9 @@
   },
   "points_few": "punkty",
   "shortcut": {
-    "hide": "Schowaj skrót do wyjazdu",
-    "fallback": "Twój wyjazd"
+    "hide": "Schowaj skrót do planu",
+    "fallback": "Twój plan",
+    "stage_ongoing": "W trakcie",
+    "stage_draft": "Robocze"
   }
 }

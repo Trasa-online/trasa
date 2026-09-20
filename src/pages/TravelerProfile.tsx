@@ -4,9 +4,10 @@ import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteWithUndo } from "@/lib/trash";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, UserCircle2, ArrowRight, Bell, Share2, Search, ChevronLeft } from "lucide-react";
-import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { UserCircle2, ArrowRight, ChevronLeft } from "lucide-react";
+import { BrandIcon, LIST_ICON, STAR_ICON, BrandShare, BrandBell, BrandSearch, BrandSettings } from "@/components/BrandIcon";
 import { SavedPlacesGrid } from "@/components/saved/SavedPlacesGrid";
 import TabHeader from "@/components/layout/TabHeader";
 import PinnedSearchField from "@/components/layout/PinnedSearchField";
@@ -30,13 +31,18 @@ import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
+import { useFriendList, excludeFriend, unexcludeFriend, friendIdsKey } from "@/lib/friends";
+import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
+import { UserMinus } from "lucide-react";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
+import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
 import { listTheme } from "@/lib/listThemes";
 import ReferralCard from "@/components/profile/ReferralCard";
 import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
-import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
+import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
 import { REORDER_ITEM_CLASS, useLongPressReorder } from "@/hooks/useLongPressReorder";
+import { useStickyHeadVar } from "@/hooks/useStickyHeadVar";
 import { applyTripOrder, fetchTripOrder, saveTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import AvatarFrame from "@/components/profile/AvatarFrame";
 import { isAvatarFrame } from "@/lib/avatarFrames";
@@ -169,7 +175,7 @@ const TravelerProfile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
+  const [followSheet, setFollowSheet] = useState<PeopleTab | null>(null);
   const [starredOpen, setStarredOpen] = useState(false);
   // Wyszukiwarka przypieta w naglowku - dziala W MIEJSCU, dokladnie jak w Eksploracji
   // (prosba Nat 2026-09-06): foldery kategorii chowaja sie po wpisaniu frazy, a wyniki
@@ -197,7 +203,7 @@ const TravelerProfile = () => {
   const [tab, setTab] = useState<"listy" | "wyjazdy">(initialTab);
   // Podzakładki (pigułki) w Listy / Wyjazdy. Domyślnie: Listy->Moje, Wyjazdy->Wspomnienia
   // (opublikowane trasy = flagowa treść; robocze to work-in-progress).
-  const [listyTab, setListyTab] = useState<"moje" | "ogolne" | "zapisane">("moje");
+  const [listyTab, setListyTab] = useState<"moje" | "wspolne" | "ogolne" | "zapisane">("moje");
   // "Opublikowane" jako pierwsze i domyslne (prosba Nat 2026-09-10) - to gotowa tresc,
   // po ktora user tu wraca; robocze to praca w toku.
   const [wyjazdyTab, setWyjazdyTab] = useState<"robocze" | "wspomnienia" | "zapisane">("wspomnienia");
@@ -218,7 +224,7 @@ const TravelerProfile = () => {
     const sub = searchParams.get("sub");
     if (sub === "robocze" || sub === "wspomnienia" || sub === "zapisane") { subChosen.current = true; setWyjazdyTab(sub as any); }
     else if (!sub) { subChosen.current = false; setWyjazdyTab("wspomnienia"); }
-    if (sub === "moje" || sub === "ogolne" || sub === "zapisane") setListyTab(sub as any);
+    if (sub === "moje" || sub === "wspolne" || sub === "ogolne" || sub === "zapisane") setListyTab(sub as any);
     else if (!sub) setListyTab("moje");
   }, [searchParams]);
 
@@ -257,7 +263,11 @@ const TravelerProfile = () => {
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const { data: starred = [] } = useStarredPlaces(user?.id);
-  const followList = useFollowList(user?.id, followSheet === "following" ? "following" : "followers");
+  // ZNAJOMI = wzajemna obserwacja (patrz src/lib/friends.ts). Liczba jedzie z BAZY, nie
+  // z przeciecia dwoch list w kliencie - to ta sama funkcja, ktora bramkuje zdjecia.
+  // Sama LISTA (i wypisywanie ze znajomych) mieszka w `PeopleSheet`; tutaj potrzebny jest
+  // wylacznie licznik w rzedzie statystyk.
+  const friendList = useFriendList(user?.id);
 
   // Usuwanie z oknem "Cofnij" (deferDelete): element znika od razu z listy (optymistycznie),
   // faktyczny DB delete odroczony o 5s; klik "Cofnij" przywraca (snapshot cache). Zastepuje confirm()
@@ -265,25 +275,11 @@ const TravelerProfile = () => {
   const handleDeleteTrip = (tr: any) => {
     if (!user) return;
     const ids: string[] = tr.routeIds?.length ? tr.routeIds : [tr.id];
-    const key = ["profile-trip-feed", user.id];
-    const prev = queryClient.getQueryData(key);
-    queryClient.setQueryData(key, (old: any) => (old ?? []).filter((r: any) => r.id !== tr.id));
-    deferDelete({
+    // Do KOSZA OD RAZU + "Cofnij" (2026-09-15). `deleteWithUndo` samo odswieza WSZYSTKIE
+    // listy, na ktorych wyjazd moze stac - lokalne `setQueryData` nie jest juz potrzebne.
+    void deleteWithUndo("trip", ids, {
       message: t("profile.trip_deleted"),
-      onUndo: () => queryClient.setQueryData(key, prev),
-      commit: async () => {
-        try {
-          await supabase.from("pins").delete().in("route_id", ids);
-          await (supabase as any).from("chat_sessions").delete().in("route_id", ids);
-          const { error } = await supabase.from("routes").delete().in("id", ids).eq("user_id", user.id);
-          if (error) throw new Error(error.message);
-          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
-        } catch (e: any) {
-          toast.error(t("profile.delete_error"));
-          console.error("[TravelerProfile] delete trip failed:", e?.message ?? e);
-          queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
-        }
-      },
+      failMessage: t("profile.delete_error"),
     });
   };
   const { data: profile } = useQuery({
@@ -317,21 +313,40 @@ const TravelerProfile = () => {
     if (res.ok && res.method === "clipboard") toast.success(t("invite.link_copied"));
   };
 
-  // Feed LIST (zakladka Listy): wlasne listy + kafelki miejsc + liczniki z kolumn.
+  // Feed LIST (zakladka Listy): wlasne ORAZ WSPOLTWORZONE kolekcje + kafelki miejsc + liczniki.
   const { data: listCards = [] } = useQuery({
     queryKey: ["profile-list-feed", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data: cols } = await (supabase as any)
-        .from("discovery_collections")
-        .select("id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
-        .eq("user_id", user!.id).eq("kind", "ranking")
-        // Zakładka Listy = moje CURATED listy (grupy). Publiczne polecajki (visited). Luźno
-        // zapisane miejsca (auto-lista "Do zobaczenia", to_visit) to NIE lista - pokazują się
-        // jako kafelki w Zapisane→Miejsca, nie tutaj.
-        .eq("list_status", "visited")
-        .order("updated_at", { ascending: false });
-      const rows = (cols ?? []) as any[];
+      const COLS = "id, user_id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at, is_public";
+      // Zakładka Listy = moje CURATED listy (grupy). Publiczne polecajki (visited). Luźno
+      // zapisane miejsca (auto-lista "Do zobaczenia", to_visit) to NIE lista - pokazują się
+      // jako kafelki w Zapisane→Miejsca, nie tutaj.
+      //
+      // WSPOLTWORZONE TEZ TU TRAFIAJA (prosba Nat 2026-09-15): kolekcja, do ktorej ktos mnie
+      // zaprosil, jest moja do wspoltworzenia - dodaje do niej miejsca i notki - wiec ma stac
+      // w "Moje kolekcje", a nie tylko w "Zapisane". Rozpoznaje ja pigulka autora: stoi tam
+      // wlasciciel, nie ja.
+      const { data: memberRows } = await (supabase as any)
+        .from("discovery_collection_members")
+        .select("collection_id")
+        .eq("user_id", user!.id);
+      const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
+      // ⛔ DWA zapytania zamiast jednego `.or(...)`: lista id w `id.in.(…)` ma przecinki
+      // w srodku nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje
+      // pusty wynik (patrz memory `feedback_postgrest_or_filter_quoting`).
+      const [mine, shared] = await Promise.all([
+        (supabase as any).from("discovery_collections").select(COLS)
+          .eq("user_id", user!.id).eq("kind", "ranking").eq("list_status", "visited"),
+        memberIds.length
+          ? (supabase as any).from("discovery_collections").select(COLS)
+              .in("id", memberIds).eq("kind", "ranking").eq("list_status", "visited")
+          : Promise.resolve({ data: [] }),
+      ]);
+      const seen = new Set<string>();
+      const rows = [...((mine.data ?? []) as any[]), ...((shared.data ?? []) as any[])]
+        .filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)))
+        .sort((a, b) => new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime());
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const { data: items } = await (supabase as any)
@@ -349,7 +364,22 @@ const TravelerProfile = () => {
       }
       // "odwiedzone przez autora / wszystkie" - ten sam chip co na kafelku w eksploracji.
       const visits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
-      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0 }));
+      // Wlasciciele kolekcji WSPOLTWORZONYCH - ich pigulka autora ma stanac na kafelku.
+      const ownerIds = Array.from(new Set(rows.map((r) => r.user_id).filter((id) => id && id !== user!.id)));
+      const owners = new Map<string, any>();
+      if (ownerIds.length) {
+        const { data: profs } = await (supabase as any)
+          .from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color")
+          .in("id", ownerIds);
+        for (const pr of (profs ?? []) as any[]) owners.set(pr.id, pr);
+      }
+      const mem = await fetchCollectionMembersBulk(ids, new Map(rows.map((r) => [r.id, r.user_id]))).catch(() => new Map());
+      return rows.map((r) => ({
+        ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0,
+        co_authors: mem.get(r.id) ?? [],
+        _shared: r.user_id !== user!.id,
+        _owner: owners.get(r.user_id) ?? null,
+      }));
     },
   });
 
@@ -603,6 +633,15 @@ const TravelerProfile = () => {
     });
   };
 
+  // ⛔ TEN HOOK MUSI STAC NAD early-returnami ponizej. Stal pod nimi i przy pierwszym
+  // renderze (profil sie laduje / gosc) Reactowi ubywalo hookow - ta sama pulapka, ktora
+  // wywalila widok kolekcji 2026-09-15. Bramka `npm run hooks:check` lapie to od tamtej pory.
+  //
+  // Kafelek ma sie zatrzymywac POD przyklejonym naglowkiem (zakladki + chipy podzakladek),
+  // a nie za nim - wysokosc mierzy wspolny [useStickyHeadVar](src/hooks/useStickyHeadVar.ts),
+  // ten sam, ktorego uzywa profil PUBLICZNY (oba maja snap na kolekcjach).
+  const stickyRef = useStickyHeadVar();
+
   if (loading) return <ScreenSkeleton variant="profile" />;
   if (!user || user.is_anonymous) return <GuestProfile />;
 
@@ -695,7 +734,8 @@ const TravelerProfile = () => {
       kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
       cover: places.find((x: any) => x.photo)?.photo ?? null,
       where: l.city || scopeLabel(l),
-      authorName: l.author_username ? `@${l.author_username}` : (l.author_name ?? ""),
+      authorName: l.author_name ?? "",
+      authorHandle: l.author_username ? `@${l.author_username}` : null,
       authorAvatar: l.author_avatar_profile ?? l.author_avatar ?? null,
       authorId: l.user_id ?? null,
       authorFrame: l.author_frame ?? null,
@@ -718,13 +758,65 @@ const TravelerProfile = () => {
             </p>
           </div>
         )}
-        <GridTile it={item} size="feed" onOpen={() => navigate(`/lista/${l.id}`)} />
+        <GridTile it={item} size="feed" people="avatars" onOpen={() => navigate(`/lista/${l.id}`)} />
       </div>
     );
   };
 
   // Snap wlaczamy tylko tam, gdzie scrolluje sie KOLEKCJE (kafelki jednakowej budowy).
-  const listSnap = tab === "listy" && (listyTab === "moje" ? listCards.length > 0 : listyTab === "zapisane" && (savedListCards as any[]).length > 0);
+  // Kolekcje wygladaja TAK SAMO jak w eksploracji (prosba Nat 2026-09-14): ten sam
+  // GridTile - kolorowe tlo z palety, mini-siatka miejsc, pigulka autora, chipy.
+  // ⛔ JEDNA funkcja dla "Moje kolekcje" i "Wspolne" - te same kafelki, tylko inny
+  //    zestaw danych. Skopiowany blok rozjechalby sie przy pierwszej zmianie kafelka.
+  const renderCollectionCards = (cards: any[]) => (
+    <div className="space-y-4">
+              {cards.map((l: any) => {
+                const places = (l.tiles ?? []).map((it: any) => ({
+                  name: it.place_name as string,
+                  category: (it.category ?? null) as string | null,
+                  photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+                }));
+                const item: GridItem = {
+                  kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
+                  cover: places.find((x: any) => x.photo)?.photo ?? null,
+                  where: l.city || scopeLabel(l),
+                  // Kolekcja WSPOLTWORZONA pokazuje swojego wlasciciela, nie mnie - inaczej
+                  // w "Moje kolekcje" cudza kolekcja wygladalaby na moja.
+                  authorName: (l._owner ?? profile)?.first_name || "",
+                  authorHandle: (l._owner ?? profile)?.username ? `@${(l._owner ?? profile).username}` : null,
+                  authorAvatar: (l._owner ?? profile)?.avatar_url ?? null,
+                  authorId: l.user_id ?? user.id,
+                  authorFrame: (l._owner ?? profile)?.avatar_frame ?? null,
+                  authorFrameColor: (l._owner ?? profile)?.avatar_frame_color ?? null,
+                  showAuthor: true,
+                  coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
+                  at: new Date(l.updated_at ?? 0).getTime(),
+                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  theme: listTheme(l.theme, l.id), places,
+                  visitedCount: l.visited_count ?? 0,
+                  // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla
+                  // autora ("ile osob to zapisalo"), nie element kafelka w eksploracji.
+                  // Licznik zapisow tylko na WLASNYCH - to informacja zwrotna dla autora.
+                  savesCount: l._shared ? undefined : Number(l.saves_count ?? 0),
+                  // Prywatnosc pokazujemy TAKZE na kolekcjach wspoltworzonych: wspoltworca
+                  // dodaje do nich miejsca i zdjecia, wiec musi wiedziec, czy to, co pisze,
+                  // zobaczy swiat. ⛔ Nie podajemy tego w "Zapisanych" ani w eksploracji -
+                  // tam wszystko widoczne jest z definicji publiczne.
+                  isPublic: l.is_public !== false,
+                };
+                return <GridTile key={l.id} it={item} size="feed" people="avatars" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
+              })}
+    </div>
+  );
+
+  // Kolekcje wlasne vs WSPOLTWORZONE. `_shared` ustawia zapytanie `profile-list-feed`
+  // (drugie zapytanie po `discovery_collection_members`).
+  const ownListCards = (listCards as any[]).filter((l) => !l._shared);
+  const sharedListCards = (listCards as any[]).filter((l) => l._shared);
+  const listSnap = tab === "listy" && (
+    listyTab === "moje" ? ownListCards.length > 0
+    : listyTab === "wspolne" ? sharedListCards.length > 0
+    : listyTab === "zapisane" && (savedListCards as any[]).length > 0);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
@@ -737,19 +829,19 @@ const TravelerProfile = () => {
                 i zjadalo pion na ekranie, ktory i tak jest gesty (prosba Nat 2026-09-09).
                 Po tapnieciu rozwija sie na cala belke (prop `overlay` nizej). */}
             <button onClick={openSearch} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("common:buttons.search")}>
-              <Search className="h-5 w-5" />
+              <BrandSearch className="h-5 w-5" />
             </button>
             <button onClick={handleShareProfile} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.share_profile_aria")}>
-              <Share2 className="h-5 w-5" />
+              <BrandShare className="h-5 w-5" />
             </button>
             <button onClick={() => setNotificationsOpen(true)} className="relative h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.notifications_aria")}>
-              <Bell className="h-5 w-5" />
+              <BrandBell className="h-5 w-5" />
               {unreadNotifs > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">{unreadNotifs > 9 ? "9+" : unreadNotifs}</span>
               )}
             </button>
             <button onClick={() => navigate("/settings")} className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform" aria-label={t("profile.settings_aria")}>
-              <Settings className="h-5 w-5" />
+              <BrandSettings className="h-5 w-5" />
             </button>
           </>
         }
@@ -776,7 +868,7 @@ const TravelerProfile = () => {
       {/* Wyniki zamiast tresci profilu - ten sam panel co w Eksploracji, Feedzie i Miejscach
           (lista kategorii jedna pod druga, potem wyniki z kategorii). */}
       {searchOpen && (
-        <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
           <SearchPane query={searchQuery} cat={searchCat} onCat={setSearchCat} />
         </div>
       )}
@@ -788,7 +880,7 @@ const TravelerProfile = () => {
           `scroll-pt-[44px]` = wysokosc PRZYKLEJONEJ belki zakladek, zeby kafelek zatrzymywal
           sie pod nia, a nie za nia. Naglowek profilu dostaje wlasny punkt zaczepienia nizej
           (bez niego snap-mandatory nie pozwolilby sie przy nim zatrzymac). */}
-      <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 overflow-x-hidden", searchOpen && "hidden", listSnap && "snap-y snap-mandatory scroll-pt-[44px]")}>
+      <PullToRefresh onRefresh={handleRefresh} className={cn("flex-1 overflow-x-hidden", searchOpen && "hidden", listSnap && "snap-y snap-mandatory scroll-pt-[var(--profile-sticky,44px)]")}>
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(7rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
@@ -843,9 +935,15 @@ const TravelerProfile = () => {
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
           </button>
-          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
+          {/* ZNAJOMI zamiast "Obserwowanych" (prosba Nat 2026-09-17: spontaway reklamujemy jako
+              siec opartą na znajomosciach, wiec to znajomi maja byc na wierzchu).
+              ⚠️ Rzad liczy sie do TRZECH pozycji - przy trzeciej trzeba bylo wyprowadzic flage
+              zgloszenia i "..." do gornej belki, bo wychodzil poza 393 px. Czwarty licznik sie
+              nie miesci, dlatego "Obserwowani" nie znikaja z produktu, tylko przenosza sie do
+              przelacznika WEWNATRZ arkusza. */}
+          <button onClick={() => setFollowSheet("friends")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{(friendList.data ?? []).length}</p>
           </button>
           {/* Wyroznione miejsca (prosba Nat 2026-09-13): gwiazdka "topki" z licznikiem - ile miejsc
               user wyroznil w swoich wyjazdach i listach. Tap otwiera arkusz z tymi miejscami. */}
@@ -860,7 +958,7 @@ const TravelerProfile = () => {
               kategoria "Ludzie". Wczesniej prowadzilo na osobny ekran /search, czyli DRUGI widok
               wyszukiwania obok tego z Eksploracji (prosba Nat 2026-09-09: jedno zrodlo prawdy). */}
           <button onClick={() => { setSearchCat("people"); openSearch(); }} className="h-9 w-9 shrink-0 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-90 transition-transform" aria-label={t("profile.find_users_aria")}>
-            <Search className="h-4 w-4" />
+            <BrandSearch className="h-4 w-4" />
           </button>
         </div>
 
@@ -875,7 +973,11 @@ const TravelerProfile = () => {
         {/* Sticky: przy przewijaniu profilu zakladki zostaja na gorze (prosba Nat 2026-09-01).
             -mx-4 px-4 + tlo, zeby przyklejony pasek zakrywal tresc na CALEJ szerokosci - inaczej
             kafelki przejezdzalyby pod nim po bokach. */}
-        <div className="sticky top-0 z-30 bg-background -mx-4 px-4 flex border-b border-border/40">
+        {/* Podzakladki (chipy) siedza W TYM SAMYM sticky pudelku co zakladki (prosba Nat
+            2026-09-15) - wczesniej przyklejaly sie tylko zakladki, a chipy odjezdzaly w gore
+            i przy przewinietej liscie nie bylo widac, ktora podzakladke sie oglada. */}
+        <div ref={stickyRef} className="sticky top-0 z-30 bg-background -mx-4 px-4">
+        <div className="flex border-b border-border/40">
           {/* Kolejnosc: Wyjazdy | Listy (prosba Nat 2026-08-30) - wyjazdy sa flagowa trescia profilu. */}
           {(["wyjazdy", "listy"] as const).map((tk) => {
             const active = tab === tk;
@@ -891,27 +993,54 @@ const TravelerProfile = () => {
             );
           })}
         </div>
+        {/* Wiersz podzakladek: chipy + (przy Wspomnieniach) guzik ukladu. */}
+        <div className="flex items-center gap-3 pt-3 pb-2">
+          {tab === "listy" ? (
+            /* Moje listy (curated) | Ogólne (lista ogólna) | Zapisane (od innych). */
+            <TabSelect
+              dotLabel={t("profile.new_content_aria")}
+              value={listyTab}
+              onChange={(v) => { setListyTab(v as "moje" | "wspolne" | "ogolne" | "zapisane"); goSub(v); }}
+              options={[
+                { id: "moje", label: t("tabs.my_lists") },
+                // WSPOLNE = kolekcje, w ktorych wspoltworze, ale NIE jestem autorka (prosba Nat
+                // 2026-09-16: "kolekcja moze byc przypadkowo nie zapisana, ALE wspolna").
+                // Do 16.09 lezaly wymieszane w "Moje kolekcje" - byly tam, bo nie mialy wlasnego
+                // miejsca, nie dlatego, ze tam pasowaly.
+                { id: "wspolne", label: t("tabs.shared_lists") },
+                { id: "ogolne", label: t("tabs.general") },
+                // Kropka = w ktorejs zapisanej liscie autor dodal miejsce, ktorego jeszcze nie
+                // widzialem. Na profilu to jedyny sygnal dla kogos, kto nie scrolluje zapisanych.
+                { id: "zapisane", label: t("trip_tabs.saved"), dot: (savedListCards as any[]).some((l) => l.isNew) },
+              ]}
+            />
+          ) : (
+            <>
+              {/* Opublikowane | Robocze | Zapisane (od innych). */}
+              <TabSelect
+                dotLabel={t("profile.new_content_aria")}
+                value={wyjazdyTab}
+                onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); goSub(v); }}
+                options={[{ id: "wspomnienia", label: t("trip_tabs.published") }, { id: "robocze", label: t("trip_tabs.drafts") }, { id: "zapisane", label: t("trip_tabs.saved") }]}
+              />
+              {/* Przelacznik ukladu TYLKO przy opublikowanych - roboczy ma na karcie akcje
+                  wlasciciela (olowek, kosz), ktore w malym kafelku nie mialyby gdzie stanac.
+                  JEDEN guzik (2026-09-15): rzad trzech najezdzal na chipy obok. */}
+              {wyjazdyTab === "wspomnienia" && memoryTrips.length > 0 && (
+                <TripLayoutSwitch value={tripLayout} onChange={setTripLayout} />
+              )}
+            </>
+          )}
+        </div>
+        </div>
 
         {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
         <div className="space-y-6 pt-1" {...swipeTabs}>
           {tab === "listy" ? (
             <div className="space-y-4">
-              {/* Podzakładki (dropdown): Moje listy (curated) | Ogólne (lista ogólna) | Zapisane (od innych). */}
-              <TabSelect
-                dotLabel={t("profile.new_content_aria")}
-                value={listyTab}
-                onChange={(v) => { setListyTab(v as "moje" | "ogolne" | "zapisane"); goSub(v); }}
-                options={[
-                  { id: "moje", label: t("tabs.my_lists") },
-                  { id: "ogolne", label: t("tabs.general") },
-                  // Kropka = w ktorejs zapisanej liscie autor dodal miejsce, ktorego jeszcze nie
-                  // widzialem. Na profilu to jedyny sygnal dla kogos, kto nie scrolluje zapisanych.
-                  { id: "zapisane", label: t("trip_tabs.saved"), dot: (savedListCards as any[]).some((l) => l.isNew) },
-                ]}
-              />
               <TabHint text={t(`tab_hints.lists_${listyTab}`)} />
               {listyTab === "moje" ? (
-                listCards.length === 0 ? (
+                ownListCards.length === 0 ? (
               // Pusty stan LIST (Figma "Mój profil - Listy - pusty stan"): peachy znak trasy (S)
               // + instrukcja uzycia "+", bez guzika CTA (tworzenie idzie przez BottomNav "+").
               <div className="pt-16 pb-12 text-center px-8">
@@ -921,39 +1050,19 @@ const TravelerProfile = () => {
                   {t("empty.first_list_desc")}
                 </p>
               </div>
-            ) : (
-              // Kolekcje wygladaja TAK SAMO jak w eksploracji (prosba Nat 2026-09-14): ten sam
-              // GridTile - kolorowe tlo z palety, mini-siatka miejsc, pigulka autora, chipy.
-              // Wczesniej byl tu ProfileFeedCard (rzad miniatur), wiec ta sama kolekcja
-              // wygladala inaczej na profilu i w siatce.
-              <div className="space-y-4">
-              {listCards.map((l: any) => {
-                const places = (l.tiles ?? []).map((it: any) => ({
-                  name: it.place_name as string,
-                  category: (it.category ?? null) as string | null,
-                  photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
-                }));
-                const item: GridItem = {
-                  kind: "list", id: l.id, title: l.title || t("feed.list_fallback", t("profile.list_fallback_title")),
-                  cover: places.find((x: any) => x.photo)?.photo ?? null,
-                  where: l.city || scopeLabel(l),
-                  authorName: profile?.username ? `@${profile.username}` : displayName,
-                  authorAvatar: profile?.avatar_url ?? null, authorId: user.id,
-                  authorFrame: (profile as any)?.avatar_frame ?? null,
-                  authorFrameColor: (profile as any)?.avatar_frame_color ?? null,
-                  showAuthor: true,
-                  at: new Date(l.updated_at ?? 0).getTime(),
-                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
-                  theme: listTheme(l.theme, l.id), places,
-                  visitedCount: l.visited_count ?? 0,
-                  // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla
-                  // autora ("ile osob to zapisalo"), nie element kafelka w eksploracji.
-                  savesCount: Number(l.saves_count ?? 0),
-                };
-                return <GridTile key={l.id} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
-              })}
-              </div>
-                )
+                ) : renderCollectionCards(ownListCards)
+              ) : listyTab === "wspolne" ? (
+                // WSPOLNE: kolekcje, do ktorych ktos mnie zaprosil. Ten sam kafelek, z pigulka
+                // WLASCICIELA - inaczej cudza kolekcja wygladalaby na moja.
+                sharedListCards.length === 0 ? (
+                  <div className="pt-16 pb-12 text-center px-8">
+                    <span aria-hidden className="mx-auto mb-5 block h-24 w-24" style={{ backgroundColor: "#ef9d78", WebkitMaskImage: "url(/Ikona_Trasy.svg)", maskImage: "url(/Ikona_Trasy.svg)", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskPosition: "center", maskPosition: "center" }} />
+                    <p className="text-lg font-bold text-foreground">{t("empty.no_shared_lists")}</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed max-w-[300px] mx-auto">
+                      {t("empty.no_shared_lists_desc")}
+                    </p>
+                  </div>
+                ) : renderCollectionCards(sharedListCards)
               ) : listyTab === "ogolne" ? (
                 // t("tabs.general") - lista OGÓLNA usera (wszystkie zapisane miejsca), dostępna z dropdownu list.
                 <div className="pt-1"><SavedPlacesGrid /></div>
@@ -975,23 +1084,6 @@ const TravelerProfile = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Podzakładki: Opublikowane | Robocze | Zapisane (od innych).
-                  "Zapisane" wrocilo 2026-09-11 razem z zapisem CALEGO cudzego wyjazdu -
-                  bookmark i wybor pojedynczych miejsc z cudzego wyjazdu odpowiadaja na dwie
-                  rozne potrzeby, wiec zyja obok siebie. */}
-              <div className="flex items-center justify-between gap-3">
-                <TabSelect
-                  dotLabel={t("profile.new_content_aria")}
-                  value={wyjazdyTab}
-                  onChange={(v) => { subChosen.current = true; setWyjazdyTab(v as "robocze" | "wspomnienia" | "zapisane"); goSub(v); }}
-                  options={[{ id: "wspomnienia", label: t("trip_tabs.published") }, { id: "robocze", label: t("trip_tabs.drafts") }, { id: "zapisane", label: t("trip_tabs.saved") }]}
-                />
-                {/* Przelacznik ukladu TYLKO przy opublikowanych - roboczy ma na karcie akcje
-                    wlasciciela (olowek, kosz), ktore w malym kafelku nie mialyby gdzie stanac. */}
-                {wyjazdyTab === "wspomnienia" && memoryTrips.length > 0 && (
-                  <TripLayoutSwitch value={tripLayout} onChange={setTripLayout} />
-                )}
-              </div>
               <TabHint text={wyjazdyTab === "wspomnienia" && tripLayout !== "lista" && memoryTrips.length > 1
                 ? t("tab_hints.trips_wspomnienia_reorder")
                 : t(`tab_hints.trips_${wyjazdyTab}`)} />
@@ -1052,7 +1144,7 @@ const TravelerProfile = () => {
                   <>
                     <div className="flex items-start gap-1.5" {...reorder.containerProps}>
                       {mosaicColumns(memoryTrips).map((col, ci) => (
-                        <div key={ci} className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div key={ci} className={`flex min-w-0 flex-1 flex-col gap-1.5 ${ci === 1 ? MOSAIC_OFFSET : ""}`}>
                           {col.map((tr: any) => (
                             <div key={tr.id} className={REORDER_ITEM_CLASS} {...reorder.itemProps(tr.id)}>
                               <TripTile natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
@@ -1074,43 +1166,31 @@ const TravelerProfile = () => {
       </div>
       </PullToRefresh>
 
-      {/* Obserwujacy / Obserwowani - lista */}
-      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
-        <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
-          {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
-          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 -mt-2 mb-1 shrink-0" />
-          <SheetHeader className="pb-3 border-b border-border/20">
-            <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-3">
-            {followList.isLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-8">…</p>
-            ) : (followList.data ?? []).length === 0 ? (
-              <div className="px-1 space-y-4 pt-2">
-                <p className="text-sm text-muted-foreground text-center">
-                  {followSheet === "following" ? t("profile.no_following", t("profile.no_following")) : t("profile.no_followers")}
-                </p>
-                <InviteFriendsBanner />
-                <button onClick={() => { setFollowSheet(null); setSearchCat("people"); openSearch(); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
-                  {t("profile.find_friends")}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {(followList.data ?? []).map((p) => (
-                  <button key={p.id} onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
-                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
-                      {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Arkusz ludzi: jeden arkusz, trzy zakladki, szukanie i akcja w wierszu (kierunek A
+          z eksploracji - patrz PeopleSheet). Ten sam komponent obsluguje profil publiczny,
+          wiec wiersz osoby jest JEDEN, a nie dwa prawie takie same. */}
+      {user && followSheet && (
+        <PeopleSheet
+          open
+          onClose={() => setFollowSheet(null)}
+          tab={followSheet}
+          onTab={setFollowSheet}
+          ownerId={user.id}
+          myId={user.id}
+          own
+          emptyExtra={(
+            <div className="space-y-4">
+              <InviteFriendsBanner />
+              <button
+                onClick={() => { setFollowSheet(null); setSearchCat("people"); openSearch(); }}
+                className="w-full rounded-full bg-secondary py-3 text-sm font-bold text-secondary-foreground transition-transform active:scale-[0.97]"
+              >
+                {t("profile.find_friends")}
+              </button>
+            </div>
+          )}
+        />
+      )}
 
       {user && <NotificationsDrawer open={notificationsOpen} onClose={() => setNotificationsOpen(false)} userId={user.id} />}
 

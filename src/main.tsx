@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { isWeb, isNative } from "@/lib/platform";
+import { internalAccountFromStorage } from "@/lib/internalAccounts";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
@@ -72,7 +73,9 @@ function PostHogBoot({ children }: { children: React.ReactNode }) {
       });
       (window as any).posthog = posthog;
       const existingConsent = localStorage.getItem("trasa_cookie_consent_v2");
-      if (existingConsent === "granted") posthog.opt_in_capturing();
+      // Konto zespolu zostaje w opt-out mimo zgody - sprawdzane synchronicznie z sesji w
+      // localStorage, bo pierwszy $pageview leci od razu (lib/internalAccounts).
+      if (existingConsent === "granted" && !internalAccountFromStorage()) posthog.opt_in_capturing();
       setState({ Provider: phReact.PostHogProvider, client: posthog });
     });
     return () => { cancelled = true; };

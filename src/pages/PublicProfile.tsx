@@ -22,17 +22,23 @@ import FollowButton from "@/components/social/FollowButton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
 import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
-import { useFollowCounts, useFollowList } from "@/hooks/useFollow";
+import { useFollowCounts } from "@/hooks/useFollow";
+import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
+import { useFriendIds } from "@/lib/friends";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
-import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
-import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout } from "@/components/profile/TripLayout";
+import { GridTile, type GridItem } from "@/components/home/FeedTiles";
+import { useStickyHeadVar } from "@/hooks/useStickyHeadVar";
+import { scrollTopTapProps } from "@/lib/scrollTop";
+import { listTheme } from "@/lib/listThemes";
+import { fetchListVisitCounts } from "@/lib/placeVisits";
+import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
+import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
 import { scopeLabel } from "@/lib/tripScope";
 // Karta wyjazdu 1:1 z eksploracja (na profilu bez mapki) - prosba Nat 2026-08-30.
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import { resolveStored } from "@/components/PlacePhoto";
 import { SpontawayTabIcon } from "@/components/profile/SpontawayTabIcon";
-import { shortRelativeTime } from "@/lib/relativeTime";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
 
 // Stala pusta referencja - inaczej useMemo nizej liczylby sie na nowo w kazdym renderze.
@@ -99,7 +105,7 @@ export default function PublicProfile() {
     onLeft: () => goTab("listy"),
     onRight: () => goTab("wyjazdy"),
   });
-  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
+  const [followSheet, setFollowSheet] = useState<PeopleTab | null>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["public-profile", username],
@@ -122,25 +128,43 @@ export default function PublicProfile() {
   // Liczniki follow (asymetryczny model, publiczny SELECT).
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(profile?.id);
   const { data: starred = [] } = useStarredPlaces(profile?.id);
+  // Znajomi tej osoby - baza liczy wzajemne obserwacje. ⛔ Dla CUDZEJ listy nie odejmuje
+  // wykluczen: z roznicy dalo by sie odczytac, kogo ta osoba wypisala ze znajomych.
+  const friendIds = useFriendIds(profile?.id);
   const [starredOpen, setStarredOpen] = useState(false);
-  const followList = useFollowList(profile?.id, followSheet === "following" ? "following" : "followers");
 
   // Feed LIST (zakladka Listy): publiczne + zatwierdzone listy usera + kafelki miejsc + liczniki.
   const { data: listCards = [] } = useQuery({
     queryKey: ["public-list-feed", profile?.id],
     enabled: !!profile?.id,
     queryFn: async () => {
-      const { data: cols } = await (supabase as any)
-        .from("discovery_collections")
-        .select("id, title, city, list_status, description, tags, views_count, saves_count, likes_count, updated_at")
-        .eq("user_id", profile!.id).eq("kind", "ranking")
-        // TYLKO publiczne polecajki (visited). Prywatne wishlisty "Do zobaczenia" (to_visit) NIGDY
-        // na cudzym profilu - guard nawet gdyby jakaś została jako public+approved.
-        .eq("list_status", "visited")
-        // Soft-moderacja: publiczne widoczne od razu (pending + approved), tylko rejected/hidden ukryte.
-        .eq("is_public", true).eq("hidden_by_admin", false).neq("moderation_status", "rejected")
-        .order("updated_at", { ascending: false });
-      const rows = (cols ?? []) as any[];
+      const COLS = "id, user_id, title, city, countries, theme, list_status, description, tags, views_count, saves_count, likes_count, updated_at";
+      // Te same bramki dla obu zapytan: TYLKO publiczne polecajki (visited). Prywatne wishlisty
+      // "Do zobaczenia" (to_visit) NIGDY na cudzym profilu - guard nawet gdyby ktoras zostala
+      // jako public+approved. Soft-moderacja: pending + approved widoczne, rejected/hidden nie.
+      const guarded = (q: any) => q.eq("kind", "ranking").eq("list_status", "visited")
+        .eq("is_public", true).eq("hidden_by_admin", false).neq("moderation_status", "rejected");
+      // WSPOLTWORZONE kolekcje tez naleza do tego profilu (prosba Nat 2026-09-15; na WLASNYM
+      // profilu dziala to od tego samego dnia). Bez tego kolekcja, do ktorej ktos zostal
+      // zaproszony, nie pokazywala sie u niego nigdzie poza "Zapisane".
+      // ⚠️ Odczyt `discovery_collection_members` przez OSOBE TRZECIA dziala od migracji
+      // 20260915k - wczesniej polityka wpuszczala tylko wlasciciela i czlonkow, wiec ta lista
+      // wracala pusta i wspoltworzone kolekcje po cichu znikaly z cudzego profilu.
+      const { data: memberRows } = await (supabase as any)
+        .from("discovery_collection_members").select("collection_id").eq("user_id", profile!.id);
+      const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
+      // ⛔ DWA zapytania zamiast `.or(...)`: lista id w `id.in.(…)` ma przecinki w srodku
+      // nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje pustke.
+      const [mineRes, sharedRes] = await Promise.all([
+        guarded((supabase as any).from("discovery_collections").select(COLS).eq("user_id", profile!.id)),
+        memberIds.length
+          ? guarded((supabase as any).from("discovery_collections").select(COLS).in("id", memberIds))
+          : Promise.resolve({ data: [] }),
+      ]);
+      const seen = new Set<string>();
+      const rows = [...((mineRes.data ?? []) as any[]), ...((sharedRes.data ?? []) as any[])]
+        .filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)))
+        .sort((a, b) => new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime());
       if (!rows.length) return [];
       const ids = rows.map((r) => r.id);
       const { data: items } = await (supabase as any)
@@ -155,7 +179,23 @@ export default function PublicProfile() {
         const _cover = pickPlaceCover(photoMap, pinCoverKeys(it));
         (byCol[it.collection_id] ??= []).push({ ...it, _cover });
       }
-      return rows.map((r) => ({ ...r, tiles: byCol[r.id] ?? [] }));
+      // "odwiedzone przez autora / wszystkie" - ten sam chip co na kafelku w eksploracji.
+      const visits = await fetchListVisitCounts(ids).catch(() => new Map<string, number>());
+      // Wspoltworcy - zeby bylo widac, ze kolekcja jest wspolna (prosba Nat 2026-09-15).
+      const mem = await fetchCollectionMembersBulk(ids, new Map(rows.map((r) => [r.id, r.user_id]))).catch(() => new Map());
+      // Wlasciciele kolekcji, ktorych ten user tylko WSPOLTWORZY - pigulka autora ma pokazac ich,
+      // nie wlasciciela profilu.
+      const ownerIds = Array.from(new Set(rows.map((r) => r.user_id).filter((x) => x && x !== profile!.id)));
+      const owners = new Map<string, any>();
+      if (ownerIds.length) {
+        const { data: profs } = await (supabase as any)
+          .from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color").in("id", ownerIds);
+        for (const pr of (profs ?? []) as any[]) owners.set(pr.id, pr);
+      }
+      return rows.map((r) => ({
+        ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0,
+        co_authors: mem.get(r.id) ?? [], _owner: owners.get(r.user_id) ?? null,
+      }));
     },
   });
 
@@ -167,9 +207,16 @@ export default function PublicProfile() {
     queryFn: async () => {
       const cols = "id, title, city, countries, start_date, day_number, folder_id, views, saves_count, likes_count, created_at, user_id, tags, review_narrative, ai_summary, cover_url, list_cover_url";
       // WLASNE wyjazdy usera...
+      // ⛔ `status = 'published'` JEST OBOWIAZKOWY. `is_shared` NIE oznacza "opublikowany"
+      // od 2026-08-23 (model roboczy->przeszly): `inviteUsersToRoute` ustawia je KAZDEMU
+      // wyjazdowi grupowemu, takze roboczemu, zeby zaproszeni go odczytali. Bez tego warunku
+      // profil publiczny pokazywal ROBOCZE wyjazdy grupowe (zgloszenie Nat 2026-09-16).
+      // ⚠️ Samo zaostrzenie RLS (migracja 20260916c) tego NIE zalatwia: uczestnik wyjazdu
+      // czyta szkic przez polityke po czlonkostwie, wiec wchodzac na profil hosta nadal by go
+      // widzial. Widok musi o szkice po prostu nie pytac.
       const { data: routes } = await (supabase as any)
         .from("routes").select(cols)
-        .eq("user_id", profile!.id).eq("is_shared", true).eq("hidden_by_admin", false)
+        .eq("user_id", profile!.id).eq("is_shared", true).eq("status", "published").eq("hidden_by_admin", false)
         .order("created_at", { ascending: false });
       // ...ORAZ wyjazdy GRUPOWE, w ktorych bral udzial (nie jest hostem) - przez RPC.
       //
@@ -300,15 +347,10 @@ export default function PublicProfile() {
   const [savedListIds, setSavedListIds] = useState<Set<string>>(() => {
     try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
   });
-  const [initSavedLists] = useState<Set<string>>(() => {
-    try { return new Set<string>(JSON.parse(localStorage.getItem("trasa_saved_collections") || "[]")); } catch { return new Set(); }
-  });
 
   const isTripLiked = (id: string) => likeOverride["t:" + id] ?? initLikedTrips.has(id);
   const isTripSaved = (id: string) => saveOverride["t:" + id] ?? initSavedTrips.has(id);
   const isListSaved = (id: string) => savedListIds.has(id);
-  // Licznik = baza (z DB) skorygowana o roznice miedzy stanem biezacym a poczatkowym.
-  const delta = (now: boolean, was: boolean) => (now ? 1 : 0) - (was ? 1 : 0);
 
   const onTripLike = (tr: any) => {
     if (!user) { navigate("/auth"); return; }
@@ -353,6 +395,11 @@ export default function PublicProfile() {
     setSavedListIds(next);
   };
 
+  // ⛔ NAD early-returnami - inaczej przy pierwszym renderze (profil sie laduje) Reactowi
+  // ubywa hookow. Ta sama pulapka, ktora wywalila widok kolekcji 2026-09-15; lapie ja
+  // `npm run hooks:check`.
+  const stickyRef = useStickyHeadVar();
+
   if (isLoading) return <ScreenSkeleton variant="profile" />;
   if (!profile) return (
     <div className="flex flex-col items-center justify-center h-[100dvh] gap-3">
@@ -363,11 +410,15 @@ export default function PublicProfile() {
 
   // Imię (first_name) = nazwa wyświetlana; username = osobny @handle (nie username jako oba).
   const displayName = profile.first_name || profile.username || "";
+  // Snap wlaczamy tylko tam, gdzie scrolluje sie KOLEKCJE (kafelki jednakowej budowy) -
+  // ta sama regula, co na wlasnym profilu. Po zablokowaniu osoby tresci nie ma wcale.
+  const listSnap = tab === "listy" && !blocked && listCards.length > 0;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
       {/* Header: powrot + @username */}
-      <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
+      {/* Tapniecie w belke = powrot na gore (odruch z iOS); guziki w srodku dzialaja normalnie. */}
+      <div {...scrollTopTapProps()} className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
         <button onClick={() => goBackOr(navigate, "/eksploruj")} className="h-9 w-9 flex items-center justify-center text-foreground active:scale-90 transition-transform">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -406,11 +457,18 @@ export default function PublicProfile() {
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      {/* SNAP przy kolekcjach - dokladnie to samo zachowanie, co na wlasnym profilu (prosba
+          Nat 2026-09-16). Wlaczony TYLKO na zakladce Kolekcje: Wyjazdy maja karty roznej
+          wysokosci (lista / mozaika / siatka) i snap by je szarpal.
+          `scroll-pt` = mierzona wysokosc przyklejonej belki zakladek, zeby kafelek stawal POD
+          nia, a nie za nia. */}
+      <div data-scroll-main className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden${listSnap ? " snap-y snap-mandatory scroll-pt-[var(--profile-sticky,44px)]" : ""}`}>
       <div className="px-4 space-y-5 max-w-lg mx-auto pt-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
 
         {/* Avatar + nazwa + bio (Figma: nazwa | separator | bio) */}
-        <div className="flex items-start gap-4">
+        {/* `snap-start` = gora profilu jest pelnoprawnym miejscem spoczynku przy wlaczonym
+            snapie; bez tego krotkie pociagniecie od gory od razu skakaloby na pierwszy kafelek. */}
+        <div className="flex items-start gap-4 snap-start">
           <span className="relative h-[76px] w-[76px] shrink-0">
           <AvatarFrame kind={isAvatarFrame(profile.avatar_frame) ? profile.avatar_frame : null} color={profile.avatar_frame_color} size={76} />
           <Avatar className="h-[76px] w-[76px] shrink-0">
@@ -440,9 +498,12 @@ export default function PublicProfile() {
             <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
           </button>
-          <button onClick={() => setFollowSheet("following")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.following")}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.following}</p>
+          {/* ZNAJOMI zamiast obserwowanych - ta sama definicja co na wlasnym profilu
+              (wzajemna obserwacja, liczona przez baze). Obserwowani nie znikaja: maja
+              zakladke w arkuszu. Rzad miesci TRZY pozycje, czwarta sie nie miesci. */}
+          <button onClick={() => setFollowSheet("friends")} className="text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends")}</p>
+            <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{(friendIds.data ?? []).length}</p>
           </button>
           {/* Wyroznione miejsca tej osoby (prosba Nat 2026-09-13) - jak na wlasnym profilu. */}
           <button onClick={() => { haptics.light(); setStarredOpen(true); }} aria-label={t("profile.starred_aria")} className="text-left active:opacity-70 transition-opacity">
@@ -457,7 +518,12 @@ export default function PublicProfile() {
           <FollowButton targetUserId={profile.id} iconOnly className="shrink-0" />
         </div>
 
-        {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej) */}
+        {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej).
+            PRZYKLEJONE u gory, tak jak na wlasnym profilu: przy wlaczonym snapie pierwszy
+            kafelek wypycha naglowek poza ekran, wiec bez tego nie bylo juz widac, czyj to
+            profil ani ktora zakladke sie oglada. Tlo musi byc kryjace - kafelki przejezdzaja
+            pod spodem. */}
+        <div ref={stickyRef} className="sticky top-0 z-30 bg-background -mx-4 px-4">
         <div className="flex border-b border-border/40 -mx-1">
           {/* Kolejnosc: Wyjazdy | Listy - ta sama co na wlasnym profilu. */}
           {(["wyjazdy", "listy"] as const).map((tk) => {
@@ -473,6 +539,7 @@ export default function PublicProfile() {
               </button>
             );
           })}
+        </div>
         </div>
 
         {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
@@ -492,29 +559,36 @@ export default function PublicProfile() {
             listCards.length === 0 ? (
               <FeedEmptyRO maskSrc="/Ikona_Trasy.svg" title={t("public.no_lists")} desc={t("public.no_lists_desc")} />
             ) : (
-              // Ten sam odstep i to samo rozmieszczenie licznikow co na wlasnym profilu
-              // (prosba Nat 2026-09-10) - dotad karta listy wygladala inaczej u siebie
-              // i u kogos innego, choc to ta sama tresc.
-              <div className="space-y-10">
-              {listCards.map((l: any) => (
-                <ProfileFeedCard
-                  key={l.id}
-                  avatarUrl={profile.avatar_url}
-                  authorId={profile.id}
-                  fallback={displayName}
-                  eyebrow=""
-                  timestamp={shortRelativeTime(l.updated_at)}
-                  title={l.title || t("feed.list_fallback")}
-                  description={l.description}
-                  tiles={l.tiles}
-                  counts={{ saves: Math.max(0, (l.saves_count ?? 0) + delta(isListSaved(l.id), initSavedLists.has(l.id))), views: l.views_count ?? 0 }}
-                  // Sam licznik przy dacie (prosba Nat 2026-09-10). Stopka z osobna zakladka
-                  // zostawala pod karta jako samotna ikona bez liczby - druga informacja o tym
-                  // samym. Zapisanie listy zyje w jej widoku, gdzie stoi pelne CTA.
-                  countsInHeader
-                  onOpen={() => navigate(`/lista/${l.id}`)}
-                />
-              ))}
+              // Kolekcje wygladaja TAK SAMO jak w eksploracji i na wlasnym profilu
+              // (prosba Nat 2026-09-15). Wczesniej byl tu `ProfileFeedCard` (rzad miniatur),
+              // wiec ta sama kolekcja miala TRZECI wyglad - u siebie kafelek, u kogos innego
+              // karta. Licznika zapisow NIE podajemy: to informacja zwrotna dla autora,
+              // a nie element kafelka u ogladajacego.
+              <div className="space-y-4">
+              {listCards.map((l: any) => {
+                const places = (l.tiles ?? []).map((it: any) => ({
+                  name: it.place_name as string,
+                  category: (it.category ?? null) as string | null,
+                  photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+                }));
+                const item: GridItem = {
+                  kind: "list", id: l.id, title: l.title || t("feed.list_fallback"),
+                  cover: places.find((x: any) => x.photo)?.photo ?? null,
+                  where: l.city || scopeLabel(l),
+                  // Kolekcja WSPOLTWORZONA pokazuje swojego wlasciciela, nie wlasciciela profilu.
+                  authorName: (l._owner ?? profile).first_name || "",
+                  authorHandle: (l._owner ?? profile).username ? `@${(l._owner ?? profile).username}` : null,
+                  authorAvatar: (l._owner ?? profile).avatar_url, authorId: l.user_id ?? profile.id,
+                  authorFrame: (l._owner ?? profile).avatar_frame, authorFrameColor: (l._owner ?? profile).avatar_frame_color,
+                  showAuthor: true,
+                  coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
+                  at: new Date(l.updated_at ?? 0).getTime(),
+                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  theme: listTheme(l.theme, l.id), places,
+                  visitedCount: l.visited_count ?? 0,
+                };
+                return <GridTile key={l.id} it={item} size="feed" people="avatars" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
+              })}
               </div>
             )
           ) : tripCards.length === 0 ? (
@@ -535,7 +609,7 @@ export default function PublicProfile() {
               {/* Dwie kolumny flex (naprzemiennie), NIE CSS multicol - patrz mosaicColumns. */}
               <div className="flex items-start gap-1.5">
                 {mosaicColumns(tripCards).map((col, ci) => (
-                  <div key={ci} className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div key={ci} className={`flex min-w-0 flex-1 flex-col gap-1.5 ${ci === 1 ? MOSAIC_OFFSET : ""}`}>
                     {col.map((tr: any) => (
                       <TripTile key={tr.id} natural photo={tripCover(tr)} title={tr.title || t("feed.trip_fallback_generic")}
                         meta={scopeLabel(tr) || tr.city} onOpen={() => navigate(`/route/${tr.id}`)} />
@@ -577,38 +651,22 @@ export default function PublicProfile() {
 
       {/* Obserwujacy / Obserwowani - lista (klik -> profil danej osoby) */}
       <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={profile.id} own={false} />
-      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
-        <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
-          {/* Uchwyt: sygnal, ze arkusz zamyka sie przeciagnieciem w dol. */}
-          <div className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/25 -mt-2 mb-1 shrink-0" />
-          <SheetHeader className="pb-3 border-b border-border/20">
-            <SheetTitle>{followSheet === "following" ? t("profile.following") : t("profile.followers")}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-3">
-            {followList.isLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-8">…</p>
-            ) : (followList.data ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center pt-6">
-                {followSheet === "following"
-                  ? t("public.no_following", { name: displayName })
-                  : t("public.no_followers", { name: displayName })}
-              </p>
-            ) : (
-              <div className="space-y-1">
-                {(followList.data ?? []).map((p) => (
-                  <button key={p.id} onClick={() => { setFollowSheet(null); navigate(`/profil/${p.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
-                    <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-primary font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
-                      {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Ten sam arkusz, co na wlasnym profilu (kierunek A). Rozne sa tylko REGULY:
+          relacje w wierszach licza sie wzgledem MNIE, a nie wlasciciela listy, i nie ma
+          akcji wlasciciela (wypisania ze znajomych). */}
+      {followSheet && (
+        <PeopleSheet
+          open
+          onClose={() => setFollowSheet(null)}
+          tab={followSheet}
+          onTab={setFollowSheet}
+          ownerId={profile.id}
+          myId={user?.id}
+          own={false}
+          ownerName={displayName}
+          ownerUsername={profile.username}
+        />
+      )}
     </div>
   );
 }

@@ -32,7 +32,7 @@
     "no_place_detected": "No place detected. Try a photo of a building, landmark or attraction.",
     "prompt_parks": "Show me 3 of the nicest parks and places to walk",
     "error": "Sorry, something went wrong. Try again.",
-    "no_route": "No active trip. Create a plan first.",
+    "no_route": "No active plan. Create a plan first.",
     "identify_failed": "We could not recognise the place.",
     "prompt_landmarks": "Show me 3 of the most interesting landmarks",
     "prompt_museums": "Show me 3 interesting museums",
@@ -94,13 +94,13 @@
   "filters": {
     "all": "All",
     "lists": "Collections",
-    "trips": "Trips",
+    "trips": "Plans",
     "places": "Places",
     "routes": "Routes",
     "people": "People"
   },
   "fallback": {
-    "trip": "Trip",
+    "trip": "Plan",
     "list": "Collection",
     "route": "Route",
     "place": "Place",
@@ -122,25 +122,25 @@
         "desc": "Want to know when someone likes or saves your collection? Turn on notifications - we only send the ones about reactions to your content and invites from friends."
       },
       "trip_created": {
-        "title": "Trip ready",
-        "desc": "We'll let you know when friends answer your invite and, once you publish, when someone likes or saves your trip. No spam, just reactions to your content."
+        "title": "Plan ready",
+        "desc": "We'll let you know when friends answer your invite and, once you publish, when someone likes or saves your plan. No spam, just reactions to your content."
       },
       "trip_published": {
-        "title": "Trip published",
-        "desc": "Want to know when someone likes or saves your trip? Turn on notifications - no spam, just reactions to your content."
+        "title": "Plan published",
+        "desc": "Want to know when someone likes or saves your plan? Turn on notifications - no spam, just reactions to your content."
       },
       "invite_sent": {
         "title": "Invites sent",
-        "desc": "Turn on notifications to know when your friends answer and write in the trip chat."
+        "desc": "Turn on notifications to know when your friends answer and write in the plan chat."
       },
       "bell": {
         "title": "Turn on notifications",
-        "desc": "Know right away when someone likes or saves your trip or collection, invites you to a trip or writes in the chat.",
-        "short": "Reactions to your trips and collections, invites, trip chat."
+        "desc": "Know right away when someone likes or saves your plan or collection, invites you to a plan or writes in the chat.",
+        "short": "Reactions to your plans and collections, invites, plan chat."
       },
       "settings": {
         "title": "Turn on notifications",
-        "desc": "Know right away when someone likes or saves your trip or collection, invites you to a trip or writes in the chat."
+        "desc": "Know right away when someone likes or saves your plan or collection, invites you to a plan or writes in the chat."
       },
       "denied": {
         "title": "Notifications are off",
@@ -160,7 +160,30 @@
       "denied": {
         "title": "Location is off",
         "desc": "Turn it on in your phone settings: Settings → Spontaway → Location."
-      }
+      },
+      "status_on": "On",
+      "status_off": "Off",
+      "status_ask": "Not asked yet"
     }
+  },
+  "splash": {
+    "made_in": "MADE IN POLAND, SHARED WORLDWIDE"
+  },
+  "keyboard": {
+    "hide": "Hide keyboard"
+  },
+  "translate": {
+    "button": "Translate",
+    "loading": "Translating…",
+    "translated": "Translated",
+    "original_shown": "Original",
+    "show_original": "Show original",
+    "show_translation": "Show translation",
+    "failed": "Could not translate",
+    "limit": "Daily translation limit reached"
+  },
+  "limits": {
+    "trip_places": "A plan can hold up to {{max}} places. {{left}} left.",
+    "collection_places": "A collection can hold up to {{max}} places. {{left}} left."
   }
 }

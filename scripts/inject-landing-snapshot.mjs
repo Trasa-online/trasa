@@ -90,11 +90,28 @@ const ALTERNATES = [
   '<link rel="x-default" hreflang="x-default" href="https://spontaway.com/" />',
 ].join("\n    ");
 
+
+// Wejscie z HASH-ROUTE (np. spontaway.com/#/biznes/<id>) trafia sciezka "/" - czyli na LANDING
+// z wklejona trescia - i dopiero React przelacza widok. Efekt: przez ulamek sekundy lokal
+// widzi landing B2C zamiast swojego panelu (zgloszenie Nat 2026-09-15).
+//
+// Hash nigdy nie dociera do serwera, wiec przepisanie w vercel.json tego nie zalatwi.
+// Ten skrypt siedzi w <head>, wykonuje sie PRZED malowaniem tresci i gdy adres ma realna
+// trase w hashu - czysci wklejona migawke. Robot i zwykle wejscie na "/" dostaja landing
+// bez zmian, bo tam hasha nie ma.
+const HASH_ROUTE_GUARD = `<script>(function(){
+  var h = location.hash || "";
+  if (h.length > 2 && h.charAt(0) === "#" && h.charAt(1) === "/") {
+    document.documentElement.setAttribute("data-app-route", "1");
+  }
+})();</script>
+    <style>html[data-app-route="1"] #landing-snapshot{display:none!important}</style>`;
+
 function render(markupFor, metaFor, lang, canonical) {
-  let html = base.replace(rootTag[0], `<div id="root">${markupFor}</div>`);
+  let html = base.replace(rootTag[0], `<div id="root"><div id="landing-snapshot">${markupFor}</div></div>`);
   if (metaFor.title) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${metaFor.title}</title>`);
   html = html.replace(/<html([^>]*)\slang="[^"]*"/, "<html$1").replace(/<html/, `<html lang="${lang}"`);
-  html = html.replace("</head>", `  <link rel="canonical" href="${canonical}" />\n    ${ALTERNATES}\n  </head>`);
+  html = html.replace("</head>", `  <link rel="canonical" href="${canonical}" />\n    ${ALTERNATES}\n    ${HASH_ROUTE_GUARD}\n  </head>`);
   return html;
 }
 

@@ -1,11 +1,15 @@
+import { BrandSpinner } from "@/components/BrandSpinner";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays, Plus, Check, Bookmark } from "lucide-react";
+import { ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, Plus, Check } from "lucide-react";
+import { BrandCalendar, BrandPin } from "@/components/BrandIcon";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
+import { rememberItem, recallItem } from "@/hooks/useScrollRestore";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { format } from "date-fns";
@@ -324,6 +328,19 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
   // Adres z bazy (ocena-gwiazdki usunieta z aplikacji; Google fallbacky odciete - zero Google).
   const displayAddress = place.address;
+  // MIASTO na okladce (prosba Nat 2026-09-15). Do tej pory w wierszu meta stal sam pierwszy
+  // czlon adresu, czyli ULICA - a przy globalnej zakladce "Miejsca" (city="all") karty
+  // z Warszawy, Gdanska i Rzymu leza jedna na drugiej i po samej ulicy nie da sie poznac,
+  // gdzie sie jest. Dotyczy tak samo wizytowek premium (adres z panelu lokalu), jak i stanu
+  // zero (adres z `places`). Dedup, bo czesc adresow to sama nazwa miasta.
+  // ⛔ `city` bywa sentynelem "all" (zakladka Miejsca jest globalna) - nie wolno go wypisac
+  // jako nazwy miasta. Zrodlem prawdy jest `place.city`; prop sluzy tylko za awaryjne uzupelnienie.
+  const cardCity = (place.city || (city && city !== "all" ? city : "") || "").trim() || null;
+  const street = displayAddress ? displayAddress.split(",")[0].trim() : null;
+  const metaPlace = [street, cardCity]
+    .filter((v): v is string => !!v)
+    .filter((v, i, a) => a.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i)
+    .join(" · ");
   // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS "od Ciebie" gdy
   // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
   // miejsce MA wspolrzedne - maly przycisk "Pokaz dystans" otwiera wybor (Jestes juz w meiscie?).
@@ -548,10 +565,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           {place.price_level && !shareMode && (
             <span className="text-white/60 text-sm">{PRICE_DOTS(place.price_level)}</span>
           )}
-          {displayAddress && (
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3 text-white/50" />
-              <span className="text-white/60 text-xs truncate">{displayAddress.split(",")[0]}</span>
+          {metaPlace && (
+            <div className="flex min-w-0 items-center gap-1">
+              <BrandPin className="h-3 w-3 shrink-0 text-white/50" />
+              <span className="text-white/60 text-xs truncate">{metaPlace}</span>
             </div>
           )}
         </div>
@@ -641,7 +658,9 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             aria-label={t("add")}
             className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
           >
-            <Bookmark className={cn("h-5 w-5 text-foreground", saved && "fill-current")} strokeWidth={2} />
+            {/* Brandowa zakladka (CLAUDE.md: nie lucide `Bookmark`), PUSTA dopoki miejsce nie
+                jest nigdzie zapisane, PELNA po zapisie (prosba Nat 2026-09-15). */}
+            <BrandBookmark filled={saved} className="h-5 w-5 text-foreground" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onTap(); }}
@@ -791,11 +810,7 @@ const EmptyState = ({
 
       {loadingExamples && (
         <div className="flex justify-center py-8">
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map(i => (
-              <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-            ))}
-          </div>
+          <BrandSpinner size={26} />
         </div>
       )}
 
@@ -957,6 +972,9 @@ function placeBaseScore(p: MockPlace): number {
   return rating;
 }
 
+/** Klucz pamieci powrotu dla zakladki Miejsca (swiper w `exploreMode`). */
+const MIEJSCA_SCROLL_KEY = "/miejsca";
+
 // Przeplot kategorii (weighted round-robin): zadne dwie sasiednie karty nie sa z tej
 // samej kategorii (chyba ze zostala juz tylko jedna kategoria), a w obrebie kategorii
 // najlepiej oceniane miejsca pojawiaja sie wczesniej. Rozwiazuje "4-5 restauracji pod rzad".
@@ -1079,20 +1097,20 @@ export async function fetchEnrichedPlace(id: string, refDate?: string): Promise<
 }
 
 export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
-  const placeGallery: string[] = Array.isArray(p.gallery_urls) ? p.gallery_urls.filter(Boolean) : [];
-
+  // `places.gallery_urls` (backfill Google) NIE jest juz czytane nigdzie: galeria lokalu bierze
+  // wylacznie zdjecia wgrane przez lokal, a zwykle miejsce - wylacznie zdjecia userow.
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
   if (!bp) {
-    // Zwykle miejsce (bez profilu biznesu). ZERO Google (2026-07-29): NIE uzywamy starego Google
-    // backfillu (places.photo_url z prefiksem gpid_/cache). Zachowujemy: (a) recznie skurowana
-    // okladka (upload /manual/) = NASZ content, (b) proxy Google na zywo (/api/place-photo) - swiadomy
-    // backfill zdjec dla ODBLOKOWANYCH miejsc zakladki "Miejsca" (proxy = pobranie live, bez cache
-    // bajtow, zgodnie z ToS Google). Brak -> okladka z losowego zdjecia usera (SwipeCard) / ikona.
-    const curated = typeof p.photo_url === "string"
-      && (p.photo_url.includes("/place-photos-cache/manual/") || p.photo_url.includes("/api/place-photo"))
-      ? p.photo_url
-      : undefined;
-    return { ...p, photo_url: curated, galleryPhotos: curated ? [curated] : [] } as MockPlace;
+    // Zwykle miejsce (bez profilu biznesu) = ZERO zdjec spoza spolecznosci (decyzja Nat
+    // 2026-09-15). Okladka moze pochodzic WYLACZNIE od uzytkownikow (place_photos /
+    // pins.user_photo_urls, dociagane osobno przez SwipeCard) albo od samego lokalu.
+    // `places.photo_url` i `places.gallery_urls` sa tu ODRZUCANE w calosci, niezaleznie od
+    // tego, czy to proxy Google (/api/place-photo), plik z cache (gpid_/hash_), czy okladka
+    // wgrana recznie (/place-photos-cache/manual/) - wszystkie trzy to nie jest nasz content
+    // spolecznosciowy. Brak zdjecia usera -> ikona kategorii na peachy tle.
+    // Dane w bazie ZOSTAJA nietkniete: to odsiew po stronie klienta, wiec przywrocenie
+    // ktoregokolwiek zrodla to jedna linijka tutaj.
+    return { ...p, photo_url: undefined, galleryPhotos: [] } as MockPlace;
   }
   // Per decyzja produktowa (CLAUDE.md): WYGLAD wizytowki (logo, eventy, cover, kontakt) jest
   // premium dla kazdego aktywnego biznesu - kolumna `plan` (legacy zero/basic/premium) jest tu
@@ -1104,11 +1122,9 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   // Logika galerii: jesli biznes wgral wlasne zdjecia (cover_image, cover_video, gallery_urls)
   // -> uzywamy TYLKO biznesowych. Biznes wybral jak chce sie prezentowac, nie nadpisujemy
   // kurowanymi Google Photos z places.gallery_urls (backfill).
-  // Jesli biznes NIE ma zadnych wlasnych zdjec -> uzywamy placeGallery (Google backfill)
-  // jako fallback zeby wizytowka miala chociaz placeholder.
   const hasBizPhotos = !!(bp.cover_image_url || bp.cover_video_url || bizGallery.length > 0);
-  // ZERO Google (2026-07-29): gdy biznes nie ma wlasnych zdjec, NIE fallbackujemy do
-  // placeGallery (Google backfill) - zostaje pusto (-> ikona kategorii / zdjecia usera).
+  // ZERO Google (2026-07-29): gdy lokal nie ma wlasnych zdjec, NIE fallbackujemy do
+  // places.gallery_urls (backfill Google) - zostaje pusto (-> ikona / zdjecia userow).
   const mergedGallery = hasBizPhotos ? bizGallery : [];
   // Adres z profilu biznesu (street + postal + miasto). Biznes wpisuje wlasny adres w dashboardzie -
   // to autorytatywne zrodlo. Inaczej adres bralby sie z Google (detail.formatted_address), ktory dla
@@ -1477,6 +1493,41 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseQueue, sortByNearest]);
 
+  // ── POWROT NA TA SAMA WIZYTOWKE (prosba Nat 2026-09-15) ────────────────────────────────
+  // Wejscie w cos z zakladki Miejsca odmontowuje swiper, wiec po powrocie user ladowal na
+  // pierwszej karcie. ⚠️ NIE zapamietujemy pozycji w pikselach: `interleaveByCategory`
+  // uklada kolejke od nowa przy kazdym montowaniu (przeplot kategorii z losowym jitterem),
+  // wiec ten sam offset trafilby w INNA wizytowke. Pamietamy IDENTYFIKATOR karty i szukamy
+  // jej w nowej kolejnosci. Tylko w exploreMode - kreator (`/plan`) ma wlasny przebieg.
+  useEffect(() => {
+    // ⚠️ Tylko gdy karta JEST znana. Przy montowaniu `activeCardId` to jeszcze null, a
+    // `rememberItem(key, null)` kasuje wpis - czyli wymazalibysmy pamiec dokladnie w chwili,
+    // w ktorej jest potrzebna do powrotu.
+    if (exploreMode && activeCardId) rememberItem(MIEJSCA_SCROLL_KEY, activeCardId);
+  }, [exploreMode, activeCardId]);
+
+  const restoreCardId = useRef<string | null>(exploreMode ? recallItem(MIEJSCA_SCROLL_KEY) : null);
+  // Przywrocenie pozycji to PROGRAMOWY scroll. Bez tej flagi `onScroll` potraktowalby go jak
+  // przegladanie i od razu po powrocie wyskoczyloby pytanie o lokalizacje (prog: trzecia karta).
+  const programmaticScroll = useRef(false);
+  useEffect(() => {
+    const want = restoreCardId.current;
+    if (!exploreMode || !want) return;
+    const idx = displayQueue.findIndex((p) => p.id === want);
+    if (idx < 0) return;                       // kolejki jeszcze nie ma - efekt wroci z nia
+    // Karta poza oknem leniwego doladowania: najpierw ja wyrenderuj, scroll w nastepnym przebiegu.
+    if (idx >= exploreVisible) { setExploreVisible(Math.min(displayQueue.length, idx + 4)); return; }
+    restoreCardId.current = null;
+    const scroller = scrollWrapRef.current;
+    const node = scroller?.children[idx] as HTMLElement | undefined;
+    if (!scroller || !node) return;
+    // Roznica prostokatow zamiast `scrollIntoView` - przesuwa WYLACZNIE ten scroller,
+    // bez ruszania przodkow. Snap sam doklei karte do punktu przyciagania.
+    programmaticScroll.current = true;
+    scroller.scrollTop += node.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    window.setTimeout(() => { programmaticScroll.current = false; }, 250);
+  }, [exploreMode, displayQueue, exploreVisible]);
+
   const photoUrlOverrides = useRef<Record<string, string>>({});
 
   const saveReaction = (place: MockPlace, reaction: "liked" | "skipped" | "super_liked", overridePhotoUrl?: string) => {
@@ -1798,15 +1849,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-2 w-2 rounded-full bg-primary animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
+        <BrandSpinner size={34} />
       </div>
     );
   }
@@ -1932,7 +1975,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         {onEditDate ? (
           <button onClick={onEditDate} className="text-xs text-muted-foreground inline-flex items-center gap-1 active:opacity-60" aria-label={t("edit_date_aria")}>
             {city} · {format(date, "d MMM")}
-            <CalendarDays className="h-3 w-3 opacity-60" />
+            <BrandCalendar className="h-3 w-3 opacity-60" />
           </button>
         ) : (
           <span className="text-xs text-muted-foreground">{city} · {format(date, "d MMM")}</span>
@@ -2030,18 +2073,23 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         <div
           ref={scrollWrapRef}
           onScroll={(e) => {
+            // User sam przewinal - nie wyrywamy mu juz widoku do zapamietanej karty.
+            restoreCardId.current = null;
             const el = e.currentTarget;
             const h = el.clientHeight || 1;
             const idx = Math.round(el.scrollTop / h);
             const p = displayQueue[idx];
             if (p && p.id !== activeCardId) setActiveCardId(p.id);
             if (el.scrollTop > 24 && !hasScrolled) setHasScrolled(true);
-            maybeAskLocationOnBrowse(idx);
+            if (!programmaticScroll.current) maybeAskLocationOnBrowse(idx);
             // Infinite scroll: dociagaj kolejne karty gdy zblizamy sie do konca (2.5 ekranu).
             if (el.scrollHeight - el.scrollTop - el.clientHeight < el.clientHeight * 2.5) {
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));
             }
           }}
+          // Glowny scroller zakladki Miejsca: stukniecie w pasek statusu wraca na PIERWSZA
+          // karte (patrz src/lib/scrollTop.ts). Snap sam dociaga ja do krawedzi.
+          data-scroll-main
           className="flex-1 min-h-0 overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain pt-3 scroll-pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]"
         >
           {displayQueue.slice(0, exploreVisible).map((place) => {

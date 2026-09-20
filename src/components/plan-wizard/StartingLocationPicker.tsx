@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Search, X, Plus, Minus, LocateFixed, Loader2 } from "lucide-react";
+import { X, Plus, Minus, LocateFixed, Loader2, Search } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
 import { APIProvider, Map, AdvancedMarker, useMapsLibrary, useMap } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getCityCenter } from "@/lib/cities";
@@ -281,7 +282,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
         <div className="absolute top-3 left-3 right-3 z-10">
           <div className="relative">
             <div className="flex items-center bg-white rounded-2xl shadow-lg px-3 h-11 gap-2">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 type="text"
                 value={query}

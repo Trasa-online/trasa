@@ -55,6 +55,9 @@ export const analytics = {
 //   explore_opened -> place_viewed -> place_saved
 //   trip_create_opened -> trip_place_added -> trip_published
 //   list_create_opened -> list_place_added -> list_published
+//   collection_created        - NOWA kolekcja (kazda sciezka, publiczna i prywatna) - raport dzienny
+//   list_place_added          - miejsce dopisane do ISTNIEJACEJ kolekcji; `general: true` = zapis
+//                               1-tap do prywatnej "Ogolne" (raport go pomija)
 // Druga polowa tezy produktu: czy TRESC JEDNEGO uzytkownika napedza dzialanie DRUGIEGO.
 // Bez tych zdarzen widac tylko tworzenie, a nie obieg:
 //   route_saved / list_saved  - ktos zapisal cudzy wyjazd albo liste

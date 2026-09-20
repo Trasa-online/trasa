@@ -55,7 +55,8 @@
     "name_failed": "Nie udało się zmienić nazwy",
     "name_not_allowed": "Ta nazwa zawiera niedozwolone słowo",
     "photo_deleted": "Usunięto zdjęcie",
-    "auto_visited": "Odhaczono jako odwiedzone"
+    "auto_visited": "Odhaczono jako odwiedzone",
+    "photo_failed": "Nie udało się dodać zdjęcia. Spróbuj ponownie."
   },
   "cta": {
     "add_place": "Dodaj nowe miejsce",
@@ -68,7 +69,9 @@
     "rename_list": "Zmień nazwę kolekcji",
     "list_actions": "Akcje kolekcji",
     "list_theme": "Tło kolekcji",
-    "list_scope": "Kraj i miasto"
+    "list_scope": "Kraj i miasto",
+    "list_people": "Osoby w kolekcji",
+    "list_privacy": "Prywatność"
   },
   "fallback_title": "Kolekcja miejsc",
   "photo": "Zdjęcie",
@@ -97,7 +100,18 @@
     "yellow": "Żółty",
     "gold": "Złoty",
     "orange": "Pomarańcz",
-    "brown": "Brąz"
+    "brown": "Brąz",
+    "cream": "Krem",
+    "sand": "Piasek",
+    "sage": "Szałwia",
+    "moss": "Mech",
+    "teal": "Morski",
+    "sky": "Niebo",
+    "denim": "Denim",
+    "plum": "Śliwka",
+    "wine": "Wino",
+    "custom": "Własny kolor",
+    "custom_hint": "Wybierz z palety"
   },
   "scope": {
     "title": "Kraj i miasto",
@@ -108,5 +122,52 @@
     "save": "Zapisz",
     "saved": "Zapisano kraj i miasto",
     "save_failed": "Nie udało się zapisać kraju i miasta"
+  },
+  "people": {
+    "title": "Osoby w kolekcji",
+    "desc_owner": "Zaproszone osoby mogą dodawać miejsca do tej kolekcji. Usunąć mogą tylko to, co same dodały.",
+    "desc_member": "Współtworzysz tę kolekcję. Możesz dodawać miejsca i usuwać te, które sam(a) dodałeś(-aś).",
+    "current": "Współtworzą",
+    "add": "Dodaj osoby",
+    "remove": "Usuń z kolekcji",
+    "added": "Dodano do kolekcji",
+    "removed": "Usunięto z kolekcji",
+    "add_failed": "Nie udało się dodać. Spróbuj ponownie.",
+    "remove_failed": "Nie udało się usunąć. Spróbuj ponownie.",
+    "user_fallback": "Użytkownik",
+    "add_confirm_one": "Dodaj {{count}} osobę",
+    "add_confirm_few": "Dodaj {{count}} osoby",
+    "add_confirm_many": "Dodaj {{count}} osób",
+    "added_count_one": "Dodano {{count}} osobę do kolekcji",
+    "added_count_few": "Dodano {{count}} osoby do kolekcji",
+    "added_count_many": "Dodano {{count}} osób do kolekcji",
+    "leave": "Opuść",
+    "leave_confirm_title": "Opuścić tę kolekcję?",
+    "leave_confirm_desc": "Przestaniesz ją współtworzyć. Miejsca, notki i zdjęcia, które dodałeś(-aś), zostają.",
+    "leave_cta": "Opuść kolekcję",
+    "left": "Opuściłeś(-aś) kolekcję",
+    "leave_failed": "Nie udało się opuścić kolekcji. Spróbuj ponownie."
+  },
+  "privacy": {
+    "title": "Prywatność kolekcji",
+    "desc": "Decydujesz, kto może ją oglądać. Współtwórcy widzą ją zawsze.",
+    "public_label": "Publiczna",
+    "public_desc": "Widoczna w eksploracji i pod linkiem. Każdy może ją zapisać u siebie.",
+    "private_label": "Tylko dla mnie",
+    "private_desc": "Znika z eksploracji, a link przestaje działać. Zostaje u Ciebie i u współtwórców.",
+    "private_warn_one": "{{count}} osoba ma ją zapisaną i straci do niej dostęp.",
+    "private_warn_few": "{{count}} osoby mają ją zapisaną i stracą do niej dostęp.",
+    "private_warn_many": "{{count}} osób ma ją zapisaną i straci do niej dostęp.",
+    "chip": "Prywatna",
+    "now_public": "Kolekcja jest publiczna",
+    "now_private": "Kolekcja jest prywatna",
+    "undo": "Cofnij",
+    "save_failed": "Nie udało się zmienić prywatności. Spróbuj ponownie."
+  },
+  "visitors": {
+    "title": "Kto tu był",
+    "starred": "Wyróżnił(a)",
+    "visited": "Był(a) tu",
+    "empty": "Nikt jeszcze nie odhaczył tego miejsca."
   }
 }

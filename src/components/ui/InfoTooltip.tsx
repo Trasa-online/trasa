@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Info } from "lucide-react";
+import { BrandInfo } from "@/components/BrandIcon";
 
 // Ikona informacji (i) w naglowku widoku - po tapnieciu pokazuje popover z wyjasnieniem, co user
 // moze robic na tym widoku i co tworzy. Tap w tlo zamyka. Popover wyrownany do prawej pod ikona.
@@ -13,7 +13,7 @@ export function InfoTooltip({ title, children, align = "right" }: { title?: stri
         aria-label="Informacja"
         className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted transition-colors"
       >
-        <Info className="h-[22px] w-[22px]" />
+        <BrandInfo className="h-[22px] w-[22px]" />
       </button>
       {open && (
         <>

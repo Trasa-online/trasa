@@ -84,7 +84,7 @@
     "heading_single": "Day plan"
   },
   "empty": {
-    "participant": "No proposals yet. Add the places you want to see - the host picks what makes it into the trip.",
+    "participant": "No proposals yet. Add the places you want to see - the host picks what makes it into the plan.",
     "host": "No proposals yet. Add places with the search, or wait for participants to add theirs."
   },
   "search": {
@@ -95,7 +95,7 @@
     "already": "That place is already in the proposals",
     "remove_failed": "We could not remove the proposal",
     "add_failed": "We could not add the proposal",
-    "accept_failed": "We could not add it to the trip"
+    "accept_failed": "We could not add it to the plan"
   },
   "already_badge": "Already proposed",
   "aria": {
@@ -107,7 +107,7 @@
   "clear": "Clear",
   "back": "Back",
   "proposals": {
-    "added": "“{{place}}” added to the trip",
+    "added": "“{{place}}” added to the plan",
     "title": "Place suggestions",
     "title_count": "Proposals from participants ({{count}})",
     "add": "Add to suggestions",
@@ -124,7 +124,7 @@
     "failed": "We could not add the place",
     "placeholder": "Add a new place…",
     "saved_list": "Saved collection ·",
-    "remove": "Remove from the trip",
+    "remove": "Remove from the plan",
     "no_results": "No results",
     "already": "Already added",
     "open_in_maps": "Open {{place}} in Google Maps",
@@ -139,14 +139,14 @@
     "empty": "No messages yet. Write the first one to discuss places with the others.",
     "placeholder": "Write a message...",
     "send": "Send",
-    "title": "Trip chat",
+    "title": "Plan chat",
     "title_named": "Chat: {{title}}",
     "participant": "Participant"
   },
   "row": {
     "saved_in_list": "Place saved in a collection",
     "open_in_maps": "Open in Google Maps",
-    "remove": "Remove the place from the trip",
+    "remove": "Remove the place from the plan",
     "save_to_list": "Save place to a collection",
     "visited": "Visited",
     "mark_visited": "Mark as visited",
@@ -154,8 +154,8 @@
     "top_place": "Top pick",
     "set_top": "Add to top picks",
     "unset_top": "Remove from top picks",
-    "top_limit_one": "You can highlight up to {{count}} place from this trip",
-    "top_limit_other": "You can highlight up to {{count}} places from this trip",
+    "top_limit_one": "You can highlight up to {{count}} place from this plan",
+    "top_limit_other": "You can highlight up to {{count}} places from this plan",
     "more_actions": "More actions"
   },
   "note": {

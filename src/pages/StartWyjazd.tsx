@@ -4,13 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteWithUndo } from "@/lib/trash";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, ArrowRight, Search, X, Trash2, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, Plus, Loader2 } from "lucide-react";
+import { BrandTrash, BrandSearch } from "@/components/BrandIcon";
 import { resolveStored } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { haptics } from "@/hooks/useHaptics";
 import { toast } from "sonner";
-import { deferDelete } from "@/lib/deferDelete";
 
 // Ekran po kliknieciu "+": wybor bazy nowego wyjazdu. Robocze (wlasne trasy usera) lub
 // Zapisane (trasy zapisane od innych) jako punkt startu, albo "Zacznij od nowa" (pusty
@@ -143,15 +144,8 @@ export default function StartWyjazd() {
   // jedno i drugie (zgloszenie Nat 2026-09-09).
   const deleteDraft = async (id: string) => {
     haptics.warning();
-    deferDelete({
-      message: t("drafts.deleted"),
-      commit: async () => {
-        await (supabase as any).from("pins").delete().eq("route_id", id);
-        await (supabase as any).from("routes").delete().eq("id", id);
-        queryClient.invalidateQueries({ queryKey: ["start-robocze"] });
-      },
-      onUndo: () => queryClient.invalidateQueries({ queryKey: ["start-robocze"] }),
-    });
+    // Do KOSZA OD RAZU + "Cofnij" (2026-09-15) - takze roboczy wyjazd da sie odzyskac.
+    void deleteWithUndo("trip", id, { message: t("drafts.deleted") });
   };
 
   return (
@@ -185,7 +179,7 @@ export default function StartWyjazd() {
       {/* Wyszukiwarka */}
       <div className="px-4 pt-3">
         <div className="relative">
-          <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <BrandSearch className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -241,7 +235,7 @@ export default function StartWyjazd() {
                   aria-label={t("drafts.delete_aria")}
                   className="absolute top-3 right-3 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive active:scale-90 transition-colors"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <BrandTrash className="h-4 w-4" />
                 </button>
               )}
             </div>

@@ -3,8 +3,9 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { FLIGHT_MS, arcThrough, relRect } from "@/lib/flightPath";
 import { localizeTag, verdictOf } from "@/lib/routeTags";
-import { Check, CheckCheck, MoreHorizontal, Plus, Trash2 } from "lucide-react";
-import { BrandIcon, CAMERA_ICON, SAVE_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { CheckCheck, MoreHorizontal, Plus } from "lucide-react";
+import { BrandIcon, CAMERA_ICON, STAR_ICON, BrandTrash, BrandCheck } from "@/components/BrandIcon";
+import { BrandBookmark } from "@/components/BrandBookmark";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLongPress } from "@/hooks/useLongPress";
 import { haptics } from "@/hooks/useHaptics";
@@ -41,7 +42,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, onToggleVisited, isTop, onToggleTop, visitedAvatar, selection, menuExtras, deleteLabel }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, visitedByMe, onToggleVisited, onVisitedTap, isTop, topByMe, topCount, topAll, onToggleTop, visitedAvatar, visitedAvatars, selection, menuExtras, deleteLabel }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -56,15 +57,33 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   cornerAvatar?: string | null;
   // "Bylem tu" (2026-09-08). Stan nalezy do OGLADAJACEGO, nie do listy - patrz src/lib/placeVisits.ts.
   // Oba propy sa opcjonalne, wiec ekrany, ktore ich nie podaja (wyjazdy), wygladaja jak dotad.
+  /** Czy pigulka "odwiedzone" ma sie w ogole pokazac (w kolekcji: byl tu KTOKOLWIEK). */
   visited?: boolean;
+  /** Czy odhaczyl to OGLADAJACY - od tego zalezy tylko etykieta w menu ("byłem" / "nie byłem").
+   *  Brak = przyjmij `visited` (wyjazdy, gdzie pigulka i przelacznik znacza to samo). */
+  visitedByMe?: boolean;
   onToggleVisited?: () => void;
   // "Topka" wyjazdu (2026-09-08): autor wyroznia 1-3 miejsca warte polecenia.
   // onToggleTop podaje tylko autor - dla ogladajacych gwiazdka jest sama informacja.
   isTop?: boolean;
+  /** Kolekcja wspoltworzona (2026-09-20): gwiazdki sa PER UCZESTNIK. `isTop` = wyroznil
+   *  KTOKOLWIEK (gwiazdka przy nazwie), `topByMe` = wyroznil OGLADAJACY (stan guzika).
+   *  Brak `topByMe` = przyjmij `isTop` (wyjazdy, gdzie gwiazdka jest jedna). */
+  topByMe?: boolean;
+  /** Ile osob wyroznilo. Przy > 1 obok gwiazdki stoi liczba - CHYBA ze wyroznili WSZYSCY
+   *  uczestnicy (`topAll`): wtedy sama gwiazdka, bez liczby (prosba Nat 2026-09-20). */
+  topCount?: number;
+  topAll?: boolean;
   onToggleTop?: () => void;
+  /** Tapniecie w zolta pigulke "odwiedzone" (kolekcja): arkusz z osobami, ktore tu byly. */
+  onVisitedTap?: () => void;
   /** Awatar osoby, ktorej dotyczy `visited`, gdy NIE jest to ogladajacy (cudza lista).
    *  Obecny = wiersz pokazuje stan PASYWNY: informacje, nie przelacznik. */
   visitedAvatar?: string | null;
+  /** Kolekcja wspoltworzona: odwiedzic moze KILKA osob, wiec zamiast jednego awatara idzie
+   *  lista. Widac dwa pierwsze, reszta jako "+N" (zgloszenie testerki 2026-09-16). Podany
+   *  przykrywa `visitedAvatar`. */
+  visitedAvatars?: (string | null)[];
   /** Zaznaczanie miejsc w CUDZYM wyjezdzie (2026-09-10). Przytrzymanie wchodzi w tryb,
    *  a w trybie cale tapniecie w wiersz przelacza zaznaczenie - bez celowania w checkbox.
    *  Nieobecne = wiersz zachowuje sie jak dotad. */
@@ -96,10 +115,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // (odwiedziny doczytuja sie osobnym zapytaniem PO pierwszym renderze) wyglada dla efektu jak
   // "wlasnie odhaczylem" i cala lista animuje sie naraz - zlapane na probkowaniu: 8 lecacych
   // znaczkow zamiast jednego.
+  const myTop = topByMe ?? isTop;
   const tappedTop = useRef(false);
   const tappedVisit = useRef(false);
   const flying = !!flight;
-  const wasTop = useRef(!!isTop);
+  const wasTop = useRef(!!myTop);
 
   // Przytrzymanie gwiazdki = ladowanie. Postep zyje w refach i idzie prosto w style (bez
   // setState co klatke); stan React trzyma tylko "czy widac pierscien" i "pieczatka gra".
@@ -125,7 +145,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   const startPress = () => {
     if (!onToggleTop) return;
     stopCharge();
-    const pr = { t0: performance.now(), raf: 0, timer: 0, ticked: 0, done: false, active: !isTop };
+    const pr = { t0: performance.now(), raf: 0, timer: 0, ticked: 0, done: false, active: !myTop };
     press.current = pr;
     // Gwiazdka juz przypieta: przytrzymanie nic nie laduje (tap ja zdejmuje).
     if (!pr.active) return;
@@ -177,7 +197,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   useEffect(() => () => { if (press.current) { cancelAnimationFrame(press.current.raf); clearTimeout(press.current.timer); } }, []);
 
   useEffect(() => {
-    if (isTop && !wasTop.current && tappedTop.current) {
+    if (myTop && !wasTop.current && tappedTop.current) {
       wasTop.current = true;
       tappedTop.current = false;
       // Pozycje MIERZONE, nie stale: wiersz bywa wysoki na 100 px albo na 400 (notka + zdjecia),
@@ -210,8 +230,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
       const id = setTimeout(() => setFlight(null), FLIGHT_MS - 80);
       return () => clearTimeout(id);
     }
-    wasTop.current = !!isTop;
-  }, [isTop]);
+    wasTop.current = !!myTop;
+  }, [myTop]);
 
   // Przytrzymanie wchodzi w tryb zaznaczania. Poza trybem `onOpen` dziala normalnie - stad
   // `didFire()`: `click` przychodzi PO puszczeniu palca i bez tego otwieralby wizytowke
@@ -242,6 +262,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // miniature zostala wycofana: dla akcji "bylem tu" liczy sie sila przybicia, a nie droga.
   // Lot zostaje wylacznie przy topce, gdzie ma sens - tam gwiazdka MUSI dolecec do nazwy,
   // bo tam zostaje.
+  // ⚠️ Liczymy TU, nie w JSX: bramka `i18n:check` czyta `>` w znaczniku jako poczatek tekstu,
+  // a szablon `+${n}` bierze za polski napis na sztywno.
+  const extraVisitors = Math.max(0, (visitedAvatars?.length ?? 0) - 2);
+  const plusExtra = "+" + extraVisitors;
+  const iVisited = visitedByMe ?? visited;
   const wasVisited = useRef(!!visited);
   useEffect(() => {
     if (visited && !wasVisited.current && tappedVisit.current) {
@@ -281,7 +306,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               <span className={`absolute top-1 left-1 h-6 w-6 rounded-full flex items-center justify-center border-2 ${
                 selection!.selected ? "bg-primary border-primary text-white" : "bg-white/85 border-white"
               }`}>
-                {selection!.selected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                {selection!.selected && <BrandCheck className="h-3.5 w-3.5 stroke-[3]" />}
               </span>
             )}
           </button>
@@ -291,12 +316,16 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               na pigulce w chwili odhaczenia. */}
           {visited && !selecting && (
             <motion.span
+              role={onVisitedTap ? "button" : undefined}
+              tabIndex={onVisitedTap ? 0 : undefined}
+              onClick={onVisitedTap ? (e) => { e.stopPropagation(); onVisitedTap(); } : undefined}
+              onKeyDown={onVisitedTap ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onVisitedTap(); } } : undefined}
               aria-label={t("row.visited")}
               animate={stamped ? { scale: [1, 0.82, 1.12, 0.98, 1] } : { scale: 1 }}
               transition={stamped
                 ? { duration: 0.44, times: [0, 0.16, 0.4, 0.7, 1], ease: "easeOut" }
                 : { duration: 0.2 }}
-              className="relative h-8 w-16 rounded-full flex items-center justify-center gap-1 bg-[#FDF184] text-[#0E0E0E]"
+              className={`relative h-8 min-w-16 px-2 rounded-full flex items-center justify-center gap-1 bg-[#FDF184] text-[#0E0E0E] ${onVisitedTap ? "active:scale-95 transition-transform cursor-pointer" : ""}`}
             >
               <AnimatePresence>
                 {stamped && (
@@ -323,9 +352,22 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                   </>
                 )}
               </AnimatePresence>
-              {visitedAvatar !== undefined && (
+              {/* Kilku odwiedzajacych: dwa awatary nachodzace na siebie + "+N". Pigulka jest
+                  waska, wiec trzeci awatar juz by ja rozpychal ponad szerokosc miniatury. */}
+              {visitedAvatars?.length ? (
+                <span className="flex items-center -space-x-1.5 shrink-0">
+                  {visitedAvatars.slice(0, 2).map((u, i) => (
+                    <img key={i} src={avatarSrc(u)} alt="" className="h-6 w-6 rounded-full object-cover bg-white/60 ring-[1.5px] ring-[#FDF184]" />
+                  ))}
+                  {extraVisitors > 0 && (
+                    <span className="h-6 min-w-[24px] px-1 rounded-full bg-white/75 ring-[1.5px] ring-[#FDF184] text-[10px] font-black flex items-center justify-center">
+                      {plusExtra}
+                    </span>
+                  )}
+                </span>
+              ) : visitedAvatar !== undefined ? (
                 <img src={avatarSrc(visitedAvatar)} alt="" className="h-6 w-6 rounded-full object-cover bg-white/60 shrink-0" />
-              )}
+              ) : null}
               <CheckCheck className="h-4 w-4 shrink-0" strokeWidth={3} />
             </motion.span>
           )}
@@ -353,6 +395,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                     transition={flying ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 17 }}
                   >
                     <BrandIcon src={STAR_ICON} className="h-4 w-4 -mt-0.5 mr-1 align-middle text-primary" label={t("row.top_place")} />
+                    {/* Kilka osob wyroznilo, ale NIE wszystkie: liczba przy gwiazdce. Gdy
+                        wyroznili wszyscy uczestnicy - sama gwiazdka (Nat 2026-09-20). */}
+                    {(topCount ?? 0) > 1 && !topAll && (
+                      <span className="-ml-0.5 mr-1.5 align-middle text-[12px] font-black text-primary">{topCount}</span>
+                    )}
                   </motion.span>
                 )}
                 {pin.place_name}
@@ -385,8 +432,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               <motion.button
                 ref={starBtnRef}
                 type="button"
-                aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
-                aria-pressed={!!isTop}
+                aria-label={myTop ? t("row.unset_top") : t("row.set_top")}
+                aria-pressed={!!myTop}
                 onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); startPress(); }}
                 onPointerUp={(e) => { e.stopPropagation(); endPress(false); }}
                 onPointerCancel={() => endPress(true)}
@@ -397,7 +444,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 animate={sealed ? { scale: [1, 0.82, 1.18, 0.96, 1] } : { scale: 1 }}
                 transition={sealed ? { duration: 0.5, times: [0, 0.15, 0.45, 0.75, 1], ease: "easeOut" } : { duration: 0.15 }}
                 style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none", touchAction: "manipulation" }}
-                className={`relative h-10 w-10 rounded-full border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 transition-colors ${isTop ? "bg-[#FDF184]" : "bg-white"}`}
+                className={`relative h-10 w-10 rounded-full border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 transition-colors ${myTop ? "bg-[#FDF184]" : "bg-white"}`}
               >
                 {/* Pierscien ladowania - poza obrysem kolka, rysowany od gory zgodnie z ruchem wskazowek. */}
                 <svg aria-hidden viewBox="0 0 52 52" className={`pointer-events-none absolute -inset-1.5 h-[52px] w-[52px] -rotate-90 transition-opacity duration-150 ${charging ? "opacity-100" : "opacity-0"}`}>
@@ -406,7 +453,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                     strokeDasharray={RING_C} strokeDashoffset={RING_C} />
                 </svg>
                 <span ref={starGlyphRef} className="flex will-change-transform">
-                  <BrandIcon src={STAR_ICON} className={`h-[18px] w-[18px] ${isTop ? "text-primary" : "text-foreground/45"}`} />
+                  <BrandIcon src={STAR_ICON} className={`h-[18px] w-[18px] ${myTop ? "text-primary" : "text-foreground/45"}`} />
                 </span>
                 {/* Pieczatka po pelnym naladowaniu: fala + rozprysk (ta sama choreografia, co "bylem tu"). */}
                 <AnimatePresence>
@@ -472,7 +519,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 className="h-10 w-10 rounded-full bg-white border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
               >
                 {/* Brandowa zakladka (Ikona_Zapisane.svg) zamiast lucide (prosba Nat 2026-09-13). */}
-                <BrandIcon src={SAVE_ICON} className={`h-[18px] w-[18px] ${saved ? "text-[#F0A583]" : "text-foreground/60"}`} />
+                {/* Pusta zakladka = miejsce nigdzie nie zapisane, pelna = zapisane (2026-09-15). */}
+                <BrandBookmark filled={saved} className={`h-[18px] w-[18px] ${saved ? "text-[#F0A583]" : "text-foreground/60"}`} />
               </button>
             )}
             {(actionCount > 1 || (actionCount === 1 && !onSave)) && (
@@ -495,8 +543,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 <DropdownMenuContent align="end" className="rounded-2xl w-60">
                   {onToggleVisited && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); tappedVisit.current = true; onToggleVisited(); }} className="gap-2.5 py-2.5">
-                      <Check className={`h-4 w-4 ${visited ? "text-primary" : "text-muted-foreground"}`} strokeWidth={3} />
-                      {visited ? t("row.mark_not_visited") : t("row.mark_visited")}
+                      <BrandCheck className={`h-4 w-4 ${iVisited ? "text-primary" : "text-muted-foreground"}`} strokeWidth={3} />
+                      {iVisited ? t("row.mark_not_visited") : t("row.mark_visited")}
                     </DropdownMenuItem>
                   )}
                   {menuRest.map((x) => (
@@ -506,13 +554,13 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                   ))}
                   {onSave && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSave(); }} className="gap-2.5 py-2.5">
-                      <BrandIcon src={SAVE_ICON} className={`h-4 w-4 ${saved ? "text-[#F0A583]" : "text-foreground/70"}`} />
+                      <BrandBookmark filled={saved} className={`h-4 w-4 ${saved ? "text-[#F0A583]" : "text-foreground/70"}`} />
                       {saved ? t("row.saved_in_list") : t("row.save_to_list")}
                     </DropdownMenuItem>
                   )}
                   {onDelete && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="gap-2.5 py-2.5 text-destructive focus:text-destructive">
-                      <Trash2 className="h-4 w-4" />
+                      <BrandTrash className="h-4 w-4" />
                       {deleteLabel ?? t("row.remove")}
                     </DropdownMenuItem>
                   )}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MapPin, Plus, Search, X } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
+import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import CityCountryPicker from "@/components/create/CityDrum";
@@ -107,7 +108,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
           {/* Kraj + miasto: zwinięte do jednego wiersza, tap rozwija drum (jak przy wyjeździe). */}
           <button type="button" onClick={() => { haptics.light(); setPickerOpen((o) => !o); }}
             className="mt-3 w-full flex items-center gap-2.5 h-12 px-3.5 rounded-2xl border border-border bg-secondary/50 active:opacity-80 transition-opacity text-left">
-            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+            <BrandPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="flex-1 min-w-0 truncate text-base font-semibold text-foreground">{city}</span>
             <span className="text-xs font-semibold text-muted-foreground shrink-0">{country}</span>
             <span className="text-xs font-bold text-primary shrink-0">{pickerOpen ? t("common:buttons.done") : t("add_saved.change")}</span>
@@ -120,7 +121,7 @@ export default function AddSavedPlaceSheet({ open, onOpenChange, onAdded }: {
 
           {!pickerOpen && (
             <div className="mt-3 flex items-center gap-2 h-12 px-3.5 rounded-2xl border border-border bg-background">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <BrandSearch className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
