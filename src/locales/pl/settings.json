@@ -92,7 +92,7 @@
   },
   "frames": {
     "title": "Ramka awatara",
-    "desc": "Wybrana ramka jest widoczna przy Twoim zdjęciu na profilu, w wyjazdach i w kolekcjach.",
+    "desc": "Wybrana ramka jest widoczna przy Twoim zdjęciu na profilu, w planach i w kolekcjach.",
     "none": "Bez ramki",
     "stars": "Gwiazdki",
     "hearts": "Serduszka",
@@ -140,7 +140,7 @@
     "notifications_desc": "Push i co dostajesz",
     "privacy": "Prywatność i dane",
     "privacy_desc": "Analityka, zablokowani, zgody",
-    "trash_desc": "Wyjazdy wracają przez 7 dni",
+    "trash_desc": "Plany wracają przez 7 dni",
     "help": "Pomoc i kontakt",
     "help_desc": "Zgłoś błąd, społeczność",
     "about": "O aplikacji",
@@ -177,7 +177,7 @@
     "loading": "Wczytuję...",
     "someone": "Ktoś",
     "empty_title": "Nikogo nie zablokowałaś",
-    "empty_desc": "Zablokowane osoby znikają z wyszukiwarki, kolekcji i wyjazdów. Możesz je odblokować w tym miejscu.",
+    "empty_desc": "Zablokowane osoby znikają z wyszukiwarki, kolekcji i planów. Możesz je odblokować w tym miejscu.",
     "confirm_title": "Odblokować {{name}}?",
     "confirm_desc": "Znów zobaczycie swoje treści. Ta osoba nie dostanie o tym powiadomienia."
   },
@@ -185,17 +185,17 @@
     "intro": "Zanim to zrobisz, przeczytaj, co znika razem z kontem. Tego nie da się cofnąć - kosz z 7 dniami tu nie działa.",
     "gone_title": "Znika na zawsze",
     "gone": {
-      "trips": "Twoje wyjazdy razem ze zdjęciami i notkami",
+      "trips": "Twoje plany razem ze zdjęciami i notkami",
       "collections": "Kolekcje, które stworzyłaś, i ich zawartość",
       "notes": "Notatki i zdjęcia dodane przy miejscach",
       "stars": "Wyróżnienia gwiazdką",
       "follows": "Obserwujący, obserwowani i znajomi",
-      "messages": "Wiadomości w czatach wyjazdów"
+      "messages": "Wiadomości w czatach planów"
     },
     "stays_title": "Zostaje u innych",
     "stays": {
       "shared_collections": "Miejsca dodane do współtworzonych kolekcji zostają u ich właścicieli",
-      "group_trips": "Wyjazdy grupowe, których nie jesteś właścicielką, zostają u gospodarza"
+      "group_trips": "Plany grupowe, których nie jesteś właścicielką, zostają u gospodarza"
     },
     "type_intro": "Wpisz swoją nazwę użytkownika, żeby potwierdzić. To jedyna bariera, której nie da się pokonać odruchem.",
     "type_label": "Twoja nazwa użytkownika",

@@ -61,7 +61,7 @@
   "author_anon": "Anonim",
   "author_default": "Użytkownik",
   "search_placeholder": "Szukaj tras, autorów…",
-  "routes_heading": "Wyjazdy",
+  "routes_heading": "Plany",
   "places_heading": "Miejsca",
   "people_heading": "Ludzie",
   "in_city": "w {{city}}",
@@ -135,14 +135,14 @@
     "empty_lists_routes": "Brak zapisanych kolekcji i tras"
   },
   "grid": {
-    "trip": "Wyjazd",
+    "trip": "Plan",
     "list": "Kolekcja",
     "days_one": "{{count}} dzień",
     "days_few": "{{count}} dni",
     "days_many": "{{count}} dni"
   },
   "feed_empty": {
-    "nobody_title": "Tu pojawią się wyjazdy i kolekcje osób, które obserwujesz",
+    "nobody_title": "Tu pojawią się plany i kolekcje osób, które obserwujesz",
     "nobody_hint": "Na razie nikogo nie obserwujesz. Znajdź znajomych albo podróżnych, których gust Ci odpowiada.",
     "nobody_cta": "Znajdź osoby do obserwowania",
     "quiet_title": "Na razie cisza",

@@ -82,8 +82,8 @@
   "empty": {
     "saved": "You have no saved places yet. Like places while exploring to add them here in one tap."
   },
-  "intro": "A trip is your plan: the places you visited, in order.",
-  "save_aside": "Places outside the trip can be saved for later.",
+  "intro": "A plan is your plan: the places you visited, in order.",
+  "save_aside": "Places outside the plan can be saved for later.",
   "search": {
     "unavailable": "Place search is temporarily unavailable. Try again later.",
     "hint": "Search, or pick from your saved places below",
@@ -91,19 +91,19 @@
   },
   "confirm": {
     "draft_desc": "You have unsaved changes in this draft. Save them?",
-    "draft_title": "Save the trip as a draft?",
-    "remove_place_title": "Remove this place from the trip?",
+    "draft_title": "Save the plan as a draft?",
+    "remove_place_title": "Remove this place from the plan?",
     "save_draft": "Save as draft",
     "discard": "Do not save, leave",
     "save_title": "Save changes?",
     "skip": "No, skip",
-    "remove_place_desc": "“{{name}}” will disappear from this trip.",
-    "remove_place_generic": "This place will disappear from this trip."
+    "remove_place_desc": "“{{name}}” will disappear from this plan.",
+    "remove_place_generic": "This place will disappear from this plan."
   },
   "reorder_hint": "Drag to reorder",
   "toast": {
-    "trip_failed": "We could not create the trip",
-    "route_failed": "We could not create the trip",
+    "trip_failed": "We could not create the plan",
+    "route_failed": "We could not create the plan",
     "places_failed": "We could not save the places",
     "save_failed": "We could not save your changes",
     "saved_draft": "Saved as a draft"
@@ -116,7 +116,7 @@
   },
   "go_suggestions": "Go to suggestions",
   "aria": {
-    "exclude": "Remove from the trip",
+    "exclude": "Remove from the plan",
     "delete_place": "Delete place",
     "add_to_route": "Add to route"
   },
@@ -126,9 +126,9 @@
   },
   "clear": "Clear",
   "back": "Back",
-  "trip_name_city": "Trip to {{city}}",
+  "trip_name_city": "Plan: {{city}}",
   "drafts": {
-    "empty_hint": "Save someone else's trip in Explore and you can use it here as a starting point.",
+    "empty_hint": "Save someone else's plan in Explore and you can use it here as a starting point.",
     "empty": "You have no saved drafts right now.",
     "confirm_delete": "Delete this draft?",
     "delete_aria": "Delete draft",
@@ -139,24 +139,24 @@
   "start": {
     "empty_drafts": "Draft routes",
     "empty_saved": "No saved routes yet",
-    "new_trip": "New trip",
+    "new_trip": "New plan",
     "start_fresh": "Start from scratch"
   },
   "compose": {
     "empty_first": "Add some places to the route first",
     "saved_one": "Place saved",
-    "name_placeholder": "Your trip name",
+    "name_placeholder": "Your plan name",
     "add_place": "Add place",
     "list_view": "List view",
     "map_alt": "Map of places",
     "keep_one": "Don't lose this place",
     "save_changes": "Save changes",
-    "save_trip": "Save trip",
+    "save_trip": "Save plan",
     "pick_dates": "Pick dates for the route",
     "pick_min": "Select at least one place for the route",
     "saved_other": "{{count}} places saved",
     "keep_other": "Don't lose these {{count}} places",
-    "new_trip": "New trip",
+    "new_trip": "New plan",
     "add_place_tile": "Add place",
     "your_saved": "Your saved places"
   }

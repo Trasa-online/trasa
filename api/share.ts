@@ -439,7 +439,7 @@ ${o.body}` : `<body>
 <div class="bar"><div class="in"><img class="mark" src="${BRAND_IMG}" alt=""><span class="brand">spontaway</span>
 ${ctaTop()}</div></div>
 <div class="wrap">${o.body}
-<div class="foot"><p>${o.noun === "route" ? "Ten wyjazd powstał w spontaway" : o.noun === "list" ? "Ta kolekcja powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+<div class="foot"><p>${o.noun === "route" ? "Ten plan powstał w spontaway" : o.noun === "list" ? "Ta kolekcja powstała w spontaway" : "spontaway to aplikacja"} - do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 ${ctaBig()}</div></div>`}
 </body></html>`;
 }
@@ -595,7 +595,7 @@ ${choiceSheet()}`;
   const pins = await rest(`pins?route_id=eq.${id}&select=place_name,category,tags,images,user_photo_urls,image_url,photo_url,pin_order,place_id,day_index&order=pin_order.asc&limit=120`);
   const pinPhotos = await communityPhotos(pins.map((p) => placeKey(null, p.place_name)));
   const [author] = route.user_id ? await rest(`profiles?id=eq.${route.user_id}&select=username,avatar_url&limit=1`) : [];
-  const title = route.title || (route.city ? `Wyjazd do ${route.city}` : "Wyjazd");
+  const title = route.title || (route.city ? `Plan: ${route.city}` : "Plan");
   const count = `${pins.length} ${plural(pins.length)}`;
   const desc = route.description || [route.city, pins.length ? count : null].filter(Boolean).join(" · ");
   const cover = img(route.list_cover_url || route.cover_url, 1200, 630);
@@ -644,8 +644,8 @@ ${cover ? `<img class="bg" src="${esc(cover)}" alt="">` : ""}
 ${chips.length ? `<div class="chips">${chips.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
 </div></div>
 ${strips}${more}
-<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz wyjazd</a>
-<p class="tail">Ten wyjazd powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+<a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz plan</a>
+<p class="tail">Ten plan powstał w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
 </div>
 ${choiceSheet()}`;
   // Wymiary okladki liczymy TYLKO dla robota budujacego podglad - czlowiek nie czeka na nic

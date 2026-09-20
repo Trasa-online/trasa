@@ -47,7 +47,7 @@ import PlaceNoteSheet from "@/components/route/PlaceNoteSheet";
 import { ShareCardTrip } from "@/components/share/ShareCard";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
-import { fetchRouteCoversFor, setMyRouteCover, setMyRouteNote, fetchRouteMemberNotes } from "@/lib/routeMemberCover";
+import { fetchRouteCoversFor, setMyRouteCover, fetchRouteMemberNotes } from "@/lib/routeMemberCover";
 import { moderateImageUrl, MODERATION_REJECTED_MESSAGE } from "@/lib/imageModeration";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import AddPlaceSheet from "@/components/route/AddPlaceSheet";
@@ -835,12 +835,6 @@ export default function SharedRoute() {
     enabled: !!id,
     queryFn: () => fetchRouteMemberNotes(id!),
   });
-  const myTripNote = (memberNotes as any[]).find((n) => n.user_id === user?.id)?.note ?? "";
-  const saveMyTripNote = async (value: string) => {
-    if (!user || !id) return;
-    await setMyRouteNote(id, user.id, value);
-    queryClient.invalidateQueries({ queryKey: ["route-member-notes", id] });
-  };
 
 
 
@@ -848,9 +842,13 @@ export default function SharedRoute() {
   // z wyjazdem do eksploracji. Edytowany tym samym guzikiem, ktory stoi POD wyswietlonym
   // opisem, wiec guzik i tresc to jedno i to samo pole (zgloszenie Nat 2026-09-09: guzik mowil
   // "Dodaj opis", chociaz opis byl - bo siedzial na innym polu niz to widoczne wyzej).
+  // Od 2026-09-20 pisze go KAZDY uczestnik (Nat: "Add note usunac i dodac opcje dodaj opis") -
+  // przez SECDEF `set_trip_description`, bo `routes` ma UPDATE tylko dla wlasciciela, a pelna
+  // polityka dla czlonkow dalaby im tez status, daty i okladke (migracja 20260920e).
   const saveTripDescription = async (value: string) => {
     if (!id) return;
-    await (supabase as any).from("routes").update({ review_narrative: value.trim() || null }).eq("id", id);
+    const { error } = await (supabase as any).rpc("set_trip_description", { p_route: id, p_description: value.trim() || null });
+    if (error) { console.error("[SharedRoute] description:", error.message); toast.error(t("toast.desc_failed")); }
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
   };
 
@@ -1432,7 +1430,9 @@ export default function SharedRoute() {
     const trimmed = nameVal.trim();
     if (!trimmed || trimmed === (route?.title ?? "")) { setEditingName(false); return; }
     setSavingName(true);
-    const { error } = await (supabase as any).from("routes").update({ title: trimmed }).eq("id", id);
+    // RPC zamiast UPDATE: uczestnik nie ma UPDATE na `routes`, wiec dotad jego zmiana nazwy
+    // konczyla sie 0 wierszy BEZ bledu - toast "zapisano", a po odswiezeniu stara nazwa.
+    const { error } = await (supabase as any).rpc("set_trip_title", { p_route: id, p_title: trimmed });
     setSavingName(false);
     if (error) {
       // Cenzura siedzi w bazie (wyzwalacz na tytule) - bez osobnego komunikatu user widzi
@@ -1704,7 +1704,9 @@ export default function SharedRoute() {
   // (zgloszenie Nat 2026-09-14; dane przeniesione migracja 20260914).
   const ownerTripNote: string = ((memberNotes as any[]).find((n) => n.user_id === route.user_id)?.note ?? "").trim();
   const routeDescription: string = (route as any).review_narrative || ownerTripNote || route.ai_summary || shareMeta?.share_caption || "";
-  const otherMemberNotes = (memberNotes as any[]).filter((n) => n.user_id !== user?.id && n.user_id !== route.user_id && (n.note ?? "").trim());
+  // Od 2026-09-20 bez wykluczania WLASNEJ notki: uczestnik nie ma juz edytora notki o wyjezdzie
+  // (pisze wspolny opis), wiec jego dawna notka ma byc widoczna tak samo jak cudze.
+  const otherMemberNotes = (memberNotes as any[]).filter((n) => n.user_id !== route.user_id && (n.note ?? "").trim());
   // Galeria = wszystkie zdjecia wyjazdu autora (review_photos), z rozwiazanym URL-em.
   // GALERIA = zdjecia wgrane wprost do galerii (routes.review_photos) ORAZ zdjecia dodane do
   // KONKRETNYCH MIEJSC w zakladce Miejsca (pin_photos) - prosba Nat 2026-09-10. Wczesniej te
@@ -1936,15 +1938,16 @@ export default function SharedRoute() {
     if (!canEdit || stage === "planning") return undefined;
     const myNote = ((notesMap.get(placeNoteKey(pin.place_name)) ?? []).find((n: any) => n.user_id === user?.id)?.note ?? "").trim();
     return [
-      // "Dodaj notkę" ZDJETE z wyjazdu (prosba Nat 2026-09-18). Zostaje wylacznie "Edytuj notkę"
-      // dla miejsca, ktore notke JUZ MA - inaczej istniejaca tresc nie mialaby zadnego wejscia
-      // do poprawki ani skasowania (edytor pod wierszem ma `hideActions`).
-      ...(myNote ? [{
+      // "Dodaj notkę" WRACA (zgloszenie Nat 2026-09-20: "jako uczestnik nie moge dodawac notek").
+      // 18.09 zdjelam ja z menu wyjazdu przez nadinterpretacje - a edytor pod wierszem ma
+      // `hideActions`, wiec bez tej pozycji NIKT (uczestnik ani wlasciciel) nie mial jak zalozyc
+      // notki przy miejscu, ktore jeszcze jej nie ma. Etykieta zalezy od tego, czy notka juz jest.
+      {
         key: "note",
-        label: t("route:note.edit"),
+        label: myNote ? t("route:note.edit") : t("route:note.add"),
         icon: <BrandNote className="h-4 w-4" />,
         onClick: () => setNotePin(pin),
-      }] : []),
+      },
       {
         key: "photo",
         label: t("add_place_photo"),
@@ -2161,10 +2164,12 @@ export default function SharedRoute() {
                 onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
             isTop={!!pin.is_top}
-                /* Gwiazdka ("topka") tylko na wyjezdzie OPUBLIKOWANYM (prosba Nat 2026-09-10).
-                   To wyroznienie dla CZYTAJACYCH - wskazanie, co z tego wyjazdu jest naprawde
-                   warte odwiedzenia. Dopoki wyjazd jest roboczy, nie ma komu tego mowic. */
-                onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
+                /* Gwiazdka ("topka") dla KAZDEGO uczestnika, na kazdym etapie (Nat 2026-09-20:
+                   "jako uczestnik nie moge dodawac gwiazdek"). Do tego dnia stala za `isPublished`
+                   (10.09: "wyroznienie dla czytajacych"), ale odkad wyjazd jest PLANEM, gwiazdka
+                   jest tez sygnalem dla samych uczestnikow - co z planu jest must-see. RLS
+                   `Group members can update pins of shared route` przepuszcza uczestnika. */
+                onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
                 note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
                 selection={selectionFor(pin)}
                 menuExtras={placeMenuExtras(pin)}
@@ -2201,7 +2206,7 @@ export default function SharedRoute() {
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
             onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={canEdit && isPublished ? () => void toggleTopPin(pin) : undefined}
+            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
             selection={selectionFor(pin)}
             menuExtras={placeMenuExtras(pin)}
@@ -2470,7 +2475,7 @@ export default function SharedRoute() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-2xl w-60" onCloseAutoFocus={(e) => e.preventDefault()}>
-                    {isOwner && stage !== "planning" && !choosing && (
+                    {canEdit && stage !== "planning" && !choosing && (
                       <DropdownMenuItem onSelect={() => { haptics.light(); setDescOpenKey((k) => k + 1); }} className="gap-2.5 py-2.5">
                         <BrandNote className="h-4 w-4" />
                         {routeDescription ? t("route:note.edit_description") : t("route:note.add_description")}
@@ -2638,10 +2643,13 @@ export default function SharedRoute() {
             pisac (prosba Nat 2026-09-01). Wchodzi od "w trakcie". */}
         {stage !== "planning" && (canEdit || otherMemberNotes.length > 0) && !choosing && (
           <div className="mt-3 mb-5 px-5">
-            {/* WLASCICIEL edytuje tu OPIS WYJAZDU - dokladnie te tresc, ktora widac nad guzikiem.
-                UCZESTNIK nie ma prawa zapisu do `routes`, wiec u niego zostaje jego WLASNA notka
-                (i copy mowi "notka", bo to co innego niz opis calego wyjazdu). */}
-            {isOwner ? (
+            {/* WLASCICIEL I UCZESTNIK edytuja tu ten sam OPIS WYJAZDU (Nat 2026-09-20: guzik
+                "Add note" u uczestnika zdjety, w zamian "Dodaj opis" - wspolny plan ma jeden
+                opis, nie notke na osobe). Zapis idzie przez RPC, wiec brak UPDATE na `routes`
+                u uczestnika nie jest juz przeszkoda. Wlasne notki o wyjezdzie z czasow sprzed
+                tej zmiany (`route_member_covers.note`) zostaja widoczne w dymkach ponizej -
+                nie kasujemy tresci, tylko nie da sie juz pisac nowych. */}
+            {canEdit ? (
               <PlaceNoteEditor
                 note={routeDescription}
                 hideText
@@ -2652,15 +2660,6 @@ export default function SharedRoute() {
                 openKey={descOpenKey}
                 onSave={saveTripDescription}
                 onEditingChange={(v) => { setNoteEditing(v); setDescEditing(v); }}
-              />
-            ) : canEdit ? (
-              <PlaceNoteEditor
-                note={myTripNote}
-                showAvatar
-                avatarUrl={myAvatar}
-                placeholder={t("note.placeholder")}
-                onSave={saveMyTripNote}
-                onEditingChange={setNoteEditing}
               />
             ) : null}
             {otherMemberNotes.length > 0 && (

@@ -12,8 +12,8 @@
     },
     "step2": {
       "title": "spontaway plans and remembers",
-      "subtitle": "AI builds your plan in seconds. After every day we debrief, and recommendations get sharper every trip.",
-      "speech": "AI builds your plan, and after each trip it learns your taste. Recommendations get sharper every time."
+      "subtitle": "AI builds your plan in seconds. After every day we debrief, and recommendations get sharper every plan.",
+      "speech": "AI builds your plan, and after each plan it learns your taste. Recommendations get sharper every time."
     }
   },
   "prefs_speech": "Before we start, tell me a bit about yourself and we'll tailor a travel plan just for you!",
@@ -121,7 +121,7 @@
   },
   "welcome": {
     "title": "Hi! This is spontaway",
-    "body": "The best memories start with a recommendation. Discover trips created by other people, save the ones that inspire you and build your own. We will show you around in a few seconds."
+    "body": "The best memories start with a recommendation. Discover plans created by other people, save the ones that inspire you and build your own. We will show you around in a few seconds."
   },
   "terms": {
     "consent": "I accept the <terms>terms of service</terms> and the <privacy>privacy policy</privacy>. I will not post content that is abusive or violates other people's rights."
@@ -135,10 +135,10 @@
     "other": "Other"
   },
   "guide": {
-    "create_desc": "The + button builds your own trip from favourite places. It goes to Explore so others can take inspiration from it.",
+    "create_desc": "The + button builds your own plan from favourite places. It goes to Explore so others can take inspiration from it.",
     "places_desc": "Browse single places one at a time: cafes, restaurants, bars, culture and nature.",
-    "trips_desc": "Browse trips and collections of places from travellers around the world. Open any tile to see the places and get ideas for your own.",
-    "create_title": "Build your own trips",
+    "trips_desc": "Browse plans and collections of places from travellers around the world. Open any tile to see the places and get ideas for your own.",
+    "create_title": "Build your own plans",
     "places_title": "The Places tab",
     "trips_title": "The Explore tab",
     "create_eyebrow": "CREATE",
@@ -146,7 +146,7 @@
     "next": "Next",
     "done": "Done",
     "profile_title": "The Profile tab",
-    "profile_desc": "Your trips and collections, the ones you saved from others, starred places and settings. Invite friends from here too."
+    "profile_desc": "Your plans and collections, the ones you saved from others, starred places and settings. Invite friends from here too."
   },
   "profile": {
     "title": "Your spontaway profile",

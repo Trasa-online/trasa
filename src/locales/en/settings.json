@@ -92,7 +92,7 @@
   },
   "frames": {
     "title": "Avatar frame",
-    "desc": "Your frame shows next to your photo on your profile, in trips and in collections.",
+    "desc": "Your frame shows next to your photo on your profile, in plans and in collections.",
     "none": "No frame",
     "stars": "Stars",
     "hearts": "Hearts",
@@ -140,7 +140,7 @@
     "notifications_desc": "Push and what you get",
     "privacy": "Privacy and data",
     "privacy_desc": "Analytics, blocked people, permissions",
-    "trash_desc": "Trips come back for 7 days",
+    "trash_desc": "Plans come back for 7 days",
     "help": "Help and contact",
     "help_desc": "Report a bug, community",
     "about": "About the app",
@@ -177,7 +177,7 @@
     "loading": "Loading...",
     "someone": "Someone",
     "empty_title": "You have not blocked anyone",
-    "empty_desc": "Blocked people disappear from search, collections and trips. You can unblock them here.",
+    "empty_desc": "Blocked people disappear from search, collections and plans. You can unblock them here.",
     "confirm_title": "Unblock {{name}}?",
     "confirm_desc": "You will see each other's content again. They will not be notified."
   },
@@ -185,17 +185,17 @@
     "intro": "Before you do this, read what goes away with your account. This cannot be undone - the 7 day trash does not apply here.",
     "gone_title": "Gone for good",
     "gone": {
-      "trips": "Your trips along with their photos and notes",
+      "trips": "Your plans along with their photos and notes",
       "collections": "Collections you created and everything in them",
       "notes": "Notes and photos you added to places",
       "stars": "Starred places",
       "follows": "Followers, following and friends",
-      "messages": "Messages in trip chats"
+      "messages": "Messages in plan chats"
     },
     "stays_title": "Stays with other people",
     "stays": {
       "shared_collections": "Places you added to shared collections stay with their owners",
-      "group_trips": "Group trips you do not own stay with the host"
+      "group_trips": "Group plans you do not own stay with the host"
     },
     "type_intro": "Type your username to confirm. This is the one barrier you cannot pass by reflex.",
     "type_label": "Your username",

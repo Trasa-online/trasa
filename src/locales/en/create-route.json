@@ -12,32 +12,25 @@
   "next": "Next",
   "ideal_day_label": "What does your ideal day look like?",
   "ideal_day_placeholder": "E.g. I start slow, I like a morning coffee, I walk everywhere, I prefer places with character over tourist crowds...",
-  "pick_date_desc": "Pick a single day or a range. With several days you can spread the places across them inside the trip.",
+  "pick_date_desc": "Pick a single day or a range. With several days you can spread the places across them inside the plan.",
   "no_saved_places": "You have no saved places yet. Search above, or save them while exploring.",
   "search_unavailable": "Search is temporarily unavailable. Pick from your saved places.",
   "toast": {
-    "trip_failed": "We could not create the trip",
+    "trip_failed": "We could not create the plan",
     "list_failed": "We could not create the collection",
     "list_created": "Collection created"
   },
   "invite": {
     "trip_desc": "Plan trips together with others",
     "list_desc": "Build collections together with others",
-    "to_trip": "Add people to the trip",
+    "to_trip": "Add people to the plan",
     "to_list": "Add people to the collection",
     "cta": "Add people"
   },
   "skip_dates": "Skip - I will add dates later",
   "skip_city": "Skip - collection without a city",
   "your_saved_places": "Your saved places",
-  "trip_kind": {
-    "past_desc": "Add a memory",
-    "title": "What kind of trip is it?",
-    "future_desc": "Plan a trip",
-    "past": "Past",
-    "future": "Upcoming"
-  },
-  "past_trip": "Past trip",
+  "past_trip": "Past plan",
   "aria": {
     "add_to_list": "Add to collection",
     "remove_from_list": "Remove from collection",
@@ -49,14 +42,14 @@
   "pick_date": "Pick a date",
   "no_results": "No results",
   "list_name_label": "Collection name",
-  "trip_name_label": "Trip name",
+  "trip_name_label": "Plan name",
   "user_fallback": "User",
   "new_list": "New collection",
   "soon": "Soon",
   "create": "Create",
   "skip": "Skip",
   "list_name_city": "Places in {{city}}",
-  "trip_name_city": "Trip to {{city}}",
+  "trip_name_city": "Plan: {{city}}",
   "cover": {
     "empty": "Add places to the collection or upload your own photo to set a cover.",
     "reset": "Back to the default cover",
@@ -72,7 +65,7 @@
   },
   "kind": {
     "list": "Collection",
-    "trip": "Trip"
+    "trip": "Plan"
   },
   "country": {
     "title": "Where are you going?",
@@ -92,12 +85,12 @@
       "oceania": "Oceania"
     }
   },
-  "trip_name_default": "New trip",
+  "trip_name_default": "New plan",
   "naming": {
     "collection_in": "Places in {{place}}",
     "collection_plain": "Places: {{place}}",
-    "trip_to": "Trip to {{place}}",
-    "trip_plain": "Trip: {{place}}"
+    "trip_to": "Plan for {{place}}",
+    "trip_plain": "Plan: {{place}}"
   },
   "city": {
     "title_list": "Pick a city",
@@ -109,10 +102,10 @@
     "hint_list": "We suggest a name from the place you picked. You can change it."
   },
   "days_row_title": "How many days?",
-  "days_row_desc": "Split the trip into days, even without dates",
+  "days_row_desc": "Split the plan into days, even without dates",
   "days_row_less": "Fewer days",
   "days_row_more": "More days",
-  "days_step_desc": "Add or remove days. You can add dates later - then they set the trip length.",
+  "days_step_desc": "Add or remove days. You can add dates later - then they set the plan length.",
   "days_row_value_one": "{{count}} day",
   "days_row_value_other": "{{count}} days"
 }

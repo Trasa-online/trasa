@@ -8,7 +8,7 @@
     "saving": "Saving…"
   },
   "labels": {
-    "trip_fallback": "Trip",
+    "trip_fallback": "Plan",
     "you": "You",
     "participant": "Participant"
   },
@@ -50,7 +50,7 @@
     "earlier": "Earlier",
     "later": "Later",
     "add_place": "Add a place",
-    "map": "Trip map"
+    "map": "Plan map"
   },
   "empty": {
     "no_places": "No places in the plan.",
@@ -60,7 +60,7 @@
   "gallery": {
     "add": "Add",
     "tap_hint": "Tap a photo to see it in full and set it as the entry cover.",
-    "empty": "No photos in the trip gallery yet. Add them in the “Photos from the trip” section, or add new ones above.",
+    "empty": "No photos in the plan gallery yet. Add them in the “Photos from the trip” section, or add new ones above.",
     "empty_editable": "No photos from this trip. Add your first memories.",
     "hint": "Add photos from the whole trip",
     "go": "Go to Gallery",
@@ -90,7 +90,7 @@
     "anon_desc": "Without your profile - your route appears in Explore as “Anonymous”.",
     "caption_label": "Caption",
     "optional": "(optional)",
-    "caption_placeholder": "Write something about this trip…"
+    "caption_placeholder": "Write something about this plan…"
   },
   "prompt": {
     "title": "Share this route with others?",
@@ -111,8 +111,8 @@
   "confirm": {
     "remove_place": "Are you sure you want to remove {{name}} from the day's plan?",
     "place_this": "this place",
-    "finish_desc": "The trip goes to your memories and to Explore. Until then you can edit it freely.",
-    "finish_title": "Finish this trip?"
+    "finish_desc": "The plan goes to your memories and to Explore. Until then you can edit it freely.",
+    "finish_title": "Finish this plan?"
   },
   "cta": {
     "back": "Back",
@@ -121,8 +121,8 @@
     "save_changes": "Save changes",
     "close_edit_mode": "Close edit mode",
     "cancel": "Cancel",
-    "finish_trip": "Finish trip",
-    "edit_trip": "Edit trip"
+    "finish_trip": "Finish plan",
+    "edit_trip": "Edit plan"
   },
   "toast": {
     "link_copied": "Link copied",
@@ -143,8 +143,8 @@
     "cover_set_error": "We couldn't set the cover",
     "route_needs_place": "A route needs at least one place",
     "generic_error": "Something went wrong",
-    "finished_no_cover": "Trip saved to your memories. Add photos or a cover so it shows up in Explore.",
-    "finished": "Trip finished and saved to your memories",
+    "finished_no_cover": "Plan saved to your memories. Add photos or a cover so it shows up in Explore.",
+    "finished": "Plan finished and saved to your memories",
     "date_saved": "Date saved",
     "dates_removed": "Dates removed",
     "place_removed": "Place removed",
@@ -152,8 +152,8 @@
   },
   "share": {
     "text": "Check out my route on spontaway",
-    "qr": "Share the trip with a QR code",
-    "invite": "Invite friends to the trip",
+    "qr": "Share the plan with a QR code",
+    "invite": "Invite friends to the plan",
     "link": "Share link"
   },
   "a11y": {
@@ -174,28 +174,28 @@
   },
   "close": "Close",
   "cover": {
-    "desc": "The photo shown on the trip card in Explore - add a new one or pick from the gallery or the places on the trip.",
-    "needed_desc": "Without a cover the trip does not show up in Explore.",
-    "needed_title": "Add a cover so the trip is visible",
+    "desc": "The photo shown on the plan card in Explore - add a new one or pick from the gallery or the places on the plan.",
+    "needed_desc": "Without a cover the plan does not show up in Explore.",
+    "needed_title": "Add a cover so the plan is visible",
     "change": "Change the Explore thumbnail"
   },
   "description": {
-    "hint": "A general description of your trip: who it is for, what occasion, what makes it stand out",
-    "placeholder": "Describe your trip: who it is for, what occasion, what is worth seeing...",
-    "title": "Trip description"
+    "hint": "A general description of your plan: who it is for, what occasion, what makes it stand out",
+    "placeholder": "Describe your plan: who it is for, what occasion, what is worth seeing...",
+    "title": "Plan description"
   },
   "reorder_hint": "Drag to reorder",
   "map": {
     "no_locations": "No place locations to show on the map."
   },
   "dates": {
-    "title": "Pick dates for the trip",
+    "title": "Pick dates for the plan",
     "add": "Add a date"
   },
   "photo": {
     "for_place": "Photos for this place",
     "add_new": "Add a new photo",
-    "from_gallery": "From the trip gallery",
+    "from_gallery": "From the plan gallery",
     "for_places": "Photos for places",
     "yours": "Your photo",
     "new": "New photo",

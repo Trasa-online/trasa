@@ -3,7 +3,7 @@ import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, CalendarPlus, History, Loader2 } from "lucide-react";
+import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { BrandCalendar, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -31,8 +31,7 @@ import { GoogleGlyph } from "@/components/icons/GoogleGlyph";
 import { openExternal } from "@/lib/openExternal";
 import SheetSkeleton from "@/components/layout/SheetSkeleton";
 
-type Step = "entry" | "listCountry" | "listCity" | "listName" | "listPick" | "listPeople" | "tripMode" | "tripCountry" | "tripDates" | "tripDaysStep" | "tripPeople";
-type TripMode = "future" | "past";
+type Step = "entry" | "listCountry" | "listCity" | "listName" | "listPick" | "listPeople" | "tripCountry" | "tripDates" | "tripDaysStep" | "tripPeople";
 
 // Nazwa wyjazdu/listy powstaje z WYBRANYCH KRAJOW, a nie z osobnego kroku (decyzja Nat
 // 2026-09-10). Krok "jak to nazwac" byl przed wyborem miejsc, czyli zanim user w ogole
@@ -95,7 +94,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     usePlaceSearch(listQuery, { countries: listCountries, enabled: pickActive });
 
   // Wyjazd
-  const [tripMode, setTripMode] = useState<TripMode>("future");
   const [tripCountries, setTripCountries] = useState<string[]>([]);
   // Daty wyjazdu z kreatora - krok opcjonalny (t("skip")). Zakres wielodniowy wlacza pozniej
   // podzial miejsc na dni w widoku wyjazdu (routes.end_date + pins.day_index).
@@ -107,7 +105,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   useEffect(() => {
     if (open) {
       setStep("entry"); setListCountries([]); setListCity(""); setListTitle(""); setTitleTouched(false); setListPeople([]); setSelected(new Set()); setListQuery(""); setManualPlaces([]); setDetailPlace(null); setTripStart(null); setTripDays(1);
-      setTripMode("future"); setTripCountries([]); setTripPeople([]); setCreating(false);
+      setTripCountries([]); setTripPeople([]); setCreating(false);
     }
   }, [open]);
 
@@ -261,9 +259,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     void proceedTrip(start, days);
   };
 
-  // Kreator tworzy PUSTY szkic wyjazdu i wpuszcza od razu do widoku wyjazdu - tam dodaje sie
-  // miejsca. Etap zalezy od trybu: przyszly = "planning" (propozycje), przeszly = "completed"
-  // (wspomnienie). Kreator ustala wylacznie meta: nazwe, miasto, daty, osoby.
+  // Kreator tworzy PUSTY szkic planu i wpuszcza od razu do widoku planu - tam dodaje sie
+  // miejsca. Kreator ustala wylacznie meta: nazwe, kraj, daty, osoby.
+  // ⛔ Nie ma juz trybu "przeszly / przyszly" (decyzja Nat 2026-09-20: "usunac przeszle wyjazdy
+  // i zostawic tylko plany jako ogolny mechanizm"). Kazdy nowy plan startuje w etapie
+  // `planning`; daty z przeszlosci sa dozwolone, bo plan moze dokumentowac tez to, co juz bylo.
   const proceedTrip = async (startArg: Date | null = tripStart, daysArg: number = tripDays) => {
     if (!user) { close(); navigate("/auth"); return; }
     setCreating(true);
@@ -273,7 +273,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       { ...tripDatesForSave(startArg, daysArg), countries: tripCountries,
         // Bez daty liczba dni musi gdzies zamieszkac - inaczej wybor z krokomierza przepada.
         dayCount: startArg ? 1 : daysArg,
-        tripType: tripMode === "past" ? "completed" : "planning" });
+        tripType: "planning" });
     if (!id) { setCreating(false); haptics.error(); toast.error(t("toast.trip_failed")); return; }
     if (tripPeople.length) {
       // ⚠️ `inviteUsersToRoute` NIE RZUCA przy porazce - oddaje `{ ok: false }`. Sam `try/catch`
@@ -294,7 +294,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
     close();
     // Wejscie do WIDOKU WYJAZDU (SharedRoute) - swiezy szkic, miejsca dodaje sie guzikiem "+".
-    // Etap (propozycje / wspomnienie) rozstrzyga trip_type ustawiony wyzej.
     navigate(`/route/${id}`);
     // Jak przy kolekcji: pierwszy wyjazd -> miekkie pytanie o push (odpowiedzi znajomych,
     // reakcje po publikacji). Przy zaproszeniach kontekst "invite_sent" niesie trafniejsze copy.
@@ -361,31 +360,11 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
             <div className="mt-4 flex gap-4">
               {[
                 { key: "list", label: t("kind.list"), icon: <FileText className="h-8 w-8 text-foreground" strokeWidth={1.7} />, go: () => { track("list_create_opened"); setStep("listCountry"); } },
-                { key: "trip", label: t("kind.trip"), icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => { track("trip_create_opened"); setStep("tripMode"); } },
+                { key: "trip", label: t("kind.trip"), icon: <img src="/spontaway-symbol.png" alt="" className="h-9 w-9 object-contain" style={{ filter: "brightness(0)" }} draggable={false} />, go: () => { track("trip_create_opened"); setStep("tripCountry"); } },
               ].map((t) => (
                 <button key={t.key} onClick={() => { haptics.light(); t.go(); }} className="flex-1 flex flex-col items-center gap-3 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
                   <span className="w-full h-[90px] rounded-2xl bg-[#efefef] flex items-center justify-center">{t.icon}</span>
                   <span className="text-sm font-medium text-foreground">{t.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── WYJAZD: wybor trybu (przyszly = zaplanuj / przeszly = wspomnienie) ── */}
-        {step === "tripMode" && (
-          <div className="pb-[max(20px,env(safe-area-inset-bottom))]">
-            <Header title={t("trip_kind.title")} onBack={() => setStep("entry")} backLabel={t("common:buttons.back")} />
-            <div className="px-5 pt-1 flex gap-4">
-              {[
-                { key: "past" as TripMode, label: t("trip_kind.past"), sub: t("trip_kind.past_desc"), icon: <History className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
-                { key: "future" as TripMode, label: t("trip_kind.future"), sub: t("trip_kind.future_desc"), icon: <CalendarPlus className="h-8 w-8 text-foreground" strokeWidth={1.7} /> },
-              ].map((m) => (
-                <button key={m.key} onClick={() => { haptics.light(); setTripMode(m.key); setStep("tripCountry"); }}
-                  className="flex-1 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform outline-none focus:outline-none focus-visible:outline-none">
-                  <span className="w-full h-[90px] rounded-2xl bg-[#efefef] flex items-center justify-center">{m.icon}</span>
-                  <span className="text-sm font-medium text-foreground">{m.label}</span>
-                  <span className="text-[12px] text-muted-foreground -mt-1 text-center">{m.sub}</span>
                 </button>
               ))}
             </div>
@@ -547,7 +526,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         {/* ── WYJAZD: wybor KRAJOW (zasieg wyjazdu i wyszukiwarki miejsc) ── */}
         {step === "tripCountry" && (
           <div className="flex-1 min-h-0 flex flex-col pb-[max(16px,env(safe-area-inset-bottom))]">
-            <Header title={t("country.title")} onBack={() => setStep("tripMode")} backLabel={t("common:buttons.back")}
+            <Header title={t("country.title")} onBack={() => setStep("entry")} backLabel={t("common:buttons.back")}
               onNext={() => setStep("tripDates")}
               nextLabel={tripCountries.length ? t("common:buttons.next") : t("skip")} />
             <p className="px-5 -mt-1 pb-2 text-[13px] text-muted-foreground leading-relaxed">{t("country.hint")}</p>
@@ -576,7 +555,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
               </p>
               <FullCalendarPicker
                 maxDays={MAX_TRIP_DAYS}
-                allowPast={tripMode === "past"}
+                allowPast
                 onRangeChange={(d, numDays) => { setTripStart(d); setTripDays(Math.max(1, numDays)); }}
                 onConfirm={(d, numDays) => { setTripStart(d); setTripDays(numDays); afterDates(d, numDays); }}
                 onClear={tripStart ? () => { setTripStart(null); setTripDays(1); } : undefined}

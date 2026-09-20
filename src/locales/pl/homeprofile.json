@@ -106,20 +106,20 @@
     "places_many": "{{num}} miejsc"
   },
   "confirm": {
-    "leave_trip_desc": "Przestaniesz być uczestnikiem tego wyjazdu i zniknie on z Twojego profilu. Nie można tego cofnąć.",
-    "delete_trip_desc": "Jeżeli usuniesz ten wyjazd, zniknie on bezpowrotnie z Twojego profilu. Nie można tego cofnąć.",
-    "leave_trip_title": "Na pewno chcesz opuścić ten wyjazd?",
-    "delete_trip_title": "Na pewno chcesz usunąć ten wyjazd?",
+    "leave_trip_desc": "Przestaniesz być uczestnikiem tego planu i zniknie on z Twojego profilu. Nie można tego cofnąć.",
+    "delete_trip_desc": "Jeżeli usuniesz ten plan, zniknie on bezpowrotnie z Twojego profilu. Nie można tego cofnąć.",
+    "leave_trip_title": "Na pewno chcesz opuścić ten plan?",
+    "delete_trip_title": "Na pewno chcesz usunąć ten plan?",
     "leave_action": "Opuść",
     "delete_action": "Usuń"
   },
   "empty": {
     "no_drafts_desc": "Trasy w toku - te które tworzysz i planujesz - pojawią się tutaj.",
-    "no_trips_desc": "Stwórz wyjazd klikając guzik „+”, aby zobaczyć je tutaj.",
-    "no_memories_desc": "Minione wyjazdy wylądują tutaj jako wspomnienia.",
+    "no_trips_desc": "Stwórz plan klikając guzik „+”, aby zobaczyć je tutaj.",
+    "no_memories_desc": "Opublikowane plany wylądują tutaj.",
     "no_drafts": "Brak roboczych tras",
     "no_memories": "Brak wspomnień",
-    "no_trips": "Twoje wyjazdy"
+    "no_trips": "Twoje plany"
   },
   "today": "Dziś",
   "saved": {
@@ -169,11 +169,11 @@
     "clear": "Wyczyść"
   },
   "card": {
-    "show_trip_map": "Pokaż mapę wyjazdu",
+    "show_trip_map": "Pokaż mapę planu",
     "remove_saved": "Usuń z zapisanych",
     "close_map": "Zamknij mapę",
     "delete": "Usuń",
-    "map_alt": "Mapa wyjazdu"
+    "map_alt": "Mapa planu"
   },
   "add_place": {
     "search_hint": "Wpisz nazwę miejsca, żeby poszukać go w {{city}}. Jeśli go nie znajdziesz, dopiszesz je ręcznie."
