@@ -5,7 +5,7 @@
 // z menu w jednej z nich nie jest problemem pozostalych.
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Send, Loader2, Store } from "lucide-react";
+import { Send, Loader2, Store, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { AppShell, PageHeader, Card, Button, TextArea, StatusBadge, Loading, EmptyState } from "../../ui";
@@ -14,12 +14,16 @@ import { useMessageThreads, useThread, useSendReply, useMarkThreadRead, type Mes
 export function MessagesPage() {
   const threads = useMessageThreads();
   const [openId, setOpenId] = useState<string | null>(null);
+  // Pierwsza rozmowa otwiera sie sama TYLKO RAZ (lista bez otwartego watku to pol ekranu
+  // pustki) - po tym, jak Nat zamknie podglad krzyzykiem, nie ma wracac (prosba 2026-09-20).
+  const [autoOpened, setAutoOpened] = useState(false);
   const markRead = useMarkThreadRead();
 
-  // Pierwsza rozmowa otwiera sie sama - lista bez otwartego watku to pol ekranu pustki.
   useEffect(() => {
-    if (!openId && threads.data?.length) setOpenId(threads.data[0].business_profile_id);
-  }, [threads.data, openId]);
+    if (autoOpened || !threads.data?.length) return;
+    setAutoOpened(true);
+    setOpenId(threads.data[0].business_profile_id);
+  }, [threads.data, autoOpened]);
 
   useEffect(() => {
     if (openId) markRead.mutate(openId);
@@ -51,13 +55,18 @@ export function MessagesPage() {
             <ul className="max-h-[70vh] overflow-y-auto">
               {threads.data.map((t) => (
                 <li key={t.business_profile_id}>
-                  <ThreadRow thread={t} active={t.business_profile_id === openId} onClick={() => setOpenId(t.business_profile_id)} />
+                  {/* Tapniecie w OTWARTY watek zamyka go - to samo, co krzyzyk w naglowku rozmowy. */}
+                  <ThreadRow
+                    thread={t}
+                    active={t.business_profile_id === openId}
+                    onClick={() => setOpenId((cur) => (cur === t.business_profile_id ? null : t.business_profile_id))}
+                  />
                 </li>
               ))}
             </ul>
           </Card>
 
-          {open ? <Conversation thread={open} /> : null}
+          {open ? <Conversation thread={open} onClose={() => setOpenId(null)} /> : null}
         </div>
       )}
     </AppShell>
@@ -96,7 +105,7 @@ function ThreadRow({ thread, active, onClick }: { thread: MessageThread; active:
   );
 }
 
-function Conversation({ thread }: { thread: MessageThread }) {
+function Conversation({ thread, onClose }: { thread: MessageThread; onClose: () => void }) {
   const messages = useThread(thread.business_profile_id);
   const send = useSendReply();
   const [draft, setDraft] = useState("");
@@ -123,6 +132,9 @@ function Conversation({ thread }: { thread: MessageThread }) {
             {[thread.city, `${thread.total} wiadomości`].filter(Boolean).join(" · ")}
           </p>
         </div>
+        {/* Zamkniecie podgladu rozmowy - na telefonie karta rozmowy staje POD lista i bez
+            tego nie dalo sie jej schowac (prosba Nat 2026-09-20). */}
+        <Button onClick={onClose} aria-label="Zamknij rozmowę" icon={<X className="h-4 w-4" />} className="h-8 w-8 shrink-0 px-0" />
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-4">
