@@ -63,7 +63,7 @@ const COPY = {
     features: [
       { title: "Odkrywaj najlepsze\nmiejsca i wydarzenia", body: "Zobacz gdzie i jak najlepiej spędzić czas.", cta: "Zacznij odkrywać", img: "/mockup_odkrywaj.png", alt: "Karty miejsc i wydarzeń w aplikacji Spontaway" },
       { title: "Twórz własne\nkolekcje tematyczne", body: "Odwiedzone lub te, które chcesz odwiedzić.\nZapisuj miejsca i podziel się z innymi swoją opinią.", cta: "Stwórz pierwszą listę", img: "/kolekcje_grafika.png", alt: "Lista miejsc „Fav kawiarnie” w aplikacji Spontaway" },
-      { title: "Dziel się wrażeniami\nz przeżytych podróży", body: "Planuj i twórz podsumowania wyjazdów, pomagając innym użytkownikom w ich podróżach.", cta: "Dodaj pierwszy wyjazd", img: "/dziel_sie.png", alt: "Planowanie wyjazdu i podsumowanie podróży w aplikacji Spontaway" },
+      { title: "Dziel się wrażeniami\nz przeżytych podróży", body: "Twórz plany podróży i ich podsumowania, pomagając innym użytkownikom w ich podróżach.", cta: "Dodaj pierwszy plan", img: "/dziel_sie.png", alt: "Planowanie wyjazdu i podsumowanie podróży w aplikacji Spontaway" },
     ],
     stats: { heading: "SPONTAWAY TO", countries: "Krajów", cities: "Miast", possibilities: "Możliwości" },
     business: {
@@ -139,7 +139,7 @@ const COPY = {
     features: [
       { title: "Discover the best\nplaces and events", body: "See where and how to spend your time best.", cta: "Start exploring", img: "/mockup_odkrywaj_en.png", alt: "Place and event cards in the Spontaway app" },
       { title: "Build your own\nthemed collections", body: "Places you have been to, or the ones you still want to see.\nSave them and share your take with others.", cta: "Create your first list", img: "/kolekcje_grafika.png", alt: "A place list in the Spontaway app" },
-      { title: "Share what you brought\nback from a trip", body: "Plan your trips and turn them into recaps that help other travellers.", cta: "Add your first trip", img: "/dziel_sie_en.png", alt: "Trip planning and trip recap in the Spontaway app" },
+      { title: "Share what you brought\nback from a trip", body: "Create travel plans and turn them into recaps that help other travellers.", cta: "Add your first plan", img: "/dziel_sie_en.png", alt: "Trip planning and trip recap in the Spontaway app" },
     ],
     stats: { heading: "SPONTAWAY IS", countries: "Countries", cities: "Cities", possibilities: "Possibilities" },
     business: {
