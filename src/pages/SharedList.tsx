@@ -57,7 +57,10 @@ import ListPrivacySheet from "@/components/lists/ListPrivacySheet";
 import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
 import { ParticipantsRow } from "@/components/route/ParticipantsRow";
 import PeopleSheet from "@/components/route/PeopleSheet";
-import { fetchCollectionMembers, collectionMembersKey } from "@/lib/collectionInvite";
+import { fetchCollectionMembers, collectionMembersKey, removeCollectionMember } from "@/lib/collectionInvite";
+import { fetchCollectionStars, collectionStarsKey, setCollectionStar, starKey } from "@/lib/collectionStars";
+import { invalidateContentLists } from "@/lib/trash";
+import PlaceVisitorsSheet from "@/components/lists/PlaceVisitorsSheet";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
 
 import PlaceNotes from "@/components/route/PlaceNotes";
@@ -354,19 +357,38 @@ export default function SharedList() {
 
   // Gwiazdka kolekcji (discovery_items.is_top, migracja 20260913b) - BEZ LIMITU (decyzja Nat
   // 2026-09-13; od 2026-09-14 wyjazdy tak samo, patrz src/lib/topPlaces.ts).
-  const toggleTopItem = async (item: any) => {
-    const next = !item.is_top;
-    haptics.light();
-    queryClient.setQueryData(["shared-list-items", id], (old: any[] | undefined) =>
-      (old ?? []).map((p) => (p.id === item.id ? { ...p, is_top: next } : p)));
-    const { error } = await (supabase as any).from("discovery_items").update({ is_top: next }).eq("id", item.id);
-    if (error) {
-      console.error("[SharedList] top toggle:", error.message);
-      queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
+  // Gwiazdka PER UCZESTNIK (2026-09-20, `discovery_item_stars`): kazdy z kolekcji wyroznia
+  // sam, `discovery_items.is_top` (= gwiazdka wlasciciela) trzyma trigger w bazie. Optymistycznie
+  // w cache gwiazdek; is_top w cache pozycji NIE ruszamy - i tak liczymy z gwiazdek.
+  const { data: stars = EMPTY_ARRAY } = useQuery({
+    queryKey: collectionStarsKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchCollectionStars(id!),
+  });
+  const starsByPlace = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const st of stars as { user_id: string; place_name: string }[]) {
+      const k = starKey(st.place_name);
+      const arr = m.get(k);
+      if (arr) { if (!arr.includes(st.user_id)) arr.push(st.user_id); } else m.set(k, [st.user_id]);
     }
+    return m;
+  }, [stars]);
+  const toggleTopItem = async (item: any) => {
+    if (!user || !id) return;
+    const k = starKey(item.place_name);
+    const next = !(starsByPlace.get(k) ?? []).includes(user.id);
+    haptics.light();
+    queryClient.setQueryData(collectionStarsKey(id), (old: any[] | undefined) => next
+      ? [...(old ?? []), { user_id: user.id, place_name: item.place_name }]
+      : (old ?? []).filter((st) => !(st.user_id === user.id && starKey(st.place_name) === k)));
+    const ok = await setCollectionStar(id, user.id, item.place_name, next);
+    if (!ok) toast.error(t("common:errors.generic"));
+    queryClient.invalidateQueries({ queryKey: collectionStarsKey(id) });
+    queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });
     queryClient.invalidateQueries({ queryKey: ["starred-places"] });
   };
-
 
   // "Gdzie juz bylem" (zgloszenie z testow 2026-09-08). Stan nalezy do OGLADAJACEGO, nie do
   // listy - odhaczenie na CUDZEJ zapisanej liscie nie moze jej zmieniac wszystkim. Klucz to
@@ -504,6 +526,17 @@ export default function SharedList() {
     () => (members as any[]).filter((m) => m.user_id !== col?.user_id && m.username),
     [members, col?.user_id],
   );
+  // Wszyscy uczestnicy (wlasciciel + wspoltworcy) - do "wyroznili wszyscy" i arkusza "kto tu byl".
+  const participantIds = useMemo(
+    () => Array.from(new Set([col?.user_id, ...(members as any[]).map((m) => m.user_id)].filter(Boolean))) as string[],
+    [members, col?.user_id],
+  );
+  const participantById = useMemo(() => {
+    const m = new Map<string, { id: string; username: string | null; avatar_url: string | null; avatar_frame?: string | null; avatar_frame_color?: string | null }>();
+    if (col?.user_id) m.set(col.user_id, { id: col.user_id, username: (author as any)?.username ?? col.author_name ?? null, avatar_url: (author as any)?.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color });
+    for (const mem of members as any[]) if (mem?.user_id) m.set(mem.user_id, { id: mem.user_id, username: mem.username ?? null, avatar_url: mem.avatar_url ?? null, avatar_frame: mem.avatar_frame, avatar_frame_color: mem.avatar_frame_color });
+    return m;
+  }, [members, col?.user_id, col?.author_name, col?.author_avatar, author]);
   // Awatary do pigulki "odwiedzone": autor + wspoltworcy. Innych osob w tej mapie nie ma
   // i byc nie moze - RPC oddaje slad wylacznie uczestnikow kolekcji.
   // ⛔ TEN HOOK MUSI STAC NAD early-returnami (bramka `npm run hooks:check` zlapala go po
@@ -515,6 +548,10 @@ export default function SharedList() {
     return m;
   }, [members, (col as any)?.user_id, (author as any)?.avatar_url, (col as any)?.author_avatar]);
   const [allPeopleOpen, setAllPeopleOpen] = useState(false);
+  // Arkusz "kto tu byl" spod zoltej pigulki "odwiedzone" (prosba Nat 2026-09-20).
+  const [visitorsFor, setVisitorsFor] = useState<any | null>(null);
+  const [askLeave, setAskLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   // Notki WSZYSTKICH uczestnikow: RLS wpuszcza kazdego, kto widzi kolekcje, wiec czytelnik
   // publicznej kolekcji tez widzi caly watek - tak samo, jak przy opublikowanym wyjezdzie.
   const { data: allNotes = EMPTY_ARRAY } = useQuery({
@@ -705,6 +742,22 @@ export default function SharedList() {
   // Guzik "Udostepnij" pokazuje KARTE do zrzutu ekranu (szablon listy). Wysylka linku zostaje
   // pod dlugim przytrzymaniem - ekran z kanalami i eksportem obrazu to osobny temat.
   const handleShare = () => setShareCardOpen(true);
+  // Opuszczenie kolekcji przez wspoltworce (RLS pozwala kasowac wlasny wiersz czlonkostwa).
+  // Po wyjsciu wracamy tam, skad user przyszedl: kolekcja prywatna staje sie dla niego
+  // niewidoczna, a publiczna przestaje byc "jego" - w obu razach widok nie ma po co zostac.
+  const handleLeave = async () => {
+    if (!user || !id) return;
+    setLeaving(true);
+    const ok = await removeCollectionMember(id, user.id);
+    setLeaving(false);
+    if (!ok) { haptics.error(); toast.error(t("people.leave_failed")); return; }
+    haptics.success();
+    setAskLeave(false);
+    queryClient.invalidateQueries({ queryKey: collectionMembersKey(id) });
+    invalidateContentLists();
+    toast.success(t("people.left"));
+    goBackOr(navigate, "/moj-profil?tab=listy");
+  };
   const handleShareLink = () => { void share({ title: col.title || cityLabel || t("common:fallback.list"), url: buildShareUrl(`/lista/${col.id}`) }); };
 
   // Wlasciciel dodaje miejsca do listy (drawer jak w wyjazdach): batch insert do discovery_items.
@@ -875,8 +928,15 @@ export default function SharedList() {
             deleteLabel={t("remove_from_list")}
             // Gwiazdka "topki" takze na liscie (prosba Nat 2026-09-13) - ten sam wiersz i ta
             // sama logika, co na wyjezdzie: jedna gwiazdka, kolejny wybor ja PRZENOSI.
-            isTop={!!pin.is_top}
-            onToggleTop={mine ? () => void toggleTopItem(pin) : undefined}
+            /* Od 2026-09-20 gwiazdka jest PER UCZESTNIK: przy nazwie stoi, gdy wyroznil
+               KTOKOLWIEK; guzik pokazuje MOJ stan; wyroznic moze kazdy z kolekcji, nie tylko
+               wlasciciel pozycji. `is_top` z bazy zostaje zapasem dla kolekcji bez gwiazdek w tabeli. */
+            isTop={(starsByPlace.get(starKey(pin.place_name))?.length ?? 0) > 0 || (!!pin.is_top && !starsByPlace.has(starKey(pin.place_name)))}
+            topByMe={!!user && (starsByPlace.get(starKey(pin.place_name)) ?? []).includes(user.id)}
+            topCount={starsByPlace.get(starKey(pin.place_name))?.length ?? 0}
+            topAll={(starsByPlace.get(starKey(pin.place_name))?.length ?? 0) >= participantIds.length && participantIds.length > 0}
+            onToggleTop={canContribute && user ? () => void toggleTopItem(pin) : undefined}
+            onVisitedTap={() => setVisitorsFor(pin)}
             /* Notke i zdjecie moze dodac KAZDY uczestnik, takze przy cudzym miejscu -
                `mine` rzadzi tylko usuwaniem samej pozycji z kolekcji. */
             menuExtras={canWriteNote ? [
@@ -951,12 +1011,15 @@ export default function SharedList() {
               className="flex-1 justify-center"
               others={coAuthors as any}
               onOpenAll={() => setAllPeopleOpen(true)}
-              onOpenPerson={(m) => m.username && navigate(`/profil/${m.username}`)}
+              /* Przy wspoltworcach KAZDE tapniecie w belke uczestnikow otwiera arkusz skladu
+                 (tam "Opusc" dla uczestnika, prosba Nat 2026-09-20); profil jest w arkuszu
+                 jedno tapniecie dalej. Kolekcja jednoosobowa: pigulka autora dalej = profil. */
+              onOpenPerson={() => setAllPeopleOpen(true)}
               author={<>
               {/* Autor jako pigulka (redesign 2026-09-13, TripHeaderChips) - awatar z ramka zostaje. */}
               {author?.username ? (
                 <AuthorPill src={author?.avatar_url ?? col.author_avatar} frame={author?.avatar_frame} color={author?.avatar_frame_color} name={`@${author.username}`}
-                  className="!bg-white" onClick={() => navigate(`/profil/${author.username}`)} />
+                  className="!bg-white" onClick={() => (coAuthors.length ? setAllPeopleOpen(true) : navigate(`/profil/${author.username}`))} />
               ) : (
                 <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-3.5 font-semibold text-foreground">
                   <img src={avatarSrc(col.author_avatar ?? null)} alt="" className="h-6 w-6 rounded-full object-cover bg-orange-100 shrink-0" />
@@ -1119,7 +1182,18 @@ export default function SharedList() {
         <PeopleSheet
           open={allPeopleOpen} onOpenChange={setAllPeopleOpen} title={t("people.title")}
           author={author?.username ? { id: col.user_id, username: author.username, avatar_url: author.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color } : null}
-          others={coAuthors as any}
+          /* `Participant.id`, a wiersz czlonka ma `user_id` - bez mapowania "Opusc" nie znajdowal
+             wlasnego wiersza (zlapane renderem 2026-09-20). */
+          others={(coAuthors as any[]).map((m) => ({ ...m, id: m.user_id })) as any}
+          leave={user && isMember && !isOwner ? { userId: user.id, label: t("people.leave"), onLeave: () => setAskLeave(true) } : undefined}
+        />
+        <PlaceVisitorsSheet
+          open={!!visitorsFor}
+          onOpenChange={(o) => { if (!o) setVisitorsFor(null); }}
+          placeName={visitorsFor?.place_name ?? ""}
+          visitorIds={visitorsFor ? (visitorsByPlace.get(visitKeyOf(visitorsFor)) ?? []) : []}
+          starredIds={visitorsFor ? (starsByPlace.get(starKey(visitorsFor.place_name)) ?? []) : []}
+          people={participantById}
         />
         {shareCardOpen && (
         <ShareCardList
@@ -1235,6 +1309,20 @@ export default function SharedList() {
       <SavePlaceSheet open={!!savePlace} onOpenChange={(o) => !o && setSavePlace(null)} place={savePlace} city={col.city ?? ""} />
 
       {/* Potwierdzenie usuniecia listy - nieodwracalne. */}
+      <AlertDialog open={askLeave} onOpenChange={(o) => { if (!o && !leaving) setAskLeave(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("people.leave_confirm_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("people.leave_confirm_desc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={leaving}>{t("common:buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void handleLeave(); }} disabled={leaving}>
+              {t("people.leave_cta")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={askDelete} onOpenChange={(o) => { if (!o && !deleting) setAskDelete(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>

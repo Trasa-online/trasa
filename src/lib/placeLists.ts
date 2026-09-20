@@ -275,6 +275,13 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
   // "miejsca dodane do KOLEKCJI" bez tej flagi - zapis do wishlisty to inny gest niz
   // dopisanie miejsca do kuratorskiej kolekcji (2026-09-18).
   track("list_place_added", { target: "list", collection_id: listId, has_note: !!opts?.note, general: !!opts?.general });
+  // Miejsce dodane do KOLEKCJI laduje tez w prywatnej wishliscie "Ogolne" dodajacego (prosba Nat
+  // 2026-09-20: "kazde miejsce dodawane do kolekcji dodawaj od razu do zapisanych"). Arkusz
+  // "Zapisz miejsce" robil to od zawsze; teraz takze arkusz "Dodaj nowe miejsce" w widoku
+  // kolekcji i wspoltworca w cudzej kolekcji. Best-effort - nie wywraca dodania.
+  if (!opts?.general && addedBy) {
+    void quickSavePlace(addedBy, place, place.city ?? null).catch((e: any) => console.warn("[placeLists] mirror to general:", e?.message ?? e));
+  }
   // "Ktos dodal miejsce do kolekcji" - powiadomienie dla ZAPISUJACYCH i OBSERWUJACYCH autora
   // (RPC sam sprawdza wlasciciela, publicznosc kolekcji i dedupuje 5 min). Wolane TUTAJ, a nie
   // w widoku kolekcji, bo przez ten widok idzie tylko czesc dodan - najczestsza sciezka to

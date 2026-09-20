@@ -42,7 +42,7 @@ const GoogleGlyph = ({ className }: { className?: string }) => (
 // a pod spodem akcje po prawej: Google (biale kolko z cieniem) + zapis/kosz.
 // dragHandle (opcjonalny) = uchwyt przeciagania po lewej (tryb wlasciciela). note = dodatkowa
 // tresc pod wierszem (np. notka autora).
-export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, visitedByMe, onToggleVisited, isTop, onToggleTop, visitedAvatar, visitedAvatars, selection, menuExtras, deleteLabel }: {
+export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onSave, saved, onDelete, dragHandle, note, cornerAvatar, visited, visitedByMe, onToggleVisited, onVisitedTap, isTop, topByMe, topCount, topAll, onToggleTop, visitedAvatar, visitedAvatars, selection, menuExtras, deleteLabel }: {
   pin: any;
   index: number;
   categoryLabel: ReactNode;
@@ -66,7 +66,17 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // "Topka" wyjazdu (2026-09-08): autor wyroznia 1-3 miejsca warte polecenia.
   // onToggleTop podaje tylko autor - dla ogladajacych gwiazdka jest sama informacja.
   isTop?: boolean;
+  /** Kolekcja wspoltworzona (2026-09-20): gwiazdki sa PER UCZESTNIK. `isTop` = wyroznil
+   *  KTOKOLWIEK (gwiazdka przy nazwie), `topByMe` = wyroznil OGLADAJACY (stan guzika).
+   *  Brak `topByMe` = przyjmij `isTop` (wyjazdy, gdzie gwiazdka jest jedna). */
+  topByMe?: boolean;
+  /** Ile osob wyroznilo. Przy > 1 obok gwiazdki stoi liczba - CHYBA ze wyroznili WSZYSCY
+   *  uczestnicy (`topAll`): wtedy sama gwiazdka, bez liczby (prosba Nat 2026-09-20). */
+  topCount?: number;
+  topAll?: boolean;
   onToggleTop?: () => void;
+  /** Tapniecie w zolta pigulke "odwiedzone" (kolekcja): arkusz z osobami, ktore tu byly. */
+  onVisitedTap?: () => void;
   /** Awatar osoby, ktorej dotyczy `visited`, gdy NIE jest to ogladajacy (cudza lista).
    *  Obecny = wiersz pokazuje stan PASYWNY: informacje, nie przelacznik. */
   visitedAvatar?: string | null;
@@ -105,10 +115,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   // (odwiedziny doczytuja sie osobnym zapytaniem PO pierwszym renderze) wyglada dla efektu jak
   // "wlasnie odhaczylem" i cala lista animuje sie naraz - zlapane na probkowaniu: 8 lecacych
   // znaczkow zamiast jednego.
+  const myTop = topByMe ?? isTop;
   const tappedTop = useRef(false);
   const tappedVisit = useRef(false);
   const flying = !!flight;
-  const wasTop = useRef(!!isTop);
+  const wasTop = useRef(!!myTop);
 
   // Przytrzymanie gwiazdki = ladowanie. Postep zyje w refach i idzie prosto w style (bez
   // setState co klatke); stan React trzyma tylko "czy widac pierscien" i "pieczatka gra".
@@ -134,7 +145,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   const startPress = () => {
     if (!onToggleTop) return;
     stopCharge();
-    const pr = { t0: performance.now(), raf: 0, timer: 0, ticked: 0, done: false, active: !isTop };
+    const pr = { t0: performance.now(), raf: 0, timer: 0, ticked: 0, done: false, active: !myTop };
     press.current = pr;
     // Gwiazdka juz przypieta: przytrzymanie nic nie laduje (tap ja zdejmuje).
     if (!pr.active) return;
@@ -186,7 +197,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
   useEffect(() => () => { if (press.current) { cancelAnimationFrame(press.current.raf); clearTimeout(press.current.timer); } }, []);
 
   useEffect(() => {
-    if (isTop && !wasTop.current && tappedTop.current) {
+    if (myTop && !wasTop.current && tappedTop.current) {
       wasTop.current = true;
       tappedTop.current = false;
       // Pozycje MIERZONE, nie stale: wiersz bywa wysoki na 100 px albo na 400 (notka + zdjecia),
@@ -219,8 +230,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
       const id = setTimeout(() => setFlight(null), FLIGHT_MS - 80);
       return () => clearTimeout(id);
     }
-    wasTop.current = !!isTop;
-  }, [isTop]);
+    wasTop.current = !!myTop;
+  }, [myTop]);
 
   // Przytrzymanie wchodzi w tryb zaznaczania. Poza trybem `onOpen` dziala normalnie - stad
   // `didFire()`: `click` przychodzi PO puszczeniu palca i bez tego otwieralby wizytowke
@@ -305,12 +316,16 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               na pigulce w chwili odhaczenia. */}
           {visited && !selecting && (
             <motion.span
+              role={onVisitedTap ? "button" : undefined}
+              tabIndex={onVisitedTap ? 0 : undefined}
+              onClick={onVisitedTap ? (e) => { e.stopPropagation(); onVisitedTap(); } : undefined}
+              onKeyDown={onVisitedTap ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onVisitedTap(); } } : undefined}
               aria-label={t("row.visited")}
               animate={stamped ? { scale: [1, 0.82, 1.12, 0.98, 1] } : { scale: 1 }}
               transition={stamped
                 ? { duration: 0.44, times: [0, 0.16, 0.4, 0.7, 1], ease: "easeOut" }
                 : { duration: 0.2 }}
-              className="relative h-8 min-w-16 px-2 rounded-full flex items-center justify-center gap-1 bg-[#FDF184] text-[#0E0E0E]"
+              className={`relative h-8 min-w-16 px-2 rounded-full flex items-center justify-center gap-1 bg-[#FDF184] text-[#0E0E0E] ${onVisitedTap ? "active:scale-95 transition-transform cursor-pointer" : ""}`}
             >
               <AnimatePresence>
                 {stamped && (
@@ -380,6 +395,11 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                     transition={flying ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 17 }}
                   >
                     <BrandIcon src={STAR_ICON} className="h-4 w-4 -mt-0.5 mr-1 align-middle text-primary" label={t("row.top_place")} />
+                    {/* Kilka osob wyroznilo, ale NIE wszystkie: liczba przy gwiazdce. Gdy
+                        wyroznili wszyscy uczestnicy - sama gwiazdka (Nat 2026-09-20). */}
+                    {(topCount ?? 0) > 1 && !topAll && (
+                      <span className="-ml-0.5 mr-1.5 align-middle text-[12px] font-black text-primary">{topCount}</span>
+                    )}
                   </motion.span>
                 )}
                 {pin.place_name}
@@ -412,8 +432,8 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
               <motion.button
                 ref={starBtnRef}
                 type="button"
-                aria-label={isTop ? t("row.unset_top") : t("row.set_top")}
-                aria-pressed={!!isTop}
+                aria-label={myTop ? t("row.unset_top") : t("row.set_top")}
+                aria-pressed={!!myTop}
                 onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); startPress(); }}
                 onPointerUp={(e) => { e.stopPropagation(); endPress(false); }}
                 onPointerCancel={() => endPress(true)}
@@ -424,7 +444,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                 animate={sealed ? { scale: [1, 0.82, 1.18, 0.96, 1] } : { scale: 1 }}
                 transition={sealed ? { duration: 0.5, times: [0, 0.15, 0.45, 0.75, 1], ease: "easeOut" } : { duration: 0.15 }}
                 style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none", touchAction: "manipulation" }}
-                className={`relative h-10 w-10 rounded-full border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 transition-colors ${isTop ? "bg-[#FDF184]" : "bg-white"}`}
+                className={`relative h-10 w-10 rounded-full border border-black/[0.04] shadow-[0_1px_5px_rgba(0,0,0,0.12)] flex items-center justify-center shrink-0 transition-colors ${myTop ? "bg-[#FDF184]" : "bg-white"}`}
               >
                 {/* Pierscien ladowania - poza obrysem kolka, rysowany od gory zgodnie z ruchem wskazowek. */}
                 <svg aria-hidden viewBox="0 0 52 52" className={`pointer-events-none absolute -inset-1.5 h-[52px] w-[52px] -rotate-90 transition-opacity duration-150 ${charging ? "opacity-100" : "opacity-0"}`}>
@@ -433,7 +453,7 @@ export function RoutePlaceRow({ pin, index, categoryLabel, onOpen, onGoogle, onS
                     strokeDasharray={RING_C} strokeDashoffset={RING_C} />
                 </svg>
                 <span ref={starGlyphRef} className="flex will-change-transform">
-                  <BrandIcon src={STAR_ICON} className={`h-[18px] w-[18px] ${isTop ? "text-primary" : "text-foreground/45"}`} />
+                  <BrandIcon src={STAR_ICON} className={`h-[18px] w-[18px] ${myTop ? "text-primary" : "text-foreground/45"}`} />
                 </span>
                 {/* Pieczatka po pelnym naladowaniu: fala + rozprysk (ta sama choreografia, co "bylem tu"). */}
                 <AnimatePresence>

@@ -27,10 +27,26 @@ export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]
     (supabase as any).from("pins")
       .select("id, place_name, category, photo_url, image_url, images, user_photo_urls, place_id, route_id, routes!inner(id, title, user_id, created_at, city, countries)")
       .eq("is_top", true).eq("routes.user_id", userId),
-    (supabase as any).from("discovery_items")
-      .select("id, place_name, category, photo_url, google_place_id, city, collection_id, discovery_collections!inner(id, title, user_id, updated_at, city, countries)")
-      .eq("is_top", true).eq("discovery_collections.user_id", userId),
+    // Gwiazdki w kolekcjach sa PER UCZESTNIK (2026-09-20, `discovery_item_stars`) - liczymy
+    // wszystkie MOJE, takze w cudzych kolekcjach, ktore wspoltworze. `is_top` na pozycji
+    // to od tej daty tylko gwiazdka wlasciciela.
+    (supabase as any).from("discovery_item_stars")
+      .select("place_name, collection_id, discovery_collections!inner(id, title, user_id, updated_at, city, countries)")
+      .eq("user_id", userId),
   ]);
+  const starRows = (itemsRes.data ?? []) as any[];
+  const colIds = Array.from(new Set(starRows.map((r) => r.collection_id)));
+  const { data: itemRows } = colIds.length
+    ? await (supabase as any).from("discovery_items")
+        .select("id, place_name, category, photo_url, google_place_id, city, collection_id")
+        .in("collection_id", colIds)
+    : { data: [] as any[] };
+  const norm = (v: string | null | undefined) => String(v ?? "").trim().toLowerCase();
+  const itemByKey = new Map<string, any>();
+  for (const it of (itemRows ?? []) as any[]) itemByKey.set(`${it.collection_id}|${norm(it.place_name)}`, it);
+  const starredItems = starRows
+    .map((r) => { const it = itemByKey.get(`${r.collection_id}|${norm(r.place_name)}`); return it ? { ...it, discovery_collections: r.discovery_collections } : null; })
+    .filter(Boolean) as any[];
   const trips: StarredPlace[] = ((pinsRes.data ?? []) as any[]).map((p) => ({
     id: `pin:${p.id}`, place_name: p.place_name ?? "", category: p.category ?? null,
     photo: p.image_url || firstOf(p.images) || firstOf(p.user_photo_urls) || p.photo_url || null,
@@ -40,7 +56,7 @@ export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]
     countries: Array.isArray(p.routes?.countries) ? p.routes.countries.filter(Boolean) : [],
     source: { kind: "trip", id: p.route_id, title: p.routes?.title ?? "" },
   }));
-  const lists: StarredPlace[] = ((itemsRes.data ?? []) as any[]).map((it) => ({
+  const lists: StarredPlace[] = starredItems.map((it) => ({
     id: `item:${it.id}`, place_name: it.place_name ?? "", category: it.category ?? null,
     photo: it.photo_url ?? null, google_place_id: it.google_place_id ?? null,
     city: it.city ?? it.discovery_collections?.city ?? null,

@@ -135,7 +135,13 @@
     "add_confirm_one": "Add {{count}} person",
     "add_confirm_other": "Add {{count}} people",
     "added_count_one": "Added {{count}} person to the collection",
-    "added_count_other": "Added {{count}} people to the collection"
+    "added_count_other": "Added {{count}} people to the collection",
+    "leave": "Leave",
+    "leave_confirm_title": "Leave this collection?",
+    "leave_confirm_desc": "You will stop co-creating it. The places, notes and photos you added stay.",
+    "leave_cta": "Leave collection",
+    "left": "You left the collection",
+    "leave_failed": "Could not leave the collection. Try again."
   },
   "privacy": {
     "title": "Collection privacy",
@@ -151,5 +157,11 @@
     "now_private": "Collection is private",
     "undo": "Undo",
     "save_failed": "Could not change privacy. Please try again."
+  },
+  "visitors": {
+    "title": "Who has been here",
+    "starred": "Starred",
+    "visited": "Visited",
+    "empty": "Nobody has checked this place off yet."
   }
 }

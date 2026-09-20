@@ -140,7 +140,13 @@
     "add_confirm_many": "Dodaj {{count}} osób",
     "added_count_one": "Dodano {{count}} osobę do kolekcji",
     "added_count_few": "Dodano {{count}} osoby do kolekcji",
-    "added_count_many": "Dodano {{count}} osób do kolekcji"
+    "added_count_many": "Dodano {{count}} osób do kolekcji",
+    "leave": "Opuść",
+    "leave_confirm_title": "Opuścić tę kolekcję?",
+    "leave_confirm_desc": "Przestaniesz ją współtworzyć. Miejsca, notki i zdjęcia, które dodałeś(-aś), zostają.",
+    "leave_cta": "Opuść kolekcję",
+    "left": "Opuściłeś(-aś) kolekcję",
+    "leave_failed": "Nie udało się opuścić kolekcji. Spróbuj ponownie."
   },
   "privacy": {
     "title": "Prywatność kolekcji",
@@ -157,5 +163,11 @@
     "now_private": "Kolekcja jest prywatna",
     "undo": "Cofnij",
     "save_failed": "Nie udało się zmienić prywatności. Spróbuj ponownie."
+  },
+  "visitors": {
+    "title": "Kto tu był",
+    "starred": "Wyróżnił(a)",
+    "visited": "Był(a) tu",
+    "empty": "Nikt jeszcze nie odhaczył tego miejsca."
   }
 }
