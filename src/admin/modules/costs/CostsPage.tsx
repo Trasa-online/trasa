@@ -1,16 +1,22 @@
-import { Loader2, Search, Globe } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, Search, Globe, Receipt, RefreshCw, ExternalLink } from "lucide-react";
+import { format, parseISO, getDaysInMonth } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import {
   useTextsearchMonthly,
   useDailyGoogleQuota,
+  useGoogleBilling,
+  syncGoogleBilling,
   TEXTSEARCH_MONTHLY_LIMIT,
   DAILY_CALL_LIMIT,
-  TEXTSEARCH_COST_PER_CALL,
   type MonthUsage,
+  type BillingRow,
 } from "./useApiCosts";
 
-const usd = (n: number) => `$${n.toFixed(2)}`;
+// Kwoty w walucie konta rozliczeniowego Google (PLN) - to, co jest na fakturze.
+const money = (n: number, cur = "PLN") => n.toLocaleString("pl-PL", { style: "currency", currency: cur, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const GOOGLE_BILLING_URL = "https://console.cloud.google.com/billing";
 
 export function CostsPage() {
   return (
@@ -18,13 +24,143 @@ export function CostsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-black text-slate-900">Koszty API</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Zużycie płatnych wywołań Google Places. Wyszukiwarka (Text Search) ma twardy limit
-          miesięczny - po jego przekroczeniu proxy przestaje wołać Google.
+          Rachunek Google Cloud z eksportu rozliczeń (kwoty jak na fakturze, z rabatami i darmową pulą)
+          oraz stan limitów, po których proxy przestaje wołać Google.
         </p>
       </div>
+      <BillingSection />
       <TextsearchSection />
       <DailySection />
     </div>
+  );
+}
+
+/* ── RACHUNEK GOOGLE (prawdziwy, w PLN) ──────────────────────────────────────
+   Zrodlo: google_billing_daily <- google-billing-sync <- eksport rozliczen w BigQuery.
+   "Do zaplaty" = koszt katalogowy - rabaty/darmowa pula. Prognoza = tempo z dni, ktore juz
+   sa w eksporcie, przeliczone na caly miesiac (Google dosypuje dane z ~dobowym opoznieniem,
+   wiec dzisiejszy dzien zwykle jeszcze nie jest policzony). */
+function BillingSection() {
+  const { data, isLoading, isError } = useGoogleBilling();
+  const qc = useQueryClient();
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  const now = new Date();
+  const monthKey = format(now, "yyyy-MM");
+  const prevKey = format(new Date(now.getFullYear(), now.getMonth() - 1, 1), "yyyy-MM");
+  const rows = data ?? [];
+  const cur = rows[0]?.currency ?? "PLN";
+  const inMonth = (k: string) => rows.filter((r) => r.day.startsWith(k));
+  const net = (rs: BillingRow[]) => rs.reduce((a, r) => a + r.cost - r.credits, 0);
+  const gross = (rs: BillingRow[]) => rs.reduce((a, r) => a + r.cost, 0);
+  const thisMonth = inMonth(monthKey);
+  const lastMonth = inMonth(prevKey);
+  const due = net(thisMonth);
+  const list = gross(thisMonth);
+  const saved = thisMonth.reduce((a, r) => a + r.credits, 0);
+  // Ostatni dzien, ktory Google juz rozliczyl - od niego liczymy tempo.
+  const lastDay = thisMonth.length ? Math.max(...thisMonth.map((r) => Number(r.day.slice(8, 10)))) : 0;
+  const forecast = lastDay > 0 ? (due / lastDay) * getDaysInMonth(now) : 0;
+  const syncedAt = rows.length ? rows.reduce((a, r) => (r.synced_at > a ? r.synced_at : a), rows[0].synced_at) : null;
+
+  // Rozbicie na uslugi (Places API, Maps JavaScript API, Geocoding...), netto, malejaco.
+  const byService = Array.from(thisMonth.reduce((m, r) => {
+    const k = r.service || "(inne)";
+    m.set(k, (m.get(k) ?? 0) + r.cost - r.credits);
+    return m;
+  }, new Map<string, number>())).sort((a, b) => b[1] - a[1]);
+  const maxService = Math.max(0.01, ...byService.map(([, v]) => v));
+
+  const sync = async () => {
+    setSyncing(true); setSyncMsg(null);
+    const res = await syncGoogleBilling();
+    setSyncing(false);
+    setSyncMsg(res.ok ? (res.note ?? `Pobrano ${res.rows ?? 0} wierszy`) : `Błąd: ${res.error ?? "nieznany"}`);
+    qc.invalidateQueries({ queryKey: ["api-costs", "google-billing"] });
+  };
+
+  return (
+    <section className="mb-8">
+      <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <Receipt className="h-3.5 w-3.5" /> Rachunek Google - {format(now, "LLLL yyyy", { locale: dateLocale() })}
+      </h2>
+      {isLoading ? <Spin /> : isError ? <Err /> : (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          {rows.length === 0 ? (
+            <div className="py-2">
+              <p className="text-sm font-semibold text-slate-800">Eksport rozliczeń jeszcze nie dojechał.</p>
+              <p className="text-xs text-slate-500 mt-1 leading-snug">
+                Google zapisuje pierwsze wiersze kilka godzin po włączeniu eksportu i nie uzupełnia ich wstecz -
+                kwoty pojawią się tu od dnia włączenia. Synchronizacja idzie automatycznie raz dziennie o 6:20.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-3xl font-black text-slate-900 tabular-nums">{money(due, cur)}</p>
+                  <p className="text-sm text-slate-500 mt-0.5">do zapłaty za dni 1-{lastDay}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-slate-700 tabular-nums">≈ {money(forecast, cur)}</p>
+                  <p className="text-xs text-slate-500">prognoza na cały miesiąc</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mt-4 text-xs">
+                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                  <p className="text-slate-500">Cennik katalogowy</p>
+                  <p className="font-semibold text-slate-800 tabular-nums mt-0.5">{money(list, cur)}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                  <p className="text-slate-500">Rabaty i darmowa pula</p>
+                  <p className="font-semibold text-emerald-700 tabular-nums mt-0.5">-{money(saved, cur)}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                  <p className="text-slate-500">Poprzedni miesiąc</p>
+                  <p className="font-semibold text-slate-800 tabular-nums mt-0.5">{lastMonth.length ? money(net(lastMonth), cur) : "-"}</p>
+                </div>
+              </div>
+
+              {byService.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">Za co płacimy</p>
+                  <div className="space-y-2">
+                    {byService.map(([name, v]) => (
+                      <div key={name}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-slate-600">{name}</span>
+                          <span className="text-slate-700 font-semibold tabular-nums">{money(v, cur)}</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-slate-900 rounded-full" style={{ width: `${Math.max(3, Math.round((Math.max(0, v) / maxService) * 100))}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500">
+            <span>
+              {syncedAt ? `Zsynchronizowano ${format(parseISO(syncedAt), "d MMM, HH:mm", { locale: dateLocale() })}` : "Brak synchronizacji"}
+              {syncMsg ? ` · ${syncMsg}` : ""}
+            </span>
+            <div className="flex items-center gap-3 shrink-0">
+              <a href={GOOGLE_BILLING_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900">
+                Google Billing <ExternalLink className="h-3 w-3" />
+              </a>
+              <button onClick={sync} disabled={syncing} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 text-white px-3 py-1.5 font-semibold disabled:opacity-50">
+                <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} /> Odśwież teraz
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -36,8 +172,6 @@ function TextsearchSection() {
   const current: MonthUsage = data?.find((m) => m.month === monthStart) ?? { month: monthStart, textsearch_calls: 0 };
   const calls = current.textsearch_calls;
   const pct = Math.min(100, Math.round((calls / TEXTSEARCH_MONTHLY_LIMIT) * 100));
-  const spent = calls * TEXTSEARCH_COST_PER_CALL;
-  const budget = TEXTSEARCH_MONTHLY_LIMIT * TEXTSEARCH_COST_PER_CALL;
   const remaining = Math.max(0, TEXTSEARCH_MONTHLY_LIMIT - calls);
   const blocked = calls >= TEXTSEARCH_MONTHLY_LIMIT;
   const near = !blocked && pct >= 80;
@@ -48,16 +182,20 @@ function TextsearchSection() {
   return (
     <section className="mb-8">
       <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-        <Search className="h-3.5 w-3.5" /> Wyszukiwarka - bieżący miesiąc
+        <Search className="h-3.5 w-3.5" /> Limit wyszukiwarki (Text Search) - bieżący miesiąc
       </h2>
+      <p className="text-xs text-slate-400 -mt-1 mb-3 leading-snug">
+        Bezpiecznik kosztowy: po {TEXTSEARCH_MONTHLY_LIMIT.toLocaleString("pl-PL")} wywołaniach proxy przestaje wołać Google do końca miesiąca.
+        Sama liczba wywołań nie mówi o koszcie - kwota jest w rachunku wyżej.
+      </p>
 
       {isLoading ? <Spin /> : isError ? <Err /> : (
         <>
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <div className="flex items-end justify-between mb-2">
               <div>
-                <p className="text-3xl font-black text-slate-900 tabular-nums">{usd(spent)}</p>
-                <p className="text-sm text-slate-500 mt-0.5">z limitu {usd(budget)} / mies.</p>
+                <p className="text-3xl font-black text-slate-900 tabular-nums">{calls.toLocaleString("pl-PL")}<span className="text-base font-semibold text-slate-400"> / {TEXTSEARCH_MONTHLY_LIMIT.toLocaleString("pl-PL")}</span></p>
+                <p className="text-sm text-slate-500 mt-0.5">wywołań w tym miesiącu</p>
               </div>
               <div className="text-right">
                 <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${blocked ? "bg-red-100 text-red-700" : near ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
@@ -91,7 +229,7 @@ function TextsearchSection() {
                   <div key={m.month} className="flex items-center justify-between px-4 py-2.5 text-sm">
                     <span className="text-slate-600 capitalize">{format(parseISO(m.month), "LLLL yyyy", { locale: dateLocale() })}</span>
                     <span className="text-slate-500 tabular-nums">
-                      {m.textsearch_calls.toLocaleString("pl-PL")} wyw. · <span className="font-semibold text-slate-700">{usd(m.textsearch_calls * TEXTSEARCH_COST_PER_CALL)}</span>
+                      <span className="font-semibold text-slate-700">{m.textsearch_calls.toLocaleString("pl-PL")}</span> wywołań
                     </span>
                   </div>
                 ))}

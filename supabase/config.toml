@@ -53,6 +53,10 @@ verify_jwt = false
 [functions.daily-analytics-digest]
 verify_jwt = false
 
+# Rachunek Google z BigQuery do panelu ops: cron (x-trigger-secret) / service_role / admin - gate w funkcji.
+[functions.google-billing-sync]
+verify_jwt = false
+
 # Mail o premierze do waitlisty: admin-only (gate w funkcji), JWT wymagany.
 [functions.send-launch-email]
 verify_jwt = true
