@@ -134,7 +134,7 @@ export async function deleteWithUndo(kind: TrashKind, ids: string | string[], op
   invalidateContentLists();
   toast(opts.message, {
     action: {
-      label: opts.undoLabel ?? i18n.t("common:undo"),
+      label: opts.undoLabel ?? i18n.t("common:buttons.undo"),
       onClick: () => {
         haptics.light();
         void Promise.all(list.map((id) => restoreFromTrash(kind, id).catch(() => false)))

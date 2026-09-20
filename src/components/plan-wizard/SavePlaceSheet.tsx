@@ -121,7 +121,7 @@ export default function SavePlaceSheet({
         await removePlaceFromList(l.id, place.place_name);
         setOverride((prev) => new Map(prev).set(l.id, false));
         toast.success(t("save_sheet.removed_from", { title: l.title }), {
-          action: { label: "Cofnij", onClick: async () => {
+          action: { label: t("common:buttons.undo"), onClick: async () => {
             await addPlaceToList(l.id, { ...place, city: place.city ?? l.city ?? city ?? null });
             setOverride((prev) => new Map(prev).set(l.id, true));
             invalidate();

@@ -146,13 +146,24 @@ const GOOGLE_TYPE_TO_CATEGORY: Record<string, string> = {
   night_club: "nightclub",
 };
 
+// ⚠️ Google (legacy Places API) oddaje `types` ALFABETYCZNIE, nie „najwazniejszy pierwszy".
+// Sklep z butami przychodzi jako ['establishment','food','point_of_interest','shoe_store','store']
+// (Aplug Lodz, zgloszenie Nat 2026-09-20) - pierwsze trafienie w mapie to `food`, czyli
+// „Restauracja". Dlatego typy OGOLNE, ktore Google dokleja do polowy miejsc, przegrywaja
+// z kazdym typem konkretnym i licza sie dopiero, gdy nic innego nie pasuje.
+const GENERIC_GOOGLE_TYPES = new Set(["food", "point_of_interest", "establishment", "store", "tourist_attraction"]);
+
 export function categoryFromGoogleTypes(types?: string[] | null): string | null {
   if (!Array.isArray(types)) return null;
+  let generic: string | null = null;
   for (const t of types) {
-    const key = GOOGLE_TYPE_TO_CATEGORY[String(t).toLowerCase().trim()];
-    if (key) return key;
+    const norm = String(t).toLowerCase().trim();
+    const key = GOOGLE_TYPE_TO_CATEGORY[norm];
+    if (!key) continue;
+    if (GENERIC_GOOGLE_TYPES.has(norm)) { generic ??= key; continue; }
+    return key;
   }
-  return null;
+  return generic;
 }
 
 // Heurystyka: zgadnij kategorie z NAZWY miejsca (klucz z CATEGORY_ICON_MAP) - fallback dla

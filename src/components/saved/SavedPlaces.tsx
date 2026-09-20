@@ -58,7 +58,7 @@ export function SavedPlaces({ city }: { city?: string }) {
       toast.success(t("saved.removed", { name: p.place_name }), {
         duration: 5000,
         action: {
-          label: "Cofnij",
+          label: t("common:buttons.undo"),
           onClick: async () => {
             try {
               // Cofnij usuniecie = przywracamy WLASNY wpis, wiec notka wraca razem z nim.

@@ -896,7 +896,7 @@ export default function SharedRoute() {
       queryClient.invalidateQueries({ queryKey: ["trip-shortcut"] });
       toast.success(cover ? t("toast.published_with_cover") : t("toast.published_no_cover"), {
         action: {
-          label: "Cofnij",
+          label: t("common:buttons.undo"),
           onClick: async () => {
             await (supabase as any).from("routes").update({ status: "draft", trip_type: "ongoing" }).eq("id", id);
             queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
@@ -1598,7 +1598,7 @@ export default function SharedRoute() {
     queryClient.invalidateQueries({ queryKey: ["shared-route", id] });
     toast.success(t("toast.photo_deleted"), {
       action: {
-        label: "Cofnij",
+        label: t("common:buttons.undo"),
         onClick: async () => {
           await (supabase as any).rpc("restore_route_photo", { p_route_id: route.id, p_url: url });
           queryClient.invalidateQueries({ queryKey: ["shared-route", id] });

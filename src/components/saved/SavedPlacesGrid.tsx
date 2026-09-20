@@ -51,7 +51,7 @@ export function SavedPlacesGrid() {
       icon: thumb,
       description: t("grid.removed"),
       action: {
-        label: "Cofnij",
+        label: t("common:buttons.undo"),
         onClick: async () => {
           // Cofnij usuniecie = przywracamy WLASNY wpis, wiec notka wraca razem z nim.
           await addPlaceToList(p.collection_id, {

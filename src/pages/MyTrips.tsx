@@ -120,7 +120,7 @@ const MyTrips = () => {
     toast.success(t("trips.deleted", { city: trip.city }), {
       duration: 5000,
       action: {
-        label: "Cofnij",
+        label: t("common:buttons.undo"),
         onClick: () => {
           undone = true;
           queryClient.setQueryData(["active-routes", user?.id], previousRoutes);

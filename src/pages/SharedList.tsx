@@ -733,7 +733,7 @@ export default function SharedList() {
     queryClient.invalidateQueries({ queryKey: ["place-photos"] });
     const { id: _id, ...rest } = item;
     toast.success(t("toast.place_deleted"), {
-      action: { label: "Cofnij", onClick: async () => {
+      action: { label: t("common:buttons.undo"), onClick: async () => {
         await (supabase as any).from("discovery_items").insert({ ...rest });
         await restorePlacePhotos(gone);
         queryClient.invalidateQueries({ queryKey: ["shared-list-items", id] });

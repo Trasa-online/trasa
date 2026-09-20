@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { toast } from "sonner";
 
 // Odroczone usuwanie z oknem "Cofnij" (undo w stylu Gmaila). Wzorzec:
@@ -23,7 +24,7 @@ export function deferDelete(opts: {
   toast(opts.message, {
     duration: delay,
     action: {
-      label: "Cofnij",
+      label: i18n.t("common:buttons.undo"),
       onClick: () => {
         if (committed) return; // za pozno - commit juz poszedl
         clearTimeout(timer);
