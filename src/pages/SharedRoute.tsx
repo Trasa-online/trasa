@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { checkPlaceLimit } from "@/lib/placeLimits";
 import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { isPortraitCover } from "@/lib/coverFormat";
 import { useTranslation } from "react-i18next";
@@ -1185,6 +1186,7 @@ export default function SharedRoute() {
           pin_order: maxOrder + 1 + i, original_creator_id: user.id, added_by: user.id,
         }));
       if (!rows.length) { haptics.error(); toast.info(t("toast.pick_all_present")); return; }
+      if (!checkPlaceLimit("trip_places", (existing ?? []).length, rows.length)) { haptics.error(); return; }
       const { error } = await (supabase as any).from("pins").insert(rows);
       if (error) throw error;
       haptics.success();
@@ -2927,6 +2929,7 @@ export default function SharedRoute() {
             google_place_id: p.google_place_id ?? null, rating: p.rating ?? null,
           }))}
           onAdd={handleAddPlaces}
+          limit={{ kind: "trip_places", current: pins.length }}
         />
       )}
 

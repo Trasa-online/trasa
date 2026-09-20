@@ -181,5 +181,9 @@
     "show_translation": "Pokaż tłumaczenie",
     "failed": "Nie udało się przetłumaczyć",
     "limit": "Limit tłumaczeń na dziś wyczerpany"
+  },
+  "limits": {
+    "trip_places": "Wyjazd może mieć najwyżej {{max}} miejsc. Zostało {{left}}.",
+    "collection_places": "Kolekcja może mieć najwyżej {{max}} miejsc. Zostało {{left}}."
   }
 }

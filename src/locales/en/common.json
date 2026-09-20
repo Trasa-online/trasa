@@ -181,5 +181,9 @@
     "show_translation": "Show translation",
     "failed": "Could not translate",
     "limit": "Daily translation limit reached"
+  },
+  "limits": {
+    "trip_places": "A trip can hold up to {{max}} places. {{left}} left.",
+    "collection_places": "A collection can hold up to {{max}} places. {{left}} left."
   }
 }

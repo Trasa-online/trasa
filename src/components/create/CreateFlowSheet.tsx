@@ -20,6 +20,7 @@ import { fetchSavedPlaces, createListFromSavedPlaces, type SavedPlace, type Plac
 import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { collectionName, tripName, type NamingStrings } from "@/lib/placeNaming";
 import { createWyjazdFromPlaces, createEmptyWyjazd } from "@/lib/createWyjazd";
+import { checkPlaceLimit } from "@/lib/placeLimits";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { inviteUsersToCollection } from "@/lib/collectionInvite";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -220,6 +221,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     const seen = new Set<string>();
     const places = [...manualPlaces, ...savedSel].filter((p) => { const k = keyOfPlace(p); if (!k || seen.has(k)) return false; seen.add(k); return true; });
     // Pusta lista jest OK (opcja t("skip")) - miejsca mozna dodac pozniej na widoku listy.
+    if (!checkPlaceLimit("collection_places", 0, places.length)) { haptics.error(); return; }
     setCreating(true);
     haptics.light();
     const id = await createListFromSavedPlaces(user.id, {

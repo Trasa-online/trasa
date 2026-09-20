@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { checkPlaceLimit, isPlaceLimitError, placeLimitToast, type PlaceLimitKind } from "@/lib/placeLimits";
 import { useQuery } from "@tanstack/react-query";
 import { X, Plus, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
 import { BrandMap, BrandSearch, BrandCheck } from "@/components/BrandIcon";
@@ -43,13 +44,16 @@ interface Props {
   countries?: string[] | null;          // zasieg krajowy wyjazdu/listy (2026-09-10) - ma pierwszenstwo
   existingPlaces?: PlaceForList[];      // miejsca JUŻ w tej trasie/liście - pokazane u góry (info)
   onAdd: (places: PlaceForList[]) => Promise<void> | void;   // zapis (pins.insert / addPlaceToList)
+  // Limit miejsc (wyjazd 100 / kolekcja 30, 2026-09-20): `current` = ile juz jest. Sprawdzane
+  // PRZED wysylka - baza i tak odrzuci nadmiar (trigger), ale user ma dostac liczbe, nie "nie udalo sie".
+  limit?: { kind: PlaceLimitKind; current: number };
 }
 
 // Drawer "Dodaj nowe miejsce" (redesign 2026-08-21). Dodaje miejsca do ISTNIEJACEJ trasy/listy.
 // Domyslnie: siatka Twoich zapisanych + kafelek "Dodaj nowe miejsce" (fokus na wyszukiwarke).
 // Wpisanie frazy (>=2 znaki) -> Google Places (proxy) -> klik wyniku = nowy zaznaczony kafelek +
 // odblokowanie "Dalej". "Dalej" zapisuje wybrane miejsca (onAdd).
-export default function AddPlaceSheet({ open, onClose, city, countries, existingPlaces, onAdd }: Props) {
+export default function AddPlaceSheet({ open, onClose, city, countries, existingPlaces, onAdd, limit }: Props) {
   const { t } = useTranslation("route");
   const { user } = useAuth();
   const [selected, setSelected] = useState<PlaceForList[]>([]);
@@ -236,6 +240,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
 
   const doAdd = async () => {
     if (!selected.length || adding) return;
+    if (limit && !checkPlaceLimit(limit.kind, limit.current, selected.length)) { haptics.error(); return; }
     setAdding(true);
     haptics.light();
     try {
@@ -245,7 +250,8 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
       onClose();
     } catch (e: any) {
       haptics.error();
-      toast.error(t("add_place.failed"));
+      const lim = isPlaceLimitError(e);
+      if (lim) placeLimitToast(lim, limit?.current ?? 0); else toast.error(t("add_place.failed"));
     } finally { setAdding(false); }
   };
 

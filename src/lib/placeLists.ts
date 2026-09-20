@@ -1,4 +1,5 @@
 import i18n from "@/i18n";
+import { MAX_COLLECTION_PLACES, placeLimitToast } from "@/lib/placeLimits";
 import { randomListTheme } from "@/lib/listThemes";
 import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
@@ -234,6 +235,13 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
     .from("discovery_items").select("order_index, place_name").eq("collection_id", listId);
   const rows = (existing ?? []) as any[];
   if (rows.some((r) => skey(r.place_name) === skey(place.place_name))) return false;
+  // Limit 30 miejsc w kolekcji kuratorskiej (2026-09-20) - prywatna "Ogolne" (`general`,
+  // wishlista) bez limitu. Sprawdzenie tu, we wspolnej warstwie, bo `addPlaceToList` wolaja
+  // cztery arkusze; baza i tak odrzuci nadmiar (trigger `trg_discovery_items_place_limit`).
+  if (!opts?.general && rows.length >= MAX_COLLECTION_PLACES) {
+    const { data: col } = await (supabase as any).from("discovery_collections").select("list_status").eq("id", listId).maybeSingle();
+    if (col?.list_status !== "to_visit") { placeLimitToast("collection_places", rows.length); return false; }
+  }
   const maxOrder = rows.reduce((m: number, r: any) => Math.max(m, r.order_index ?? -1), -1);
   // Atrybucja: kto dodal miejsce (dzis wlasciciel; hak pod wspoltworzenie list - patrz memory
   // project_list_cocreation_architecture). getSession = lokalny odczyt, bez zapytania sieciowego.

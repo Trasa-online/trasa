@@ -1228,6 +1228,7 @@ export default function SharedList() {
             google_place_id: it.google_place_id ?? null, rating: it.rating ?? null,
           }))}
           onAdd={handleAddPlacesToList}
+          limit={{ kind: "collection_places", current: items.length }}
         />
       )}
 
