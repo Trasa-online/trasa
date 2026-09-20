@@ -71,7 +71,8 @@ const COPY = {
       // **gwiazdki** = pogrubienie (patrz `boldParts`). Tak jest w makiecie: wyroznione sa
       // trzy powody, dla ktorych ktos siega po aplikacje, a nie cale zdanie.
       body: "Nie pozwól by Ci, którzy **szukają gdzie zjeść**, **co zobaczyć** i **jak spędzić czas** go przegapili",
-      cta: "Skontaktuj się",
+      cta: "Załóż konto",
+      ctaSecondary: "Skontaktuj się",
       mockupAlt: "Wizytówka lokalu w aplikacji: zdjęcia, menu, godziny otwarcia i wydarzenie",
     },
     inquiry: {
@@ -144,7 +145,8 @@ const COPY = {
     business: {
       title: "Running a place?",
       body: "Don't let the people **looking for a bite**, **something to see** and **a way to spend the day** walk past you",
-      cta: "Get in touch",
+      cta: "Create an account",
+      ctaSecondary: "Get in touch",
       mockupAlt: "A place listing in the app: photos, menu, opening hours and an event",
     },
     inquiry: {
@@ -646,17 +648,25 @@ function BusinessStrip({ c, onContact }: { c: Copy; onContact: () => void }) {
             {boldParts(nb(c.business.body))}
           </p>
 
-          {/* JEDEN guzik (decyzja Nat 2026-09-15): "Zaloz konto" prowadzilo lokal do panelu
-              bez zadnej rozmowy, a "Dowiedz sie wiecej" na strone, ktorej nie ma. Teraz
-              jedna sciezka: formularz z zapytaniem o oferte (modal na desktopie, arkusz
-              na telefonie) - zadnej nawigacji poza landing. */}
-          <div className="mt-7 flex w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={onContact}
+          {/* DWA guziki (prosba Nat 2026-09-20): primary "Zaloz konto" prowadzi na landing
+              z rejestracja lokalu (`/auth?business=true`), secondary "Skontaktuj sie" otwiera
+              formularz zapytania o oferte (modal na desktopie, arkusz na telefonie).
+              ⚠️ To odwraca decyzje z 2026-09-15 (jeden guzik, zero wyjsc B2B z landingu):
+              Nat chce, zeby lokal mogl zalozyc konto sam, bez rozmowy. Secondary = braz
+              marki, tak jak kazdy guzik drugorzedny w palecie landingu. */}
+          <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            <Link
+              to="/auth?business=true"
               className="inline-flex h-[48px] w-full items-center justify-center rounded-full bg-spontaway-orange px-7 text-[15px] font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.98] sm:w-auto sm:min-w-[200px]"
             >
               {c.business.cta}
+            </Link>
+            <button
+              type="button"
+              onClick={onContact}
+              className="inline-flex h-[48px] w-full items-center justify-center rounded-full bg-spontaway-brown px-7 text-[15px] font-extrabold text-white transition-colors hover:bg-[#4a2405] active:scale-[0.98] sm:w-auto sm:min-w-[200px]"
+            >
+              {c.business.ctaSecondary}
             </button>
           </div>
         </div>

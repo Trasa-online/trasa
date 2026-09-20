@@ -548,7 +548,7 @@ Sign in with Apple psuje sie samo, bo **sekret klienta wygasa maksymalnie po 6 m
 
 **NIE edytuj tego pliku.** Strona `/dla-firm` jest zachowana do późniejszego wykorzystania. Nie przepisuj, nie refaktoruj, nie usuwaj. Nowy one-pager dla firm to osobny plik `src/pages/BusinessLanding.tsx` pod routem `/dla-firm/landing`.
 
-**⛔ Landing B2C NIE prowadzi już do niczego B2B (decyzja Nat 2026-09-15).** Landingu dla
+**Sekcja „Prowadzisz lokal?" ma od 2026-09-20 DWA guziki (prośba Nat): primary „Załóż konto" → `/auth?business=true` (landing z rejestracją lokalu) i secondary „Skontaktuj się" (brąz marki) → formularz zapytania. To częściowo cofa decyzję z 15.09 niżej - lokal może założyć konto sam, bez rozmowy; link „Dla firm" w belce i `/dla-firm` nadal odlinkowane.** ⛔ Poprzednia reguła (2026-09-15, częściowo nieaktualna): Landing B2C NIE prowadzi do niczego B2B. Landingu dla
 firm jeszcze nie ma, a trakcję zbieramy na samych użytkownikach, więc ze `SpontawayLanding`
 zniknął link „Dla firm" w belce oraz guziki „Załóż konto" (`/biznes/start`) i „Dowiedz się
 więcej" (`/dla-firm`). Została **jedna ścieżka**: guzik **„Skontaktuj się"** w sekcji
