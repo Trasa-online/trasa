@@ -572,13 +572,15 @@ export default async function handler(req: Request): Promise<Response> {
       const page = await placePage(req, q.place_id, { url: qrUrl, extra: claimBar, qrToken: token });
       if (page) return page;
     }
+    // Kod przejety przez lokal, ale wizytowka jeszcze niezatwierdzona (place_id dopisze
+    // admin-moderate-business) - podroznemu mowimy, ze to kwestia chwili, bez guzika przejecia.
     const body = `<div class="page">
-<div class="empty"><img class="mark" src="${BRAND_IMG}" alt=""><h1>Ten kod nie&#160;ma jeszcze lokalu</h1>
-<p class="meta">Wizytówka czeka na&#160;przypisanie. Jeśli prowadzisz ten lokal, przejmij ją poniżej.</p></div>
+<div class="empty"><img class="mark" src="${BRAND_IMG}" alt=""><h1>${q.claimed ? "Wizytówka w&#160;przygotowaniu" : "Ten kod nie&#160;ma jeszcze lokalu"}</h1>
+<p class="meta">${q.claimed ? "Lokal właśnie zakłada swoją wizytówkę w&#160;spontaway. Zajrzyj tu za&#160;chwilę." : "Wizytówka czeka na&#160;przypisanie. Jeśli prowadzisz ten lokal, przejmij ją poniżej."}</p></div>
 ${q.claimed ? "" : `<a class="go" href="${claimUrl}">To mój lokal →</a>`}
 <p class="tail">spontaway to aplikacja do&#160;odkrywania miejsc i&#160;planowania wyjazdów ze&#160;znajomymi.</p>
 </div>`;
-    return new Response(shell({ title: "Kod bez lokalu", desc: "Wizytówka czeka na przypisanie.", image: BRAND_IMG, url: qrUrl, body, noun: "place", variant: "trip" }), {
+    return new Response(shell({ title: q.claimed ? "Wizytówka w przygotowaniu" : "Kod bez lokalu", desc: q.claimed ? "Lokal zakłada swoją wizytówkę w spontaway." : "Wizytówka czeka na przypisanie.", image: BRAND_IMG, url: qrUrl, body, noun: "place", variant: "trip" }), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     });
   }
