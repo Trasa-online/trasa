@@ -11,7 +11,11 @@
 import { registerPlugin } from "@capacitor/core";
 import { isNative } from "@/lib/platform";
 
-export const FACEBOOK_APP_ID = String(import.meta.env.VITE_FACEBOOK_APP_ID ?? "").trim();
+// Facebook App ID apki „spontaway" (Meta for Developers, konto Nat, 2026-09-21). To identyfikator
+// PUBLICZNY (Instagram i tak dostaje go w adresie przy kazdym udostepnieniu), wiec siedzi w kodzie -
+// build z dowolnej maszyny ma go miec bez `.env`. `VITE_FACEBOOK_APP_ID` nadpisuje (np. inna apka testowa).
+const DEFAULT_FACEBOOK_APP_ID = "1405978694380412";
+export const FACEBOOK_APP_ID = String(import.meta.env.VITE_FACEBOOK_APP_ID ?? "").trim() || DEFAULT_FACEBOOK_APP_ID;
 
 type StoriesPlugin = {
   canShare(): Promise<{ available: boolean }>;
