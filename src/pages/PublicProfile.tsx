@@ -113,10 +113,13 @@ export default function PublicProfile() {
       // ilike zamiast eq: nazwy w bazie potrafia miec inna wielkosc liter albo (historycznie)
       // spacje na brzegach - a link jest jeden. Dokladne dopasowanie zostaje, bo w ilike nie ma
       // znakow wieloznacznych; escapeLike chroni przed "%" i "_" wpisanym w nazwe.
-      const { data } = await supabase
+      // Konto LOKALU (`is_business`) nie ma profilu publicznego w apce - dla linku
+      // z wyszukiwarki czy powiadomienia wyglada jak nieistniejacy user (2026-09-21).
+      const { data } = await (supabase as any)
         .from("profiles")
         .select("id, username, first_name, avatar_url, bio, avatar_frame, avatar_frame_color")
         .ilike("username", escapeLike((username ?? "").trim()))
+        .eq("is_business", false)
         .maybeSingle();
       // `as unknown`: wygenerowane typy Supabase nie znaja jeszcze avatar_frame (types.ts
       // regenerowany osobno - CLAUDE.md), a kolumna w bazie jest (migracja 20260911f).
@@ -151,7 +154,7 @@ export default function PublicProfile() {
       // 20260915k - wczesniej polityka wpuszczala tylko wlasciciela i czlonkow, wiec ta lista
       // wracala pusta i wspoltworzone kolekcje po cichu znikaly z cudzego profilu.
       const { data: memberRows } = await (supabase as any)
-        .from("discovery_collection_members").select("collection_id").eq("user_id", profile!.id);
+        .from("discovery_collection_members").select("collection_id").eq("user_id", profile!.id).eq("status", "accepted");
       const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
       // ⛔ DWA zapytania zamiast `.or(...)`: lista id w `id.in.(…)` ma przecinki w srodku
       // nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje pustke.

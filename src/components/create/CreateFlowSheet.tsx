@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { BrandCalendar, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { collectionName, tripName, type NamingStrings } from "@/lib/placeNaming";
 import { createWyjazdFromPlaces, createEmptyWyjazd } from "@/lib/createWyjazd";
 import { checkPlaceLimit } from "@/lib/placeLimits";
+import { invalidateContentLists } from "@/lib/trash";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { inviteUsersToCollection } from "@/lib/collectionInvite";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -60,7 +61,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     declines: (i18n.language || "pl").toLowerCase().startsWith("pl"),
   };
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("entry");
 
   // Lista
@@ -242,8 +242,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     }
     haptics.success();
     toast.success(t("toast.list_created"));
-    queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-    queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
+    // Wszystkie listy naraz (takze `explore-rankings` z 5-minutowym staleTime): bez tego
+    // nowa kolekcja pojawiala sie w Eksploracji dopiero po odswiezeniu (zgloszenie Nat 2026-09-21).
+    invalidateContentLists();
     close();
     navigate(`/lista/${id}`);
     // Pierwsza kolekcja = moment, w ktorym powiadomienia zaczynaja miec sens (reakcje innych):
@@ -297,7 +298,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     }
     setCreating(false);
     haptics.success();
-    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+    invalidateContentLists();
     close();
     // Wejscie do WIDOKU WYJAZDU (SharedRoute) - swiezy szkic, miejsca dodaje sie guzikiem "+".
     navigate(`/route/${id}`);

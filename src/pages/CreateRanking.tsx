@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { invalidateContentLists } from "@/lib/trash";
 import { randomListTheme } from "@/lib/listThemes";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
@@ -618,6 +619,7 @@ const CreateRanking = () => {
       if (!editId) track("collection_created", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       track("list_published", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
+      invalidateContentLists();
       // Listy widoczne w profilu (zakładka Listy). Kieruj na profil zamiast na pusty feed -
       // inaczej user ma wrazenie, ze nic sie nie zapisalo. (Osobny widok "Twoje listy" usuniety, IA 2026-08-20.)
       navigate("/moj-profil");

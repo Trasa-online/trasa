@@ -163,5 +163,15 @@
     "starred": "Starred",
     "visited": "Visited",
     "empty": "Nobody has checked this place off yet."
+  },
+  "invite": {
+    "banner_title": "Invitation to co-create this collection",
+    "banner_desc": "Join to add places, notes and photos together with the others.",
+    "accept": "Join",
+    "decline": "Not now",
+    "accepted": "You joined the collection",
+    "declined": "Invitation declined",
+    "response_failed": "Could not save your answer",
+    "awaiting": "Awaiting confirmation"
   }
 }

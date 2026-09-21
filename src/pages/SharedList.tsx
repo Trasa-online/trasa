@@ -37,7 +37,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { FramedAvatar } from "@/components/profile/FramedAvatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
-import { placeKeyOf, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, unlinkPhotoFromPlace, detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
+import { placeKeyOf, pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover, linkPhotoToPlace, unlinkPhotoFromPlace, detachPlacePhotos, restorePlacePhotos } from "@/lib/placePhotoSocial";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
@@ -57,7 +57,7 @@ import ListPrivacySheet from "@/components/lists/ListPrivacySheet";
 import CollectionPeopleSheet from "@/components/lists/CollectionPeopleSheet";
 import { ParticipantsRow } from "@/components/route/ParticipantsRow";
 import PeopleSheet from "@/components/route/PeopleSheet";
-import { fetchCollectionMembers, collectionMembersKey, removeCollectionMember } from "@/lib/collectionInvite";
+import { fetchCollectionMembers, collectionMembersKey, removeCollectionMember, respondToCollectionInvite } from "@/lib/collectionInvite";
 import { fetchCollectionStars, collectionStarsKey, setCollectionStar, starKey } from "@/lib/collectionStars";
 import { invalidateContentLists } from "@/lib/trash";
 import PlaceVisitorsSheet from "@/components/lists/PlaceVisitorsSheet";
@@ -394,10 +394,22 @@ export default function SharedList() {
   // listy - odhaczenie na CUDZEJ zapisanej liscie nie moze jej zmieniac wszystkim. Klucz to
   // miejsce, nie pozycja listy, wiec jedno odhaczenie widac na kazdej liscie z tym miejscem.
   const visitKeyOf = (it: any) => placeKeyOf({ googlePlaceId: it.google_place_id ?? null, placeName: it.place_name });
+  // To samo miejsce ma w roznych kolekcjach ROZNE klucze (`gpid:` z wyszukiwarki Google,
+  // `nm:nazwa` z planu / recznie), a odwiedziny sa zapisane pod jednym z nich. Dopasowujemy
+  // po OBU kandydatach (jak `pinCoverKeys` przy zdjeciach) i MAPUJEMY trafienie na klucz
+  // PIERWOTNY pozycji, zeby reszta ekranu dalej pytala po `visitKeyOf(it)`. Bez tego miejsce
+  // odhaczone w jednej kolekcji wygladalo w nowej na nieodwiedzone (zgloszenie Nat 2026-09-21).
+  const visitCandidates = (it: any) => pinCoverKeys({ google_place_id: it.google_place_id ?? null, place_name: it.place_name });
+  const canonVisitKeys = (rawKeys: Iterable<string>): Set<string> => {
+    const raw = new Set(rawKeys);
+    const out = new Set<string>();
+    for (const it of items as any[]) if (visitCandidates(it).some((k) => raw.has(k))) out.add(visitKeyOf(it));
+    return out;
+  };
   const { data: visitedKeys = new Set<string>() } = useQuery({
     queryKey: ["place-visits", user?.id, id],
     enabled: !!user?.id && items.length > 0,
-    queryFn: () => fetchVisitedKeys(user!.id, (items as any[]).map(visitKeyOf)),
+    queryFn: async () => canonVisitKeys(await fetchVisitedKeys(user!.id, (items as any[]).flatMap(visitCandidates))),
   });
   // Cudza lista: ktore miejsca odhaczyl u siebie AUTOR. Odwiedziny sa prywatne (RLS pozwala
   // czytac tylko swoje), wiec idzie to przez waska funkcje list_author_visits - zwraca slad
@@ -409,7 +421,7 @@ export default function SharedList() {
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("list_author_visits", { p_collection_id: id });
       if (error) { console.warn("[SharedList] author visits:", error.message); return new Set<string>(); }
-      return new Set<string>(((data ?? []) as { place_key: string }[]).map((r) => r.place_key));
+      return canonVisitKeys(((data ?? []) as { place_key: string }[]).map((r) => r.place_key));
     },
   });
 
@@ -429,13 +441,20 @@ export default function SharedList() {
     },
   });
   const visitorsByPlace = useMemo(() => {
+    // Klucz mapy = klucz PIERWOTNY pozycji (patrz `canonVisitKeys`): RPC oddaje klucz w postaci,
+    // pod ktora odwiedziny zapisano, a ta bywa inna niz klucz pozycji w tej kolekcji.
     const m = new Map<string, string[]>();
     for (const v of allVisits as { user_id: string; place_key: string }[]) {
-      const arr = m.get(v.place_key);
-      if (arr) { if (!arr.includes(v.user_id)) arr.push(v.user_id); } else m.set(v.place_key, [v.user_id]);
+      for (const it of items as any[]) {
+        if (!visitCandidates(it).includes(v.place_key)) continue;
+        const key = visitKeyOf(it);
+        const arr = m.get(key);
+        if (arr) { if (!arr.includes(v.user_id)) arr.push(v.user_id); } else m.set(key, [v.user_id]);
+      }
     }
     return m;
-  }, [allVisits]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allVisits, items]);
 
   const handleToggleVisited = async (it: any) => {
     if (!user) return;
@@ -519,24 +538,39 @@ export default function SharedList() {
   });
   // `select` juz tu nie ma: belka potrzebuje awatarow i nickow wspoltworcow, wiec trzymamy
   // PELNE wiersze (queryFn i tak dociaga profile), a same id liczymy obok.
-  const memberIds = useMemo(() => (members as any[]).map((m) => m.user_id), [members]);
+  // ZGODA NA ZAPROSZENIE (2026-09-21, migracja 20260921e): wiersz `pending` to osoba, ktora
+  // jeszcze nie odpowiedziala - NIE jest wspoltworca (nie stoi w belce, nie liczy sie do
+  // "wyroznili wszyscy"), ale kolekcje CZYTA, zeby zobaczyc, na co sie zgadza.
+  const acceptedMembers = useMemo(() => (members as any[]).filter((m) => (m.status ?? "accepted") === "accepted"), [members]);
+  const pendingInvite = !!user && (members as any[]).some((m) => m.user_id === user.id && m.status === "pending");
+  const memberIds = useMemo(() => acceptedMembers.map((m) => m.user_id), [acceptedMembers]);
   // Wspoltworcy do belki: bez wlasciciela (stoi juz jako autor) i bez wierszy bez nicku,
   // ktorych i tak nie da sie pokazac ani otworzyc.
   const coAuthors = useMemo(
-    () => (members as any[]).filter((m) => m.user_id !== col?.user_id && m.username),
-    [members, col?.user_id],
+    () => acceptedMembers.filter((m) => m.user_id !== col?.user_id && m.username),
+    [acceptedMembers, col?.user_id],
   );
   // Wszyscy uczestnicy (wlasciciel + wspoltworcy) - do "wyroznili wszyscy" i arkusza "kto tu byl".
   const participantIds = useMemo(
-    () => Array.from(new Set([col?.user_id, ...(members as any[]).map((m) => m.user_id)].filter(Boolean))) as string[],
-    [members, col?.user_id],
+    () => Array.from(new Set([col?.user_id, ...acceptedMembers.map((m) => m.user_id)].filter(Boolean))) as string[],
+    [acceptedMembers, col?.user_id],
   );
+  const respondToInvite = async (accept: boolean) => {
+    if (!id || !user) return;
+    haptics.light();
+    const ok = await respondToCollectionInvite(id, accept);
+    if (!ok) { toast.error(t("invite.response_failed")); return; }
+    queryClient.invalidateQueries({ queryKey: collectionMembersKey(id) });
+    invalidateContentLists();
+    if (accept) toast.success(t("invite.accepted"));
+    else { toast.success(t("invite.declined")); goBackOr(navigate, "/eksploruj"); }
+  };
   const participantById = useMemo(() => {
     const m = new Map<string, { id: string; username: string | null; avatar_url: string | null; avatar_frame?: string | null; avatar_frame_color?: string | null }>();
     if (col?.user_id) m.set(col.user_id, { id: col.user_id, username: (author as any)?.username ?? col.author_name ?? null, avatar_url: (author as any)?.avatar_url ?? col.author_avatar ?? null, avatar_frame: (author as any)?.avatar_frame, avatar_frame_color: (author as any)?.avatar_frame_color });
-    for (const mem of members as any[]) if (mem?.user_id) m.set(mem.user_id, { id: mem.user_id, username: mem.username ?? null, avatar_url: mem.avatar_url ?? null, avatar_frame: mem.avatar_frame, avatar_frame_color: mem.avatar_frame_color });
+    for (const mem of acceptedMembers) if (mem?.user_id) m.set(mem.user_id, { id: mem.user_id, username: mem.username ?? null, avatar_url: mem.avatar_url ?? null, avatar_frame: mem.avatar_frame, avatar_frame_color: mem.avatar_frame_color });
     return m;
-  }, [members, col?.user_id, col?.author_name, col?.author_avatar, author]);
+  }, [acceptedMembers, col?.user_id, col?.author_name, col?.author_avatar, author]);
   // Awatary do pigulki "odwiedzone": autor + wspoltworcy. Innych osob w tej mapie nie ma
   // i byc nie moze - RPC oddaje slad wylacznie uczestnikow kolekcji.
   // ⛔ TEN HOOK MUSI STAC NAD early-returnami (bramka `npm run hooks:check` zlapala go po
@@ -989,6 +1023,25 @@ export default function SharedList() {
       {/* Odbiorca linku na webie: skrot do wersji przedpremierowej (Figma 2026-09-08).
           Na natywce komponent sam sie nie renderuje. */}
       <PreReleaseBanner />
+      {/* Czekajace zaproszenie do wspoltworzenia (2026-09-21, lustro paska z wyjazdu): decyzja
+          NAD trescia - zgode wydaje sie widzac, na co konkretnie. Do potwierdzenia kolekcja
+          nie pojawia sie w "Zapisane" ani we "Wspolne". */}
+      {pendingInvite && (
+        <div className="shrink-0 bg-[#fcede3] px-5 py-3" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+          <p className="text-[15px] font-bold text-foreground">{t("invite.banner_title")}</p>
+          <p className="text-[13px] text-foreground/70 mt-0.5 leading-snug">{t("invite.banner_desc")}</p>
+          <div className="flex gap-2 mt-2.5">
+            <button onClick={() => void respondToInvite(true)}
+              className="flex-1 py-2.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform">
+              {t("invite.accept")}
+            </button>
+            <button onClick={() => void respondToInvite(false)}
+              className="px-4 py-2.5 rounded-2xl bg-white/70 text-foreground font-bold text-sm active:scale-[0.98] transition-transform">
+              {t("invite.decline")}
+            </button>
+          </div>
+        </div>
+      )}
       {/* Staly TopBar (naglowek nad obszarem scrolla): wstecz + autor + miasto + liczba miejsc + serce */}
       {/* Belka w KOLORZE PRZEWODNIM kolekcji (prosba Nat 2026-09-14) - ten sam kolor, ktory
           kolekcja ma na kafelku w eksploracji, wiec wejscie z siatki nie zmienia tozsamosci.
@@ -996,7 +1049,7 @@ export default function SharedList() {
           dostaje biale tlo zamiast peachy - na jasnych motywach peachy zlewalo sie z belka. */}
       {/* Tapniecie w belke = powrot na gore listy miejsc (odruch z iOS); guziki w srodku
           (wstecz, udostepnij, "...") dzialaja normalnie. */}
-      <div {...scrollTopTapProps()} className="shrink-0 px-5 pb-2.5" style={{ backgroundColor: listTheme(col.theme, col.id).bg, paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
+      <div {...scrollTopTapProps()} className="shrink-0 px-5 pb-2.5" style={{ backgroundColor: listTheme(col.theme, col.id).bg, paddingTop: pendingInvite ? 12 : "max(12px, env(safe-area-inset-top, 12px))" }}>
         <div className="flex items-center gap-2 text-sm">
             <button onClick={() => goBackOr(navigate, "/eksploruj")} aria-label={t("back")}
               className="h-9 w-9 shrink-0 rounded-full bg-white border border-border flex items-center justify-center active:scale-90 transition-transform">

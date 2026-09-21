@@ -16,6 +16,9 @@ import SheetSkeleton from "@/components/layout/SheetSkeleton";
 import { track } from "@/lib/analytics";
 import { deferDelete } from "@/lib/deferDelete";
 import { PushNudgeCard } from "@/components/permissions/PermissionPrimerSheet";
+import { toast } from "sonner";
+import { respondToCollectionInvite } from "@/lib/collectionInvite";
+import { invalidateContentLists } from "@/lib/trash";
 
 interface Notification {
   id: string;
@@ -52,6 +55,11 @@ interface Notification {
 // `inviteUsersToRoute` dopisuja osobe OD RAZU. Dlatego guziki na karcie brzmia "Otworz"
 // i "Nie teraz" (schowaj), a nie "Dolacz / Odrzuc" - inaczej obiecywalyby decyzje, ktorej
 // baza nie zna. Wariant z prawdziwa akceptacja = kolumna `status` w czlonkostwach + RPC.
+// AKTUALIZACJA 2026-09-21: zaproszenia do PLANU (`group_session_members.status`) i do
+// KOLEKCJI (`discovery_collection_members.status`, migracja 20260921e) maja juz stan
+// „oczekujace" - karta `route_invite` / `list_invite` ma dlatego guziki „Dolaczam" (RPC
+// `respond_to_route_invite` / `respond_to_collection_invite`) i „Nie teraz" (= odmowa,
+// wiersz zaproszenia znika); tapniecie w tresc karty otwiera plan/kolekcje do podgladu.
 
 type NotifT = (key: string, opts?: Record<string, unknown>) => string;
 type Tone = "orange" | "gold" | "brown";
@@ -413,8 +421,45 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
 
   // Karta zaproszenia: jedyne wypelnione tlo w arkuszu (peachy), zeby rzecz wymagajaca
   // decyzji nie wygladala jak kolejny wiersz. Pomarancz zostaje na guziku.
+  // Zaproszenie do planu / kolekcji: prawdziwa decyzja, nie tylko schowanie karty.
+  const isMembershipInvite = (n: Notification) => n.type === "route_invite" || n.type === "group_invite" || n.type === "list_invite";
+  const respondInvite = async (n: Notification, accept: boolean) => {
+    const rid = n.route_id ?? n.metadata?.route_id ?? null;
+    const cid = n.metadata?.collection_id ?? null;
+    let ok = false;
+    if (n.type === "list_invite" && cid) {
+      ok = await respondToCollectionInvite(cid, accept);
+    } else if (rid) {
+      let sid = n.metadata?.session_id ?? null;
+      if (!sid) {
+        const { data } = await (supabase as any).from("routes").select("group_session_id").eq("id", rid).maybeSingle();
+        sid = data?.group_session_id ?? null;
+      }
+      if (sid) {
+        const { data, error } = await (supabase as any).rpc("respond_to_route_invite", { p_session_id: sid, p_accept: accept });
+        ok = !error && data?.ok !== false;
+      }
+    }
+    // Zaproszenie moglo juz wygasnac (host je cofnal, user odpowiedzial z widoku) - wtedy
+    // karta i tak ma zniknac, bez straszenia bledem.
+    markRead.mutate([n.id]);
+    invalidateContentLists();
+    queryClient.invalidateQueries({ queryKey: ["collection-members"] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-invite"] });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-membership"] });
+    if (!ok) { toast(t("notif.invite_gone")); return; }
+    if (accept) {
+      toast.success(t("notif.invite_joined"));
+      const target = targetOf(n);
+      if (target) go(target.to);
+    } else {
+      toast(t("notif.invite_declined"));
+    }
+  };
+
   const renderInvite = (n: Notification) => {
     const cfg = TYPE_CONFIG[n.type];
+    const membership = isMembershipInvite(n);
     const username = n.actor?.username ?? t("notif.someone");
     const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
     const Icon = cfg?.icon ?? Users;
@@ -432,22 +477,23 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
               <Icon className="h-3 w-3" />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
+          {/* Tresc karty = podglad (otwiera plan / kolekcje BEZ decyzji), guziki = decyzja. */}
+          <button onClick={() => { track("notification_opened", { type: n.type }); const tg = targetOf(n); if (tg) go(tg.to, tg.state ? { state: tg.state } : undefined); }} className="flex-1 min-w-0 text-left">
             <p className="text-sm font-semibold leading-snug text-[#5B2C06]">
               {cfg ? cfg.label(t, username, n.metadata) : t("notif.fallback", { user: username })}
             </p>
             <p className="text-[11px] text-[#9A7B63] mt-0.5">{timeAgo}</p>
-          </div>
+          </button>
         </div>
         <div className="mt-3 flex gap-2">
           <button
-            onClick={() => openNotif(n)}
+            onClick={() => (membership ? void respondInvite(n, true) : openNotif(n))}
             className="flex-1 h-10 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform"
           >
-            {t("notif.open_invite")}
+            {membership ? t("notif.invite_accept") : t("notif.open_invite")}
           </button>
           <button
-            onClick={() => markRead.mutate([n.id])}
+            onClick={() => (membership ? void respondInvite(n, false) : markRead.mutate([n.id]))}
             className="flex-1 h-10 rounded-full bg-white border border-[#E6D6C8] text-[#5B2C06] text-sm font-semibold active:scale-[0.98] transition-transform"
           >
             {t("notif.dismiss")}

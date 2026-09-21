@@ -132,7 +132,11 @@
     "empty_cta": "See your collections",
     "remove": "Delete notification",
     "list_starred": "{{user}} starred a place in your collection “{{title}}”",
-    "list_starred_place": "{{user}} starred “{{place}}” in your collection “{{title}}”"
+    "list_starred_place": "{{user}} starred “{{place}}” in your collection “{{title}}”",
+    "invite_accept": "Join",
+    "invite_joined": "You joined",
+    "invite_declined": "Invitation declined",
+    "invite_gone": "This invitation is no longer active"
   },
   "live": {
     "friend_request": "New friend request 👋",

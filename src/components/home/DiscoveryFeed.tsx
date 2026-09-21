@@ -37,10 +37,9 @@ import { dateLocale } from "@/lib/dateLocale";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 // Karta trasy w feedzie + helper mapki: wspoldzielone z profilem (zakladka Wyjazdy).
 import TrasaBigCard, { buildMiniMapUrl, TRASA_CARD_H, type LatLng } from "@/components/home/TrasaBigCard";
-import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
+import { PlaceTile } from "@/components/profile/PlaceTile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "@/components/social/FollowButton";
-import { shortRelativeTime } from "@/lib/relativeTime";
 import { resolveStored } from "@/components/PlacePhoto";
 import { COLLECTION_THEMES, getTheme, collectionKind, themeLabel } from "@/lib/collectionThemes";
 import { getHistoryByCity } from "@/lib/exploreLikes";
@@ -123,22 +122,6 @@ type PolecaneRoute = {
   user_id?: string | null;             // autor - do filtra zablokowanych userow
 };
 
-
-// Miniaturka miejsca z placeholderem: brak zdjecia LUB blad ladowania (np. miejsce
-// spoza bazy z wygaslym refem Google) -> ikona kategorii w szarym kwadracie (jak w
-// natywnych appkach map). Domyslnie 56px; klasy nadpisywalne przez `className`.
-function PlaceThumb({ url, category, name, className }: { url?: string | null; category?: string | null; name?: string; className?: string }) {
-  const [failed, setFailed] = useState(false);
-  const box = className ?? "h-14 w-14 rounded-2xl shrink-0";
-  if (!url || failed) {
-    return (
-      <div className={`${box} bg-[#fcede3] flex items-center justify-center`}>
-        <CategoryIcon category={category} className="w-2/5 max-w-[56px] opacity-90" />
-      </div>
-    );
-  }
-  return <img src={url} alt={name ?? ""} onError={() => setFailed(true)} className={`${box} object-cover`} loading="lazy" />;
-}
 
 type PolecaneCreatorPlan = {
   kind: "creator";
@@ -1244,6 +1227,34 @@ const ACTIVE_CITIES = ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto"];
 const escapeLike = (v: string) => v.replace(/[%_\\]/g, "\\$&");
 
 // Hydratacja kolekcji: dociagnij items + home_city autora (badge "lokals poleca!").
+// Kolekcja z zapytania (po `hydrateCollections`) -> kafelek `GridTile`. JEDEN mapper dla feedu
+// Eksploracji i wynikow wyszukiwania (ujednolicenie, prosba Nat 2026-09-21: kolekcje w
+// wyszukiwarce mialy wlasny uklad z `ProfileFeedCard` - awatar, rzad miniatur, licznik
+// zapisow - czyli trzeci wyglad tej samej kolekcji obok Eksploracji i profilu).
+function collectionToGridItem(col: DiscoveryCollection): GridItem {
+  const places: GridPlace[] = col.items.slice(0, LIST_TILES).map((it: any) => ({
+    name: it.place_name ?? "", category: it.category ?? null,
+    photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
+    isNew: !!it._isNew,
+  }));
+  return {
+    kind: "list", id: col.id, title: col.title,
+    cover: places.find((x) => x.photo)?.photo ?? null,
+    where: col.city || scopeLabel(col),
+    // Nazwa i @nick OBOK siebie (prosba Nat 2026-09-15) - wyjazdy zostaja przy samym nicku.
+    authorName: col.author_name ?? "",
+    authorHandle: col.author_username ? `@${col.author_username}` : null,
+    authorAvatar: col.author_avatar ?? null, authorId: col.user_id ?? null,
+    authorFrame: col.author_frame ?? null, authorFrameColor: col.author_frame_color ?? null,
+    showAuthor: !!(col.author_username || col.author_name),
+    at: new Date(col.updated_at ?? 0).getTime(),
+    placesCount: col.items.length, days: null, mapUrl: null,
+    theme: listTheme(col.theme, col.id), places,
+    visitedCount: col.visited_count ?? 0,
+    newCount: (col as any).new_count ?? 0,
+  };
+}
+
 // Wspoldzielone przez explore-rankings i wyszukiwarke.
 async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
   if (!cols?.length) return [];
@@ -1676,7 +1687,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       city: p.city,
       latitude: p.latitude ?? undefined,
       longitude: p.longitude ?? undefined,
-      photo_url: p.photo_url ?? undefined,
+      photo_url: p._cover ?? p.photo_url ?? undefined,
       rating: p.rating ?? undefined,
       address: p.address ?? undefined,
     } as unknown as MockPlace;
@@ -2064,7 +2075,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
           .in("place_name", names);
         if (cities) pq2 = pq2.in("city", cities);
         const { data: rows } = await pq2.limit(150);
-        const pool = (rows ?? []).map((p: any) => ({ ...p, _cover: resolveStored(coverByName.get(String(p.place_name).toLowerCase())) ?? null }))
+        const pool = (rows ?? []).map((p: any) => ({ ...p, photo_url: null, _cover: resolveStored(coverByName.get(String(p.place_name).toLowerCase())) ?? null }))
           .filter((p: any) => !!p._cover);
         // Losowa kolejnosc (Fisher-Yates) - podglad ma byc za kazdym razem inny.
         for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
@@ -2087,7 +2098,18 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         const { data: ph } = await (supabase as any).from("place_photos").select("place_name, photo_url").in("place_name", names);
         const m = new Map<string, string>();
         for (const r of ph ?? []) { const k = String(r.place_name ?? "").toLowerCase(); if (k && !m.has(k)) m.set(k, r.photo_url); }
-        return rows.map((r) => ({ ...r, _cover: resolveStored(m.get(String(r.place_name).toLowerCase())) ?? r.photo_url ?? null }));
+        // Okladka = zdjecie USERA, a dla lokalu z kontem - jego wlasna (cover / logo). NIGDY
+        // `places.photo_url` (Google / cache / reczna okladka) - ta sama regula co w zakladce
+        // Miejsca (`enrichWithBusinessProfile`, decyzja Nat 2026-09-15). Do 21.09 kafelek
+        // w wyszukiwarce dostawal `photo_url` z bazy, a ta czesto wskazywala wylaczone proxy -
+        // pusty kadr z gradientem i bialym napisem (zlapane renderem).
+        const ids = rows.map((r) => r.id).filter(Boolean);
+        const { data: biz } = ids.length
+          ? await (supabase as any).from("business_profiles_public").select("place_id, cover_image_url, logo_url").in("place_id", ids)
+          : { data: [] as any[] };
+        const bizCover = new Map<string, string>();
+        for (const b of (biz ?? []) as any[]) { const u = b.cover_image_url || b.logo_url; if (b.place_id && u) bizCover.set(b.place_id, u); }
+        return rows.map((r) => ({ ...r, photo_url: null, _cover: resolveStored(m.get(String(r.place_name).toLowerCase())) ?? bizCover.get(r.id) ?? null }));
       };
 
       const applyRoute = (b: any) => {
@@ -2118,6 +2140,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
         }
         // 4) Po AUTORZE - trasy autorow, ktorych nick/imie pasuje.
         const { data: profs } = await (supabase as any).from("profiles").select("id")
+          .eq("is_business", false)
           .or(`username.ilike.${like},first_name.ilike.${like}`).limit(50);
         const uids = (profs ?? []).map((p: any) => p.id);
         if (uids.length) {
@@ -2145,13 +2168,15 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // pokazywac zawsze - "Wszystko" ma w podgladzie 5 najnowszych list (prosba Nat 2026-08-31).
       if (!categoryFilter.length && (cat === "all" || cat === "lists")) {
         let colQ = (supabase as any).from("discovery_collections")
-          .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, likes_count, updated_at, plan_adds_count, cover_url, list_cover_url")
+          .select("id, title, city, countries, theme, description, category, author_name, author_avatar, user_id, views_count, saves_count, likes_count, updated_at, plan_adds_count, cover_url, list_cover_url")
           .eq("is_public", true).eq("kind", "ranking").eq("list_status", "visited").eq("hidden_by_admin", false).neq("moderation_status", "rejected"); // soft-moderacja: pending widoczne
         if (q) colQ = colQ.or(`title.ilike.${like},author_name.ilike.${like}`);
         if (themeFilter.length) colQ = colQ.in("category", themeFilter);
         if (cities) colQ = colQ.in("city", cities);
         const { data: cols } = await colQ.order("updated_at", { ascending: false }).limit(cat === "all" ? 5 : 20);
-        collections = await hydrateCollections(cols ?? []);
+        // Ten sam kafelek co w Eksploracji potrzebuje licznika „odwiedzone / wszystkie".
+        const [hydrated, visitCounts] = await Promise.all([hydrateCollections(cols ?? []), fetchListVisitCounts((cols ?? []).map((c: any) => c.id))]);
+        collections = hydrated.map((c) => ({ ...c, visited_count: visitCounts.get(c.id) ?? 0 }));
       }
 
       // Miejsca (places) - szukanie po nazwie, ze WSZYSTKICH miast (albo wybranych w filtrze
@@ -2190,7 +2215,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
           pq = pq.in("category", dbCats);
         }
         const { data: rest } = await pq.order("rating", { ascending: false, nullsFirst: false }).limit(40);
-        places = [...covered, ...(rest ?? []).filter((p: any) => !usedIds.has(p.id)).map((p: any) => ({ ...p, _cover: null }))];
+        places = [...covered, ...(rest ?? []).filter((p: any) => !usedIds.has(p.id)).map((p: any) => ({ ...p, photo_url: null, _cover: null }))];
       }
 
       // LUDZIE - wyszukiwanie po samym username (prosba Nat 2026-09-06 po testach).
@@ -2200,21 +2225,21 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
       // W "Wszystko" ludzie pojawiaja sie DOPIERO po wpisaniu frazy (bez niej podglad
       // mialby 30 przypadkowych profili); folder "Ludzie" przeglada sie takze bez frazy.
       if (cat === "people" || (cat === "all" && !!q)) {
+        // Konta LOKALI (`profiles.is_business`, migracja 20260921d) nie sa ludzmi w apce.
+        // Do 21.09 filtr szedl po `business_profiles_public.owner_user_id`, czyli tylko po
+        // AKTYWNYCH wizytowkach: lokal czekajacy na weryfikacje przechodzil do wynikow, a
+        // zalozycielka (wlascicielka testowego lokalu) znikala.
         let pf = (supabase as any).from("profiles")
           .select("id, username, first_name, avatar_url")
-          .not("username", "is", null);
+          .not("username", "is", null)
+          .eq("is_business", false);
         if (user?.id) pf = pf.neq("id", user.id);
         // "po samym username" - imie celowo pomijamy, zeby wpisany nick trafial w jedna osobe.
         if (q) pf = pf.ilike("username", `%${escapeLike(q)}%`);
         const { data: profs } = await pf.order("username").limit(q ? 20 : 30);
         const rows = (profs ?? []) as any[];
-        if (rows.length) {
-          const { data: bizOwners } = await (supabase as any)
-            .from("business_profiles_public").select("owner_user_id");
-          const bizSet = new Set((bizOwners ?? []).map((b: any) => b.owner_user_id).filter(Boolean));
-          const isGuestUsername = (u: string | null) => !!u && /^user_[0-9a-f]{8}$/.test(u);
-          people = rows.filter((r) => !bizSet.has(r.id) && !isGuestUsername(r.username));
-        }
+        const isGuestUsername = (u: string | null) => !!u && /^user_[0-9a-f]{8}$/.test(u);
+        people = rows.filter((r) => !isGuestUsername(r.username));
       }
 
       return { routes, collections, places, people };
@@ -2368,25 +2393,13 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                 </div>
               </div>
             )}
-            {/* LISTY - uklad karty z profilu (awatar + tytul + miniatury miejsc). */}
+            {/* KOLEKCJE - DOKLADNIE ten sam kafelek, co w Eksploracji i na profilu (2026-09-21). */}
             {(cat === "all" || cat === "lists") && results.collections.length > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("collections")}</p>
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {results.collections.filter((col) => notBlocked(col.user_id)).map((col) => (
-                    <ProfileFeedCard
-                      key={col.id}
-                      avatarUrl={col.author_avatar}
-                      authorId={col.user_id}
-                      fallback={col.author_name}
-                      eyebrow=""
-                      timestamp={col.updated_at ? shortRelativeTime(col.updated_at) : undefined}
-                      title={col.title}
-                      description={col.description}
-                      tiles={col.items}
-                      counts={{ saves: col.saves_count ?? 0, views: col.views_count ?? 0 }}
-                      onOpen={() => navigate(`/lista/${col.id}`)}
-                    />
+                    <GridTile key={`s-col-${col.id}`} it={collectionToGridItem(col)} size="feed" onOpen={() => navigate(`/lista/${col.id}`)} />
                   ))}
                 </div>
               </div>
@@ -2394,26 +2407,13 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             {(cat === "all" || cat === "places") && (results.places?.length ?? 0) > 0 && (
               <div>
                 <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">{t("places_heading")}</p>
-                <div className="space-y-2">
+                {/* Siatka kafelkow 2:3 - ten sam `PlaceTile`, co w „Ogolne" na profilu i w siatce
+                    kolekcji (ujednolicenie, prosba Nat 2026-09-21; wczesniej rzad wierszy z
+                    miniaturka i chevronem, ktorego nie ma nigdzie indziej w apce). */}
+                <div className="grid grid-cols-3 gap-1.5">
                   {results.places.map((p: any) => (
-                    <button
-                      key={p.id}
-                      onClick={() => openPlaceDetail(p)}
-                      className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-secondary p-3 text-left active:scale-[0.98] transition-transform"
-                    >
-                      <PlaceThumb url={p._cover ?? p.photo_url} category={p.category} name={p.place_name} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm leading-tight truncate">{p.place_name}</p>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          {p.city && (
-                            <span className="flex items-center gap-0.5 min-w-0">
-                              <BrandPin className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{p.city}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <button key={p.id} onClick={() => openPlaceDetail(p)} className="text-left active:scale-[0.98] transition-transform">
+                      <PlaceTile showCity tile={{ photo_url: p.photo_url, _cover: p._cover, category: p.category, place_name: p.place_name, city: p.city }} />
                     </button>
                   ))}
                 </div>
@@ -2515,27 +2515,7 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             // jeden wyglad list w obu widokach), tylko na cala szerokosc. Bez zakladki zapisu
             // na kafelku - jak na Glownej; lista zapisuje sie z jej widoku.
             const listCards = userPolecajki.filter((col) => notBlocked(col.user_id)).map((col) => {
-              const places: GridPlace[] = col.items.slice(0, LIST_TILES).map((it: any) => ({
-                name: it.place_name ?? "", category: it.category ?? null,
-                photo: resolveStored(it.photo_url ?? null) ?? resolveStored(it._cover ?? null) ?? null,
-                isNew: !!it._isNew,
-              }));
-              const item: GridItem = {
-                kind: "list", id: col.id, title: col.title,
-                cover: places.find((x) => x.photo)?.photo ?? null,
-                where: col.city || scopeLabel(col),
-                // Nazwa i @nick OBOK siebie (prosba Nat 2026-09-15) - wyjazdy zostaja przy samym nicku.
-                authorName: col.author_name ?? "",
-                authorHandle: col.author_username ? `@${col.author_username}` : null,
-                authorAvatar: col.author_avatar ?? null, authorId: col.user_id ?? null,
-                authorFrame: col.author_frame ?? null, authorFrameColor: col.author_frame_color ?? null,
-                showAuthor: !!(col.author_username || col.author_name),
-                at: new Date(col.updated_at ?? 0).getTime(),
-                placesCount: col.items.length, days: null, mapUrl: null,
-                theme: listTheme(col.theme, col.id), places,
-                visitedCount: col.visited_count ?? 0,
-                newCount: (col as any).new_count ?? 0,
-              };
+              const item = collectionToGridItem(col);
               return (
                 <GridTile key={`col-${col.id}`} it={item} size="feed" className="snap-start snap-always" onOpen={() => navigate(`/lista/${col.id}`)} />
               );
@@ -2574,7 +2554,10 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             // Obserwowani NAJPIERW (decyzja Nat 2026-09-13): dwa koszyki - tresci od osob, ktore
             // user obserwuje, a pod nimi reszta swiata. W kazdym koszyku przeplot wyjazd/lista
             // jak dotad (kolejnosc wewnatrz koszyka = data publikacji z zapytan).
-            const followed = new Set(followedIds ?? []);
+            // WLASNE tresci ida do pierwszego koszyka razem z obserwowanymi (zgloszenie Nat
+            // 2026-09-21: swiezo utworzona kolekcja ladowala „gdzies na samym dole", bo user
+            // nie obserwuje sam siebie i wpadal do „reszty swiata" za cudzymi wyjazdami).
+            const followed = new Set([...(followedIds ?? []), ...(user?.id ? [user.id] : [])]);
             const routeRows = warszawa.filter((r) => notBlocked(r.user_id));
             const listRows = userPolecajki.filter((col) => notBlocked(col.user_id));
             const interleave = (routes: any[], lists: any[]) => {

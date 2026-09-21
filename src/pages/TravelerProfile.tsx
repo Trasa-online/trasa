@@ -330,7 +330,9 @@ const TravelerProfile = () => {
       const { data: memberRows } = await (supabase as any)
         .from("discovery_collection_members")
         .select("collection_id")
-        .eq("user_id", user!.id);
+        .eq("user_id", user!.id)
+        // Zaproszenie bez odpowiedzi (pending) to jeszcze nie wspoltworzenie (2026-09-21).
+        .eq("status", "accepted");
       const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
       // ⛔ DWA zapytania zamiast jednego `.or(...)`: lista id w `id.in.(…)` ma przecinki
       // w srodku nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje

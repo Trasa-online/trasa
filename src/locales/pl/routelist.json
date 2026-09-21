@@ -169,5 +169,15 @@
     "starred": "Wyróżnił(a)",
     "visited": "Był(a) tu",
     "empty": "Nikt jeszcze nie odhaczył tego miejsca."
+  },
+  "invite": {
+    "banner_title": "Zaproszenie do wspólnej kolekcji",
+    "banner_desc": "Dołącz, żeby dodawać miejsca, notki i zdjęcia razem z resztą.",
+    "accept": "Dołączam",
+    "decline": "Nie teraz",
+    "accepted": "Dołączyłaś(-eś) do kolekcji",
+    "declined": "Zaproszenie odrzucone",
+    "response_failed": "Nie udało się zapisać odpowiedzi",
+    "awaiting": "Czeka na potwierdzenie"
   }
 }

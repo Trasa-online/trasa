@@ -89,6 +89,7 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
         .ilike("username", `%${t}%`)
         .neq("id", user?.id ?? "")
         .not("username", "is", null)
+        .eq("is_business", false)
         .limit(20);
       setResults(((data ?? []) as Profile[]).filter((r) => !(bizIds as Set<string>).has(r.id)));
       setLoading(false);

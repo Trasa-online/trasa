@@ -137,7 +137,11 @@
     "empty_cta": "Zobacz swoje kolekcje",
     "remove": "Usuń powiadomienie",
     "list_starred": "{{user}} wyróżnił(a) miejsce w Twojej kolekcji „{{title}}”",
-    "list_starred_place": "{{user}} wyróżnił(a) „{{place}}” w Twojej kolekcji „{{title}}”"
+    "list_starred_place": "{{user}} wyróżnił(a) „{{place}}” w Twojej kolekcji „{{title}}”",
+    "invite_accept": "Dołączam",
+    "invite_joined": "Dołączyłaś(-eś)",
+    "invite_declined": "Zaproszenie odrzucone",
+    "invite_gone": "To zaproszenie jest już nieaktualne"
   },
   "live": {
     "friend_request": "Nowe zaproszenie do znajomych 👋",
