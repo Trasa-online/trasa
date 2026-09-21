@@ -375,7 +375,7 @@ export function ShareCardPlace({ place, city, photos = [], onNextPhoto, onClose,
   const canPick = !!onNextPhoto && photos.length > 1;
   // Nakladka „★ @handle" na Stories (2026-09-21): handle = instagram lokalu albo nazwa bez spacji.
   const [stickerOpen, setStickerOpen] = useState(false);
-  const handle = stickerHandle({ place_name: place.place_name, businessInstagram: (place as any).businessInstagram ?? null });
+  const handle = stickerHandle({ place_name: place.place_name, businessInstagram: (place as any).businessInstagram ?? null, city: place.city || city || null });
   return (
     <>
     <PlaceStickerSheet open={stickerOpen} handle={handle} placeName={place.place_name} onClose={() => setStickerOpen(false)} />

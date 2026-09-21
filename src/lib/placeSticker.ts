@@ -36,12 +36,37 @@ export const STAR_GREEN = "#3CC46F";
 let starPath: Path2D | null = null;
 const getStarPath = () => (starPath ??= new Path2D(STAR_PATH));
 
-/** Handle na nakladce: instagram lokalu, a gdy go nie ma - nazwa miejsca bez spacji i znakow. */
-export function stickerHandle(place: { place_name?: string | null; businessInstagram?: string | null }): string {
+// Slowa, ktore w nazwie z Google sa LOKALIZACJA, nie nazwa lokalu („FALLA Warszawa Śródmieście",
+// „Pierogarnia Mandu Gdańsk Śródmieście") - do handle nie wchodza. Miasto podaje wolajacy.
+const LOCATION_WORDS = new Set([
+  "srodmiescie", "wola", "mokotow", "praga", "ochota", "zoliborz", "ursynow", "wilanow", "bemowo", "bielany",
+  "wrzeszcz", "oliwa", "zaspa", "garnizon", "kazimierz", "podgorze", "centrum", "stare", "nowe", "miasto",
+  "warsaw", "cracow", "krakow", "warszawa", "gdansk", "gdynia", "sopot", "wroclaw", "poznan", "lodz", "katowice",
+  "polska", "poland",
+]);
+const HANDLE_MAX = 20;
+const ascii = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/Ł/g, "L").toLowerCase();
+
+/**
+ * Handle na nakladce: instagram lokalu, a gdy go nie ma - nazwa miejsca „po instagramowemu".
+ * Nazwy z Google niosa dopiski (miasto, dzielnica, „- Restauracja Sushi"), przez ktore pigulka
+ * wychodzila „...rszawasrodmiescie" poza kadr (zgloszenie Nat 2026-09-21). Bierzemy czesc PRZED
+ * myslnikiem / kreska / przecinkiem / nawiasem, wyrzucamy miasto i slowa-lokalizacje, a potem
+ * doklejamy slowa, dopoki miesza sie w 20 znakach (co najmniej pierwsze slowo).
+ */
+export function stickerHandle(place: { place_name?: string | null; businessInstagram?: string | null; city?: string | null }): string {
   const ig = (place.businessInstagram ?? "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
   if (ig) return ig.toLowerCase().slice(0, 30);
-  const slug = (place.place_name ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-  return (slug || "spontaway").slice(0, 30);
+  const head = (place.place_name ?? "").split(/\s+[-|–]\s+|\s*[,(|]/)[0] ?? "";
+  const cityWords = new Set(ascii(place.city ?? "").split(/[^a-z0-9]+/).filter(Boolean));
+  const words = ascii(head).split(/[^a-z0-9]+/).filter(Boolean)
+    .filter((w) => !cityWords.has(w) && !LOCATION_WORDS.has(w));
+  let out = "";
+  for (const w of words) {
+    if (out && (out + w).length > HANDLE_MAX) break;
+    out += w;
+  }
+  return (out || "spontaway").slice(0, HANDLE_MAX + 4);
 }
 
 export async function ensureStickerFont(): Promise<void> {
@@ -49,6 +74,17 @@ export async function ensureStickerFont(): Promise<void> {
 }
 
 const FONT = `400 ${FONT_PX}px Sigmar, "Baloo 2", system-ui, sans-serif`;
+const MAX_PILL_W = OVERLAY_W - 120; // pigulka nie moze wyjsc poza relacje (60 px marginesu z obu stron)
+const MIN_FONT_PX = 52;
+
+/** Krój pigulki: 96 px, a przy dlugim handle mniejszy, zeby pigulka zmiescila sie w kadrze. */
+function pillFont(ctx: CanvasRenderingContext2D, handle: string): string {
+  ctx.font = FONT;
+  const w = ctx.measureText(`@${handle}`).width + PAD_X * 2;
+  if (w <= MAX_PILL_W) return FONT;
+  const px = Math.max(MIN_FONT_PX, Math.floor(FONT_PX * (MAX_PILL_W - PAD_X * 2) / (w - PAD_X * 2)));
+  return `400 ${px}px Sigmar, "Baloo 2", system-ui, sans-serif`;
+}
 
 // "full" = gwiazdki + pigulka (uklad z referencji), "alt" = te same gwiazdki w INNYM ukladzie
 // (klaster u gory po lewej + jedna nad pigulka), "pill" = sama pigulka bez gwiazdek. Trzy zestawy
@@ -61,7 +97,7 @@ const PILL_MARGIN = 40; // miejsce na obwodke i cien wokol samej pigulki
 
 function pillWidth(handle: string): number {
   const c = document.createElement("canvas").getContext("2d")!;
-  c.font = FONT;
+  c.font = pillFont(c, handle);
   return c.measureText(`@${handle}`).width + PAD_X * 2;
 }
 
@@ -158,7 +194,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 function drawPill(ctx: CanvasRenderingContext2D, handle: string, right: number, cy: number) {
-  ctx.font = FONT;
+  ctx.font = pillFont(ctx, handle);
   ctx.textBaseline = "middle";
   const label = `@${handle}`;
   const textW = ctx.measureText(label).width;
