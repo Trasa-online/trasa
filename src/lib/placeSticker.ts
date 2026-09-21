@@ -107,7 +107,7 @@ export function stickerSize(handle: string, variant: StickerVariant = "full"): {
   return { w: OVERLAY_W, h: OVERLAY_H };
 }
 
-function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number, scale: number, outline: number, outlineColor: string, shadow = true) {
+export function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number, scale: number, outline: number, outlineColor: string, shadow = true) {
   const k = size / STAR_VB.w;
   ctx.save();
   ctx.translate(cx, cy);
@@ -143,7 +143,7 @@ function noise(seed: number): number {
  * i przerywanych pociagniec o niskim kryciu + miekka biala poswiata - razem daja ziarnisty,
  * nierowny slad jak kreda na tablicy. Biel, bo lezy na zdjeciu i ma byc czytelna na kazdym tle.
  */
-function drawStarChalk(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number, scale: number, seed: number) {
+export function drawStarChalk(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number, scale: number, seed: number) {
   const k = size / STAR_VB.w;
   ctx.save();
   ctx.translate(cx, cy);
