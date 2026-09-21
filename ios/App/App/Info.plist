@@ -60,6 +60,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+		<string>instagram</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>spontaway potrzebuje dostępu do kamery, aby zrobić zdjęcie i zidentyfikować miejsce lub dodać zdjęcie do dziennika podróży.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

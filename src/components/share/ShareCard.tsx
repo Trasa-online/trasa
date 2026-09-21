@@ -15,7 +15,9 @@ import { buildShareTargets, ShareTargetButton, type ImageChannel } from "@/compo
 import { renderShareImage, deliverShareImage, shareImageFilename } from "@/lib/shareImage";
 import { isNative } from "@/lib/platform";
 import PlaceStickerSheet from "@/components/share/PlaceStickerSheet";
-import { stickerHandle } from "@/lib/placeSticker";
+import { stickerHandle, stickerPng } from "@/lib/placeSticker";
+import { canShareToStories, shareToInstagramStories, storyBackgroundFromPhoto } from "@/lib/instagramStories";
+import { track } from "@/lib/analytics";
 import { SwipeCard, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { rowOwnPhotos } from "@/lib/placeUserPhotos";
 
@@ -77,12 +79,46 @@ type StripItem = { name: string; photo?: string | null; icon: string; category?:
 /** Autor udostepnianej tresci - awatar z ramka w belce arkusza, po prawej od "udostępnij". */
 type SheetAuthor = { userId?: string | null; avatar?: string | null; frame?: string | null; color?: string | null };
 
-function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, stripDays, stripMore, plainPreview, linkHeading, author, onSticker }: {
+const PRIMER_KEY = "spontaway_ig_stories_primer_v1";
+
+/** Instruktaz przed pierwszym przelaczeniem do Instagrama (panel reczny z-[97], jak PlaceStickerSheet -
+ *  `Sheet` z shadcn ma z-50 i schowalby sie pod arkuszem udostepniania na z-[95]). */
+function StoriesPrimer({ onGo, onSkip }: { onGo: () => void; onSkip: () => void }) {
+  const { t } = useTranslation("sharing");
+  return (
+    <div data-vaul-no-drag data-no-drag className="fixed inset-0 z-[97] flex items-end justify-center bg-black/40 animate-in fade-in duration-200" onClick={onSkip}>
+      <div className="w-[calc(100%-16px)] max-w-lg mx-2 mb-2 rounded-[40px] bg-[#FEFEFE] px-6 pt-7 pb-[max(20px,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300"
+        onClick={(e) => e.stopPropagation()}>
+        <p className="text-center font-brand text-[24px] leading-tight text-spontaway-orange">{t("share.stories_primer_title")}</p>
+        <ol className="mt-4 space-y-2.5">
+          {[1, 2, 3].map((n) => (
+            <li key={n} className="flex items-start gap-3 text-[15px] leading-snug text-foreground">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FDF184] text-[13px] font-bold text-[#5B2C06]">{n}</span>
+              <span>{t(`share.stories_primer_step${n}`)}</span>
+            </li>
+          ))}
+        </ol>
+        <button onClick={onGo} className="mt-5 h-12 w-full rounded-full bg-primary text-primary-foreground font-semibold active:scale-[0.98] transition-transform">
+          {t("share.stories_primer_go")}
+        </button>
+        <button onClick={onSkip} className="mt-2 h-12 w-full rounded-full bg-secondary text-secondary-foreground font-semibold active:scale-[0.98] transition-transform">
+          {t("share.stories_primer_skip")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, stripDays, stripMore, plainPreview, linkHeading, author, onSticker, storyPhoto, storySticker }: {
   children: React.ReactNode;
   /** Co udostepniamy - do analityki i nazwy pliku obrazu. */
   kind: "route" | "list" | "place";
   /** Miejsce: otwiera panel nakladki na Stories (kafelek „Nakladka" w rzedzie kanalow). */
   onSticker?: () => void;
+  /** Instagram Stories na wprost (2026-09-21): zdjecie na TLO relacji (miejsce = jego okladka)... */
+  storyPhoto?: string | null;
+  /** ...i NAKLADKA na wierzch (miejsce = gwiazdki + pigulka z handle). Bez tego naklejka = karta z podgladu. */
+  storySticker?: () => Promise<Blob>;
   author?: SheetAuthor | null;
   onClose: () => void;
   onShare?: () => void;
@@ -106,12 +142,56 @@ function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, st
   const [full, setFull] = useState(false);
   const [rendering, setRendering] = useState(false);
 
+  // INSTAGRAM STORIES NA WPROST (prosba Nat 2026-09-21): kafelek „Instagram" otwiera edytor
+  // relacji z NAKLADKA juz nalozona (miejsce: gwiazdki + pigulka @handle na zdjeciu miejsca;
+  // plan / kolekcja: karta z podgladu na gradiencie marki), a LINK do tresci laduje w schowku -
+  // w Stories user tapa naklejke „Link" i wkleja. Instagram nie przyjmuje linku z obrazem, wiec
+  // to jedyna droga do klikalnego linku (patrz instagramStories.ts). Pierwsze trzy razy
+  // pokazujemy krotki instruktaz PRZED przelaczeniem do Instagrama - potem juz bez pytania.
+  // Bez App ID / bez Instagrama / na webie -> `false` i dotychczasowa droga (plik w arkuszu).
+  const [primer, setPrimer] = useState<((go: boolean) => void) | null>(null);
+  const shareToStories = async (node: HTMLElement): Promise<boolean> => {
+    if (!(await canShareToStories())) return false;
+    const seen = Number(localStorage.getItem(PRIMER_KEY) ?? 0);
+    if (seen < 3) {
+      const go = await new Promise<boolean>((resolve) => setPrimer(() => resolve));
+      setPrimer(null);
+      if (!go) return true; // user odpuscil - nie otwieramy nic innego
+      localStorage.setItem(PRIMER_KEY, String(seen + 1));
+    }
+    setRendering(true);
+    const toastId = toast.loading(t("share.image_preparing"));
+    try {
+      const [sticker, background] = await Promise.all([
+        storySticker ? storySticker() : renderShareImage(node, "png", { background: "transparent", padding: 0 }),
+        storyPhoto ? storyBackgroundFromPhoto(storyPhoto) : Promise.resolve(null),
+      ]);
+      toast.dismiss(toastId);
+      const res = await shareToInstagramStories({ sticker, background, link: shareUrl });
+      if (res === "opened") {
+        track("content_shared_image", { kind, channel: "instagram_stories", format: "stories" });
+        if (shareUrl) toast(t("share.stories_link_hint"), { duration: 6000 });
+        return true;
+      }
+      if (res === "unavailable") return false;
+      toast.error(t("share.image_failed"));
+      return true;
+    } catch (e) {
+      console.warn("[ShareSheet] stories:", (e as any)?.message ?? e);
+      toast.dismiss(toastId);
+      return false;
+    } finally {
+      setRendering(false);
+    }
+  };
+
   // Karta -> obraz -> Instagram / plik. Renderujemy DOKLADNIE ten DOM, ktory user widzi
   // w podgladzie (`exportRef`), na zoltym tle marki - PNG i JPG dostaja ten sam kadr.
   // Instagram = JPG (mniejszy plik, Stories i tak kompresuja), pobranie = wybrany format.
   const shareAsImage = async (channel: ImageChannel) => {
     const node = exportRef.current;
     if (!node || rendering) return;
+    if (channel === "instagram" && (await shareToStories(node))) return;
     setRendering(true);
     const toastId = toast.loading(t("share.image_preparing"));
     try {
@@ -120,7 +200,10 @@ function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, st
       toast.dismiss(toastId);
       // Podpowiedz PRZED systemowym arkuszem - on wjezdza na wierzch i zostaje otwarty dluzej,
       // niz zyje toast; po zamknieciu nie byloby juz czego czytac.
-      if (isNative) toast(channel === "instagram" ? t("share.image_hint_instagram") : t("share.image_hint_save"));
+      // Instagram bez Stories na wprost (web / brak App ID / brak aplikacji): link idzie do
+      // schowka, zeby w edytorze relacji dalo sie go wkleic w naklejke „Link".
+      if (channel === "instagram" && shareUrl) await navigator.clipboard?.writeText(shareUrl).catch(() => {});
+      if (isNative) toast(channel === "instagram" ? t("share.image_hint_instagram") : t("share.image_hint_save"), { duration: 6000 });
       const res = await deliverShareImage(blob, shareImageFilename(shareTitle, format), { title: shareTitle, kind, channel });
       if (res === "failed") toast.error(t("share.image_failed"));
       else if (res === "downloaded") toast.success(t("share.image_downloaded"));
@@ -175,9 +258,11 @@ function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, st
     : [];
 
   return (
-    // Zolte tlo + naglowek Sigmar wg makiety Nat (Figma "[NEW] Ekrany" -> "Udostępnianie
-    // wyjazdów oraz list" -> "Akcja: Udostępnij - Wyjazdy", 2026-09-08). Ekran ma wygladac jak
-    // czesc marki, a nie jak systemowy arkusz - to on ma zachecac do wyslania.
+    <>
+    {primer && <StoriesPrimer onGo={() => primer(true)} onSkip={() => primer(false)} />}
+    {/* Zolte tlo + naglowek Sigmar wg makiety Nat (Figma "[NEW] Ekrany" -> "Udostępnianie
+        wyjazdów oraz list" -> "Akcja: Udostępnij - Wyjazdy", 2026-09-08). Ekran ma wygladac jak
+        czesc marki, a nie jak systemowy arkusz - to on ma zachecac do wyslania. */}
     <div data-vaul-no-drag data-no-drag className="fixed inset-0 z-[95] bg-spontaway-yellow flex flex-col animate-in fade-in duration-200 overflow-y-auto">
       <div className="shrink-0 flex items-center gap-2 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-1">
         <button onClick={onClose} aria-label={t("common:buttons.close")}
@@ -285,6 +370,7 @@ function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, st
         </div>
       )}
     </div>
+    </>
   );
 }
 
@@ -319,7 +405,8 @@ export function ShareCardPlace({ place, city, photos = [], onNextPhoto, onClose,
     <>
     <PlaceStickerSheet open={stickerOpen} handle={handle} placeName={place.place_name} onClose={() => setStickerOpen(false)} />
     <ShareSheet kind="place" onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={place.place_name}
-      plainPreview linkHeading={t("share.link_heading_place")} onSticker={() => setStickerOpen(true)}>
+      plainPreview linkHeading={t("share.link_heading_place")} onSticker={() => setStickerOpen(true)}
+      storyPhoto={place.photo_url || null} storySticker={() => stickerPng(handle, "full")}>
       <div className="flex h-full w-full items-center justify-center">
         {/* SwipeCard jest `absolute inset-0` - potrzebuje pudelka 9:16 o znanej wysokosci.
             `key` = okladka: SwipeCard trzyma zdjecie w stanie z pierwszego renderu, wiec zmiana

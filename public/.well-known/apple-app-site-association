@@ -5,7 +5,10 @@
       {
         "appID": "J33M8H3SGZ.travel.trasa.app",
         "paths": [
-          "/q/*"
+          "/q/*",
+          "/p/*",
+          "/l/*",
+          "/r/*"
         ]
       }
     ]

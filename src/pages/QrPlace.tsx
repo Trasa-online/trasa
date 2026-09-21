@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchEnrichedPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { fetchEnrichedPlace, enrichWithBusinessProfile } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import SavePlaceSheet, { type SavePlaceInput } from "@/components/plan-wizard/SavePlaceSheet";
@@ -21,6 +21,63 @@ import { queryClient } from "@/lib/queryClient";
 // Kod bez przypisanego miejsca albo nieznany -> toast i powrot do Eksploracji.
 export default function QrPlace() {
   const { token = "" } = useParams<{ token: string }>();
+  const { user } = useAuth();
+  return (
+    <PlaceLanding
+      resolve={async () => {
+        const { data, error } = await (supabase as any).rpc("resolve_qr_code", { p_token: token });
+        const row = Array.isArray(data) ? data[0] : null;
+        if (error || !row?.place_id) return null;
+        track("qr_scanned", { token, place_id: row.place_id, logged_in: !!user });
+        return fetchEnrichedPlace(row.place_id, new Date().toISOString().slice(0, 10));
+      }}
+      onResolved={() => {
+        if (!user) return;
+        // Best-effort: odwiedziny z kodu. Blad nie psuje wizytowki.
+        void (supabase as any).rpc("mark_qr_visit", { p_token: token })
+          .then(() => { queryClient.invalidateQueries({ queryKey: ["place-visits"] }); queryClient.invalidateQueries({ queryKey: ["collection-visits"] }); })
+          .catch(() => {});
+      }}
+      deps={[token, user?.id]}
+    />
+  );
+}
+
+// LINK DO MIEJSCA `spontaway.com/p/<id>` jako universal link (2026-09-21): ten sam ekran co przy
+// kodzie QR, ale bez odwiedzin - link z relacji na Instagramie nie znaczy „jestem tu". <id> to
+// wizytowka (`places`) ALBO migawka miejsca spoza bazy (`shared_places`; serwer strony linku
+// probuje w tej samej kolejnosci). Migawka bez `place_id` dostaje karte z samych pol migawki.
+export function SharedPlace() {
+  const { id = "" } = useParams<{ id: string }>();
+  return (
+    <PlaceLanding
+      resolve={async () => {
+        const today = new Date().toISOString().slice(0, 10);
+        const full = await fetchEnrichedPlace(id, today);
+        if (full) return full;
+        const { data: snap } = await (supabase as any).from("shared_places")
+          .select("id,place_id,place_name,address,city,category,latitude,longitude,photo_url").eq("id", id).maybeSingle();
+        if (!snap) return null;
+        if (snap.place_id) {
+          const linked = await fetchEnrichedPlace(snap.place_id, today);
+          if (linked) return linked;
+        }
+        return enrichWithBusinessProfile({
+          id: snap.id, place_name: snap.place_name, address: snap.address ?? "", city: snap.city ?? "",
+          category: snap.category ?? "other", latitude: snap.latitude ?? 0, longitude: snap.longitude ?? 0,
+          rating: 0, photo_url: snap.photo_url ?? "", vibe_tags: [], description: "",
+        }, today);
+      }}
+      deps={[id]}
+    />
+  );
+}
+
+function PlaceLanding({ resolve, onResolved, deps }: {
+  resolve: () => Promise<MockPlace | null>;
+  onResolved?: (place: MockPlace) => void;
+  deps: unknown[];
+}) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useTranslation("wizytowka");
@@ -31,23 +88,14 @@ export default function QrPlace() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error } = await (supabase as any).rpc("resolve_qr_code", { p_token: token });
-      const row = Array.isArray(data) ? data[0] : null;
-      if (error || !row?.place_id) { if (!cancelled) setFailed(true); return; }
-      track("qr_scanned", { token, place_id: row.place_id, logged_in: !!user });
-      const full = await fetchEnrichedPlace(row.place_id, new Date().toISOString().slice(0, 10));
+      const full = await resolve().catch(() => null);
       if (cancelled) return;
       if (!full) { setFailed(true); return; }
       setPlace(full);
-      if (user) {
-        // Best-effort: odwiedziny z kodu. Blad nie psuje wizytowki.
-        void (supabase as any).rpc("mark_qr_visit", { p_token: token })
-          .then(() => { queryClient.invalidateQueries({ queryKey: ["place-visits"] }); queryClient.invalidateQueries({ queryKey: ["collection-visits"] }); })
-          .catch(() => {});
-      }
+      onResolved?.(full);
     })();
     return () => { cancelled = true; };
-  }, [token, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!failed) return;
