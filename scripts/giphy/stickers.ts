@@ -65,6 +65,12 @@ const starsChalk: Draw = (ctx, t) => {
   drawStarChalk(ctx, 400, 560, 250, 0.18 + Math.sin(ph + 4.1) * 0.14, 1 + Math.sin(ph + 4.9) * 0.06, 3);
 };
 
+// 6. JEDNA gwiazdka z zolta obwodka - pulsuje i delikatnie sie obraca (dodatek Nat 2026-09-21).
+const starSingle: Draw = (ctx, t) => {
+  const ph = t * TAU;
+  drawStar(ctx, 360, 360, 520, Math.sin(ph) * 0.12, 1 + Math.sin(ph + 1.0) * 0.06, 40, STICKER_YELLOW);
+};
+
 // Znak: wspolrzedne z logo (618 x 636) skalowane do plotna z marginesem.
 let sPath: Path2D | null = null, starPath: Path2D | null = null;
 const markPaths = () => ({ s: (sPath ??= new Path2D(MARK_S_PATH)), star: (starPath ??= new Path2D(MARK_STAR_PATH)) });
@@ -155,5 +161,6 @@ export async function renderAll(): Promise<Sticker[]> {
   await add("3-gwiazdki-kreda", starsChalk, 720, 720);
   await add("4-logo-s-pulsujaca-gwiazdka", markPulse(720, 740), 720, 740);
   await add("5-logo-s-rysowane-stempel", markDraw(720, 740), 720, 740, 72, 50);
+  await add("6-gwiazdka-zolta-obwodka", starSingle, 720, 720);
   return out;
 }
