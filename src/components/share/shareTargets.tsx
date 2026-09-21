@@ -2,6 +2,7 @@ import { Link2, MessageCircle, MoreHorizontal, Download } from "lucide-react";
 // zwykly modul bez Reacta, wiec siegamy po i18n bezposrednio.
 import i18n from "@/i18n";
 import { isNative } from "@/lib/platform";
+import { BrandStar } from "@/components/BrandStar";
 
 // KANALY UDOSTEPNIANIA - dolny rzad arkusza (wzor: Pinterest, prosba Nat 2026-09-01).
 //
@@ -50,13 +51,15 @@ export type ShareTarget = {
  *  podgladu do zrenderowania. */
 export type ImageChannel = "instagram" | "png" | "jpeg";
 
-export function buildShareTargets({ url, title, onSystemShare, onCopied, onImage }: {
+export function buildShareTargets({ url, title, onSystemShare, onCopied, onImage, onSticker }: {
   url: string;
   title: string;
   onSystemShare: () => void;
   onCopied: () => void;
   /** Podane = arkusz umie zrenderowac karte do obrazu; bez tego kafelki obrazowe nie stoja. */
   onImage?: (channel: ImageChannel) => void;
+  /** Tylko MIEJSCE (2026-09-21): nakladka „★ @handle" na Stories - PNG / GIF z przezroczystoscia. */
+  onSticker?: () => void;
 }): ShareTarget[] {
   const text = `${title} ${url}`;
   const enc = encodeURIComponent(text);
@@ -99,6 +102,11 @@ export function buildShareTargets({ url, title, onSystemShare, onCopied, onImage
       onPress: () => openScheme(`fb-messenger://share?link=${encodeURIComponent(url)}`),
     },
     ...image.filter((t) => t.key === "instagram"),
+    ...(onSticker ? [{
+      key: "sticker", label: i18n.t("target.sticker", { ns: "sharing" }), tone: "bg-[#FDF184] text-[#F75708]",
+      node: <BrandStar className="h-7 w-7" />,
+      onPress: onSticker,
+    } as ShareTarget] : []),
     {
       key: "copy", label: i18n.t("target.copy_link", { ns: "sharing" }), tone: "bg-secondary text-foreground",
       node: <Link2 className="h-6 w-6" strokeWidth={2.2} />,

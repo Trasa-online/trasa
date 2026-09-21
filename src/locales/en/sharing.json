@@ -242,7 +242,8 @@
     "messages": "Messages",
     "copy_link": "Copy link",
     "save_png": "Download PNG",
-    "save_jpg": "Download JPG"
+    "save_jpg": "Download JPG",
+    "sticker": "Sticker"
   },
   "card": {
     "trip_label": "PLAN",
@@ -353,5 +354,15 @@
     "budget_spent_other": "You get {{count}} highlights per plan. Take one off another photo to give it here.",
     "not_allowed": "You cannot highlight photos from your own plan.",
     "failed": "Could not save the highlight"
+  },
+  "sticker": {
+    "title": "Story sticker",
+    "desc": "Stars and a pill with the place handle for a full story - drop it on your photo. The background is transparent.",
+    "mode_static": "Static",
+    "mode_animated": "Animated",
+    "download_png": "Download PNG",
+    "download_gif": "Download GIF",
+    "preparing": "Preparing the sticker…",
+    "preparing_frames": "Preparing the animation… {{done}} / {{total}}"
   }
 }

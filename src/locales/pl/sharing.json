@@ -253,7 +253,8 @@
     "messages": "Wiadomości",
     "copy_link": "Skopiuj link",
     "save_png": "Pobierz PNG",
-    "save_jpg": "Pobierz JPG"
+    "save_jpg": "Pobierz JPG",
+    "sticker": "Nakładka"
   },
   "card": {
     "trip_label": "PLAN",
@@ -369,5 +370,15 @@
     "budget_spent_many": "Masz {{count}} wyróżnień na plan. Zdejmij jedno z innego zdjęcia, żeby przyznać tutaj.",
     "not_allowed": "Nie możesz wyróżniać zdjęć z własnego planu.",
     "failed": "Nie udało się zapisać wyróżnienia"
+  },
+  "sticker": {
+    "title": "Nakładka na Stories",
+    "desc": "Gwiazdki i pigułka z nazwą miejsca na całą relację - do wklejenia na zdjęcie. Tło jest przezroczyste.",
+    "mode_static": "Statyczna",
+    "mode_animated": "Animowana",
+    "download_png": "Pobierz PNG",
+    "download_gif": "Pobierz GIF",
+    "preparing": "Przygotowuję nakładkę…",
+    "preparing_frames": "Przygotowuję animację… {{done}} / {{total}}"
   }
 }
