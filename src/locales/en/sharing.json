@@ -363,6 +363,8 @@
     "download_png": "Download PNG",
     "download_gif": "Download GIF",
     "preparing": "Preparing the sticker…",
-    "preparing_frames": "Preparing the animation… {{done}} / {{total}}"
+    "preparing_frames": "Preparing the animation… {{done}} / {{total}}",
+    "variant_full": "Stars + handle",
+    "variant_pill": "Handle only"
   }
 }

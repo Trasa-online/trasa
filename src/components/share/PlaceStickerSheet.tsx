@@ -4,7 +4,7 @@ import { X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { haptics } from "@/hooks/useHaptics";
-import { drawSticker, stickerSize, ensureStickerFont, stickerPng, stickerGif } from "@/lib/placeSticker";
+import { drawSticker, stickerSize, ensureStickerFont, stickerPng, stickerGif, type StickerVariant } from "@/lib/placeSticker";
 import { deliverShareImage } from "@/lib/shareImage";
 import { isNative } from "@/lib/platform";
 
@@ -23,6 +23,10 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
 }) {
   const { t } = useTranslation("sharing");
   const [mode, setMode] = useState<"static" | "animated">("animated");
+  // "full" = gwiazdki + pigulka na cala relacje; "pill" = sama zolta naklejka z handle (bez
+  // gwiazdek, wiec tylko PNG - nie ma czego animowac).
+  const [variant, setVariant] = useState<StickerVariant>("full");
+  const animated = variant === "full" && mode === "animated";
   const [busy, setBusy] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { dragProps } = useDragToDismiss({ onDismiss: onClose, enabled: open && !busy });
@@ -37,8 +41,8 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
     (async () => {
       await ensureStickerFont();
       if (stop) return;
-      const { w, h } = stickerSize(handle);
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const { w, h } = stickerSize(handle, variant);
+      const dpr = variant === "pill" ? 3 : Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       canvas.style.aspectRatio = `${w} / ${h}`;
@@ -48,14 +52,14 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
       const t0 = performance.now();
       const tick = () => {
         if (stop) return;
-        const t = mode === "animated" ? ((performance.now() - t0) % 1800) / 1800 : 0;
-        drawSticker(ctx, handle, t, { animated: mode === "animated" });
-        if (mode === "animated") raf = requestAnimationFrame(tick);
+        const t = animated ? ((performance.now() - t0) % 1800) / 1800 : 0;
+        drawSticker(ctx, handle, t, { animated, variant });
+        if (animated) raf = requestAnimationFrame(tick);
       };
       tick();
     })();
     return () => { stop = true; cancelAnimationFrame(raf); };
-  }, [open, handle, mode]);
+  }, [open, handle, variant, animated]);
 
   const download = async () => {
     if (busy) return;
@@ -64,12 +68,13 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
     const id = toast.loading(t("sticker.preparing"));
     try {
       const slug = handle.replace(/[^a-z0-9]/gi, "").toLowerCase() || "miejsce";
-      const blob = mode === "static"
-        ? await stickerPng(handle)
+      const blob = !animated
+        ? await stickerPng(handle, variant)
         : await stickerGif(handle, { onProgress: (d, n) => { if (d % 6 === 0) toast.loading(t("sticker.preparing_frames", { done: d, total: n }), { id }); } });
       toast.dismiss(id);
       if (isNative) toast(t("share.image_hint_save"));
-      const res = await deliverShareImage(blob, `spontaway-${slug}-nakladka.${mode === "static" ? "png" : "gif"}`, { title: placeName, kind: "place", channel: mode === "static" ? "sticker_png" : "sticker_gif" });
+      const suffix = variant === "pill" ? "naklejka" : "nakladka";
+      const res = await deliverShareImage(blob, `spontaway-${slug}-${suffix}.${animated ? "gif" : "png"}`, { title: placeName, kind: "place", channel: variant === "pill" ? "sticker_pill" : animated ? "sticker_gif" : "sticker_png" });
       if (res === "failed") toast.error(t("share.image_failed"));
       else if (res === "downloaded") toast.success(t("share.image_downloaded"));
     } catch (e) {
@@ -95,23 +100,34 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
 
         {/* Podglad na szarym tle (jak wlepki na windzie z referencji) - przezroczystosc widac. */}
         {/* Podglad calej relacji 9:16 na ciemnym tle - widac przezroczystosc i uklad wlepek. */}
-        <div className="mt-4 rounded-3xl bg-[#3A3A3E] p-3 flex items-center justify-center">
-          <canvas ref={canvasRef} className="h-[38dvh] w-auto rounded-2xl bg-[#6B6B70]" />
+        <div className="mt-4 rounded-3xl bg-[#3A3A3E] p-3 flex items-center justify-center min-h-[200px]">
+          <canvas ref={canvasRef} className={variant === "pill" ? "w-[80%] h-auto" : "h-[36dvh] w-auto rounded-2xl bg-[#6B6B70]"} />
         </div>
 
+        {/* Co pobrac: caly zestaw na relacje albo sama zolta naklejka z handle (bez gwiazdek). */}
         <div className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
-          {(["static", "animated"] as const).map((m) => (
-            <button key={m} onClick={() => { haptics.selection(); setMode(m); }}
-              className={`h-10 rounded-full text-sm font-bold transition-colors ${mode === m ? "bg-spontaway-yellow text-spontaway-brown" : "text-muted-foreground"}`}>
-              {t(m === "static" ? "sticker.mode_static" : "sticker.mode_animated")}
+          {(["full", "pill"] as const).map((v) => (
+            <button key={v} onClick={() => { haptics.selection(); setVariant(v); }}
+              className={`h-10 rounded-full text-sm font-bold transition-colors ${variant === v ? "bg-spontaway-yellow text-spontaway-brown" : "text-muted-foreground"}`}>
+              {t(v === "full" ? "sticker.variant_full" : "sticker.variant_pill")}
             </button>
           ))}
         </div>
+        {variant === "full" && (
+          <div className="mt-2 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
+            {(["static", "animated"] as const).map((m) => (
+              <button key={m} onClick={() => { haptics.selection(); setMode(m); }}
+                className={`h-10 rounded-full text-sm font-bold transition-colors ${mode === m ? "bg-spontaway-yellow text-spontaway-brown" : "text-muted-foreground"}`}>
+                {t(m === "static" ? "sticker.mode_static" : "sticker.mode_animated")}
+              </button>
+            ))}
+          </div>
+        )}
 
         <button onClick={() => void download()} disabled={busy}
           className="mt-3 w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60">
           <Download className="h-4 w-4" strokeWidth={2.4} />
-          {t(mode === "static" ? "sticker.download_png" : "sticker.download_gif")}
+          {t(animated ? "sticker.download_gif" : "sticker.download_png")}
         </button>
       </div>
     </div>

@@ -50,7 +50,18 @@ export async function ensureStickerFont(): Promise<void> {
 
 const FONT = `400 ${FONT_PX}px Sigmar, "Baloo 2", system-ui, sans-serif`;
 
-export function stickerSize(_handle: string): { w: number; h: number } {
+export type StickerVariant = "full" | "pill";
+const PILL_MARGIN = 40; // miejsce na obwodke i cien wokol samej pigulki
+
+function pillWidth(handle: string): number {
+  const c = document.createElement("canvas").getContext("2d")!;
+  c.font = FONT;
+  return c.measureText(`@${handle}`).width + PAD_X * 2;
+}
+
+/** Rozmiar plotna: cala relacja 9:16 albo SAMA pigulka (wariant „bez gwiazdek", 2026-09-21). */
+export function stickerSize(handle: string, variant: StickerVariant = "full"): { w: number; h: number } {
+  if (variant === "pill") return { w: Math.ceil(pillWidth(handle) + PILL_MARGIN * 2), h: PILL_H + PILL_MARGIN * 2 };
   return { w: OVERLAY_W, h: OVERLAY_H };
 }
 
@@ -119,9 +130,16 @@ function drawPill(ctx: CanvasRenderingContext2D, handle: string, right: number, 
  * Jedna klatka calej nakladki 9:16. `t` w [0, 1) = faza animacji (0 = pozycja spoczynkowa,
  * identyczna z PNG). Rysuje w jednostkach logicznych 1080 x 1920 - skalowanie robi wolajacy.
  */
-export function drawSticker(ctx: CanvasRenderingContext2D, handle: string, t: number, opts?: { animated?: boolean }) {
+export function drawSticker(ctx: CanvasRenderingContext2D, handle: string, t: number, opts?: { animated?: boolean; variant?: StickerVariant }) {
   const anim = opts?.animated !== false;
   const ph = anim ? t * Math.PI * 2 : 0;
+  if (opts?.variant === "pill") {
+    // Sama zolta naklejka z handle, bez gwiazdek - nic sie nie rusza.
+    const { w, h } = stickerSize(handle, "pill");
+    ctx.clearRect(0, 0, w, h);
+    drawPill(ctx, handle, w - PILL_MARGIN, h / 2);
+    return;
+  }
   ctx.clearRect(0, 0, OVERLAY_W, OVERLAY_H);
   // Uklad z referencji: duza rozowa u gory po prawej, mala zolta pod nia, zielona po lewej
   // u dolu, pigulka w prawym dolnym rogu. Kazda gwiazdka ma inna faze - inaczej wszystkie
@@ -132,8 +150,8 @@ export function drawSticker(ctx: CanvasRenderingContext2D, handle: string, t: nu
   drawPill(ctx, handle, OVERLAY_W - 60, 1690);
 }
 
-function makeCanvas(handle: string, scale: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
-  const { w, h } = stickerSize(handle);
+function makeCanvas(handle: string, scale: number, variant: StickerVariant = "full"): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
+  const { w, h } = stickerSize(handle, variant);
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(w * scale);
   canvas.height = Math.round(h * scale);
@@ -142,11 +160,12 @@ function makeCanvas(handle: string, scale: number): { canvas: HTMLCanvasElement;
   return { canvas, ctx, w, h };
 }
 
-/** PNG z przezroczystym tlem, 1080 x 1920 (pelna relacja). */
-export async function stickerPng(handle: string): Promise<Blob> {
+/** PNG z przezroczystym tlem: 1080 x 1920 (pelna relacja) albo sama pigulka (~1080 px szer.). */
+export async function stickerPng(handle: string, variant: StickerVariant = "full"): Promise<Blob> {
   await ensureStickerFont();
-  const { canvas, ctx } = makeCanvas(handle, 1);
-  drawSticker(ctx, handle, 0, { animated: false });
+  const { w } = stickerSize(handle, variant);
+  const { canvas, ctx } = makeCanvas(handle, variant === "pill" ? Math.min(4, 1080 / w) : 1, variant);
+  drawSticker(ctx, handle, 0, { animated: false, variant });
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
   if (!blob) throw new Error("toBlob returned null");
   return blob;

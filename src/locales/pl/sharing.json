@@ -379,6 +379,8 @@
     "download_png": "Pobierz PNG",
     "download_gif": "Pobierz GIF",
     "preparing": "Przygotowuję nakładkę…",
-    "preparing_frames": "Przygotowuję animację… {{done}} / {{total}}"
+    "preparing_frames": "Przygotowuję animację… {{done}} / {{total}}",
+    "variant_full": "Gwiazdki + nazwa",
+    "variant_pill": "Sama nazwa"
   }
 }
