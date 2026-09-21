@@ -164,8 +164,10 @@ export default function TrasaBigCard({
         </div>
       )}
 
-      {/* Prawy dolny stack: bookmark / akcje wlasciciela + rozwin (12px od prawej, 16px od dolu) */}
-      <div className="absolute right-3 bottom-4 z-10 flex flex-col items-center gap-2.5">
+      {/* Prawy dolny stack: bookmark / akcje wlasciciela + rozwin (12px od prawej, 16px od dolu).
+          `data-share-image-skip`: to KONTROLKI, nie tresc - karta renderowana do obrazu
+          (Instagram / PNG / JPG w arkuszu udostepniania) idzie bez nich. */}
+      <div data-share-image-skip="true" className="absolute right-3 bottom-4 z-10 flex flex-col items-center gap-2.5">
         {onToggleSave && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleSave(); }}

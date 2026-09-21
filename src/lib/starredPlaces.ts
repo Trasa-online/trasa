@@ -2,8 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchPlacePhotosForKeys, pickPlaceCover, pinCoverKeys } from "@/lib/placePhotoSocial";
 
 // Wyroznione miejsca usera (prosba Nat 2026-09-13): wszystkie gwiazdki "topki", ktore user
-// postawil - w swoich wyjazdach (pins.is_top) i listach (discovery_items.is_top). Licznik na
-// profilu + arkusz z lista miejsc; tap w miejsce prowadzi do wyjazdu/listy, z ktorej pochodzi.
+// postawil - w planach (`pin_stars`) i kolekcjach (`discovery_item_stars`), takze cudzych,
+// w ktorych uczestniczy. Licznik na profilu + arkusz z lista miejsc; tap w miejsce prowadzi
+// do planu/kolekcji, z ktorej pochodzi. ⛔ NIE licz z `pins.is_top` / `discovery_items.is_top`:
+// obie kolumny znacza dzis „gwiazdka WLASCICIELA" i trzyma je trigger.
 export type StarredPlace = {
   id: string;
   place_name: string;
@@ -23,10 +25,13 @@ const firstOf = (v: unknown): string | null => (Array.isArray(v) ? (v.find((x) =
 export const starredPlacesKey = (userId: string | null | undefined) => ["starred-places", userId ?? null] as const;
 
 export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]> {
-  const [pinsRes, itemsRes] = await Promise.all([
-    (supabase as any).from("pins")
-      .select("id, place_name, category, photo_url, image_url, images, user_photo_urls, place_id, route_id, routes!inner(id, title, user_id, created_at, city, countries)")
-      .eq("is_top", true).eq("routes.user_id", userId),
+  const [pinStarsRes, itemsRes] = await Promise.all([
+    // Gwiazdki w PLANACH sa PER UCZESTNIK (2026-09-21, `pin_stars`) - liczymy wszystkie MOJE,
+    // takze w cudzych planach, w ktorych uczestnicze. `pins.is_top` to od tej daty tylko
+    // gwiazdka wlasciciela (do 21.09 gwiazdka uczestnika wpadala na profil autora planu).
+    (supabase as any).from("pin_stars")
+      .select("place_name, route_id, routes!inner(id, title, user_id, created_at, city, countries)")
+      .eq("user_id", userId),
     // Gwiazdki w kolekcjach sa PER UCZESTNIK (2026-09-20, `discovery_item_stars`) - liczymy
     // wszystkie MOJE, takze w cudzych kolekcjach, ktore wspoltworze. `is_top` na pozycji
     // to od tej daty tylko gwiazdka wlasciciela.
@@ -34,6 +39,13 @@ export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]
       .select("place_name, collection_id, discovery_collections!inner(id, title, user_id, updated_at, city, countries)")
       .eq("user_id", userId),
   ]);
+  const pinStarRows = (pinStarsRes.data ?? []) as any[];
+  const routeIds = Array.from(new Set(pinStarRows.map((r) => r.route_id)));
+  const { data: pinRows } = routeIds.length
+    ? await (supabase as any).from("pins")
+        .select("id, place_name, category, photo_url, image_url, images, user_photo_urls, place_id, route_id")
+        .in("route_id", routeIds)
+    : { data: [] as any[] };
   const starRows = (itemsRes.data ?? []) as any[];
   const colIds = Array.from(new Set(starRows.map((r) => r.collection_id)));
   const { data: itemRows } = colIds.length
@@ -42,12 +54,20 @@ export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]
         .in("collection_id", colIds)
     : { data: [] as any[] };
   const norm = (v: string | null | undefined) => String(v ?? "").trim().toLowerCase();
+  const pinByKey = new Map<string, any>();
+  for (const pn of (pinRows ?? []) as any[]) {
+    const key = `${pn.route_id}|${norm(pn.place_name)}`;
+    if (!pinByKey.has(key)) pinByKey.set(key, pn);
+  }
+  const starredPins = pinStarRows
+    .map((r) => { const pn = pinByKey.get(`${r.route_id}|${norm(r.place_name)}`); return pn ? { ...pn, routes: r.routes } : null; })
+    .filter(Boolean) as any[];
   const itemByKey = new Map<string, any>();
   for (const it of (itemRows ?? []) as any[]) itemByKey.set(`${it.collection_id}|${norm(it.place_name)}`, it);
   const starredItems = starRows
     .map((r) => { const it = itemByKey.get(`${r.collection_id}|${norm(r.place_name)}`); return it ? { ...it, discovery_collections: r.discovery_collections } : null; })
     .filter(Boolean) as any[];
-  const trips: StarredPlace[] = ((pinsRes.data ?? []) as any[]).map((p) => ({
+  const trips: StarredPlace[] = starredPins.map((p) => ({
     id: `pin:${p.id}`, place_name: p.place_name ?? "", category: p.category ?? null,
     photo: p.image_url || firstOf(p.images) || firstOf(p.user_photo_urls) || p.photo_url || null,
     // Piny trzymaja w place_id identyfikator Google (nie UUID naszej bazy) - patrz SavePlaceSheet.

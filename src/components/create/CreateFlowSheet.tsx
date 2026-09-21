@@ -127,7 +127,13 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   const close = () => onClose();
   const toggleSel = (id: string) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const togglePerson = (p: PersonLite) => setTripPeople((prev) => prev.some((x) => x.id === p.id) ? prev.filter((x) => x.id !== p.id) : [...prev, p]);
+  // Limit 10 wspoltworcow planu (decyzja Nat 2026-09-21) - toast z `placeLimits` zamiast
+  // cichego braku reakcji; kolekcje (`toggleListPerson`) limitu nie maja.
+  const togglePerson = (p: PersonLite) => {
+    const has = tripPeople.some((x) => x.id === p.id);
+    if (!has && !checkPlaceLimit("trip_members", tripPeople.length, 1)) return;
+    setTripPeople((prev) => (has ? prev.filter((x) => x.id !== p.id) : [...prev, p]));
+  };
   const tripPeopleIds = new Set(tripPeople.map((p) => p.id));
   const listPeopleIds = new Set(listPeople.map((p) => p.id));
   const toggleListPerson = (person: PersonLite) =>
@@ -283,7 +289,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       // Wyjazd zostaje utworzony tak czy siak - komunikat dotyczy wylacznie zaproszen.
       try {
         const res = await inviteUsersToRoute({ id, city: null, title, group_session_id: null }, tripPeople.map((p) => p.id), user.id);
-        if (!res.ok) { console.warn("[CreateFlowSheet] invite failed:", res.error); toast.error(t("social:invite.failed")); }
+        if (!res.ok && res.error !== "member_limit") { console.warn("[CreateFlowSheet] invite failed:", res.error); toast.error(t("social:invite.failed")); }
       } catch (e: any) {
         console.warn("[CreateFlowSheet] invite threw:", e?.message ?? e);
         toast.error(t("social:invite.failed"));

@@ -240,11 +240,20 @@
     "day_n": "Dzień {{n}}",
     "more_in_app_one": "Jeszcze {{count}} miejsce zobaczysz w aplikacji",
     "more_in_app_few": "Jeszcze {{count}} miejsca zobaczysz w aplikacji",
-    "more_in_app_many": "Jeszcze {{count}} miejsc zobaczysz w aplikacji"
+    "more_in_app_many": "Jeszcze {{count}} miejsc zobaczysz w aplikacji",
+    "link_copied": "Skopiowano link",
+    "image_preparing": "Przygotowuję obraz…",
+    "image_failed": "Nie udało się przygotować obrazu",
+    "image_downloaded": "Obraz pobrany",
+    "image_hint_instagram": "Wybierz Instagram w arkuszu udostępniania",
+    "image_hint_save": "Wybierz „Zapisz obraz”, żeby zachować go w Zdjęciach"
   },
   "target": {
     "more_apps": "Więcej aplikacji",
-    "messages": "Wiadomości"
+    "messages": "Wiadomości",
+    "copy_link": "Skopiuj link",
+    "save_png": "Pobierz PNG",
+    "save_jpg": "Pobierz JPG"
   },
   "card": {
     "trip_label": "PLAN",

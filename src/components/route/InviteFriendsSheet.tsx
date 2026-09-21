@@ -14,6 +14,7 @@ import { inviteUsersToRoute, type InviteRoute } from "@/lib/groupInvite";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { cn } from "@/lib/utils";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
+import { checkPlaceLimit } from "@/lib/placeLimits";
 
 interface Profile { id: string; username: string | null; first_name: string | null; avatar_url: string | null; }
 
@@ -97,8 +98,11 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
 
   // Userzy JUZ w wyjezdzie (host + czlonkowie) - oznaczeni "Dodano", nie da sie ich wybrac (bez dublowania).
   const existing = useMemo(() => new Set(existingMemberIds), [existingMemberIds]);
+  // Limit 10 wspoltworcow (decyzja Nat 2026-09-21): zaznaczanie zatrzymuje sie na wolnych
+  // miejscach - licza sie osoby juz w planie (takze niepotwierdzone) plus zaznaczone.
   const toggle = (p: Profile) => {
     if (existing.has(p.id)) return;
+    if (!selected[p.id] && !checkPlaceLimit("trip_members", existing.size + Object.keys(selected).length, 1)) return;
     setSelected((prev) => {
       const n = { ...prev };
       if (n[p.id]) delete n[p.id]; else n[p.id] = p;
@@ -126,7 +130,8 @@ export default function InviteFriendsSheet({ open, onOpenChange, route, onInvite
     const timer = setTimeout(async () => {
       if (cancelled) return;
       const res = await inviteUsersToRoute(route, ids, user.id);
-      if (!res.ok) { toast.error(t("invite.failed")); return; }
+      // `member_limit` ma juz wlasny toast z liczba wolnych miejsc (placeLimits).
+      if (!res.ok) { if (res.error !== "member_limit") toast.error(t("invite.failed")); return; }
       onInvited?.(res.sessionId, people.map((p) => ({ id: p.id, avatar_url: p.avatar_url })));
       // Zaproszenia poszly - odpowiedzi znajomych przyjda pushem, jesli user pozwoli.
       askPermissionSoon("push", "invite_sent", 600);

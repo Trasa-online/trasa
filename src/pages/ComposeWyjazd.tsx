@@ -600,7 +600,7 @@ export default function ComposeWyjazd() {
         if (res.ok && res.sessionId) setGroupSessionId(res.sessionId);
         // ⚠️ Porazka wracala tu jako `{ ok: false }` i nie byla nigdzie pokazywana - user nie
         // mial skad wiedziec, ze zaproszenia nie poszly (patrz `CreateFlowSheet`).
-        if (!res.ok) { console.warn("[ComposeWyjazd] invite failed:", res.error); toast.error(t("social:invite.failed")); }
+        if (!res.ok && res.error !== "member_limit") { console.warn("[ComposeWyjazd] invite failed:", res.error); toast.error(t("social:invite.failed")); }
       } catch (e: any) {
         console.warn("[ComposeWyjazd] invite threw:", e?.message ?? e);
         toast.error(t("social:invite.failed"));

@@ -8,10 +8,13 @@ import { toast } from "sonner";
 export const MAX_TRIP_PLACES = 100;
 /** Tylko kolekcje kuratorskie (`visited`). Prywatna „Ogolne" (wishlista) limitu nie ma. */
 export const MAX_COLLECTION_PLACES = 30;
+/** Wspoltworcy PLANU poza wlascicielem (decyzja Nat 2026-09-21). Baza: trigger
+ *  `trg_group_session_member_limit` (migracja `20260921b`), blad `member_limit`. */
+export const MAX_TRIP_MEMBERS = 10;
 
-export type PlaceLimitKind = "trip_places" | "collection_places";
+export type PlaceLimitKind = "trip_places" | "collection_places" | "trip_members";
 
-const MAX: Record<PlaceLimitKind, number> = { trip_places: MAX_TRIP_PLACES, collection_places: MAX_COLLECTION_PLACES };
+const MAX: Record<PlaceLimitKind, number> = { trip_places: MAX_TRIP_PLACES, collection_places: MAX_COLLECTION_PLACES, trip_members: MAX_TRIP_MEMBERS };
 
 export function placeLimitToast(kind: PlaceLimitKind, current: number) {
   toast.error(i18n.t(`common:limits.${kind}`, { max: MAX[kind], left: Math.max(0, MAX[kind] - current) }));
@@ -27,6 +30,7 @@ export function checkPlaceLimit(kind: PlaceLimitKind, current: number, adding: n
 /** Blad z bazy (trigger) - `hint` niesie rodzaj limitu. */
 export function isPlaceLimitError(e: unknown): PlaceLimitKind | null {
   const msg = String((e as any)?.message ?? e ?? "");
+  if (msg.includes("member_limit")) return "trip_members";
   if (!msg.includes("place_limit")) return null;
   const hint = String((e as any)?.hint ?? "");
   return hint === "collection_places" ? "collection_places" : "trip_places";

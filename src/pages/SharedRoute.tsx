@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { checkPlaceLimit } from "@/lib/placeLimits";
 import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { isPortraitCover } from "@/lib/coverFormat";
@@ -26,6 +26,8 @@ import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useScreenshot } from "@/hooks/useScreenshot";
 import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
+import { fetchTripStars, tripStarsKey, setTripStar, tripStarKey } from "@/lib/tripStars";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
@@ -397,19 +399,39 @@ export default function SharedRoute() {
   const share = useShare();
   const unsave = useUnsavePlace();
   // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
-  // Gwiazdka przy miejscu (2026-09-08): autor wyroznia miejsca warte polecenia. BEZ LIMITU
-  // (decyzja Nat 2026-09-14; wczesniej jedna na wyjazd i gwiazdka sie przenosila) - tak samo,
-  // jak w kolekcjach. Zwykly toggle na pinie.
-  const toggleTopPin = async (pin: any) => {
-    const next = !pin.is_top;
-    haptics.light();
-    queryClient.setQueryData(["shared-route-pins", id], (old: any[] | undefined) =>
-      (old ?? []).map((p) => (p.id === pin.id ? { ...p, is_top: next } : p)));
-    const { error } = await (supabase as any).from("pins").update({ is_top: next }).eq("id", pin.id);
-    if (error) {
-      console.error("[SharedRoute] top toggle:", error.message);
-      queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+  // Gwiazdka przy miejscu - BEZ LIMITU (decyzja Nat 2026-09-14) i PER UCZESTNIK (2026-09-21,
+  // tabela `pin_stars`): kazdy z planu wyroznia sam, a `pins.is_top` (= gwiazdka wlasciciela)
+  // trzyma trigger w bazie. Do 21.09 uczestnik przelaczal `pins.is_top` wprost, wiec jego
+  // gwiazdka wpadala do licznika „Wyroznione" na profilu AUTORA planu (zgloszenie Nat).
+  // Optymistycznie w cache gwiazdek; is_top w cache pinow NIE ruszamy - liczymy z gwiazdek.
+  const { data: tripStars = EMPTY_ARRAY as any[] } = useQuery({
+    queryKey: tripStarsKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchTripStars(id!),
+  });
+  const starsByPlace = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const st of tripStars as { user_id: string; place_name: string }[]) {
+      const k = tripStarKey(st.place_name);
+      const arr = m.get(k);
+      if (arr) { if (!arr.includes(st.user_id)) arr.push(st.user_id); } else m.set(k, [st.user_id]);
     }
+    return m;
+  }, [tripStars]);
+  const starsOf = (pin: any) => starsByPlace.get(tripStarKey(pin.place_name)) ?? EMPTY_ARRAY;
+  const toggleTopPin = async (pin: any) => {
+    if (!user || !id) return;
+    const k = tripStarKey(pin.place_name);
+    const next = !(starsByPlace.get(k) ?? []).includes(user.id);
+    haptics.light();
+    queryClient.setQueryData(tripStarsKey(id), (old: any[] | undefined) => next
+      ? [...(old ?? []), { user_id: user.id, place_name: pin.place_name }]
+      : (old ?? []).filter((st) => !(st.user_id === user.id && tripStarKey(st.place_name) === k)));
+    const ok = await setTripStar(id, user.id, pin.place_name, next);
+    if (!ok) toast.error(t("common:errors.generic"));
+    queryClient.invalidateQueries({ queryKey: tripStarsKey(id) });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
     // Licznik wyroznionych miejsc na profilu (StarredPlacesSheet).
     queryClient.invalidateQueries({ queryKey: ["starred-places"] });
   };
@@ -474,6 +496,9 @@ export default function SharedRoute() {
         .map((p: any) => ({ id: p.id, username: p.username ?? null, avatar_url: p.avatar_url ?? null, avatar_frame: p.avatar_frame ?? null, avatar_frame_color: p.avatar_frame_color ?? null }));
     },
   });
+
+  // Wlasciciel + potwierdzeni uczestnicy: gdy wyroznili WSZYSCY, przy gwiazdce nie stoi liczba.
+  const participantsCount = 1 + (groupParticipants as any[]).length;
 
   // Czy zalogowany user jest UCZESTNIKIEM wspolnego wyjazdu (czlonek sesji, nie host).
   // Uczestnik moze dodawac zdjecia do galerii i NIE widzi CTA "Zapisz/Zaplanuj" (trasa juz jego).
@@ -2163,7 +2188,8 @@ export default function SharedRoute() {
                 onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
                 onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top}
+                isTop={starsOf(pin).length > 0} topByMe={!!user && starsOf(pin).includes(user.id)}
+                topCount={starsOf(pin).length} topAll={starsOf(pin).length >= participantsCount && participantsCount > 1}
                 /* Gwiazdka ("topka") dla KAZDEGO uczestnika, na kazdym etapie (Nat 2026-09-20:
                    "jako uczestnik nie moge dodawac gwiazdek"). Do tego dnia stala za `isPublished`
                    (10.09: "wyroznienie dla czytajacych"), ale odkad wyjazd jest PLANEM, gwiazdka
@@ -2192,7 +2218,7 @@ export default function SharedRoute() {
           ? [...list]
               .map((pin: any, i: number) => ({ pin, i }))
               .sort((a, b) =>
-                (b.pin.is_top ? 1 : 0) - (a.pin.is_top ? 1 : 0)
+                (starsOf(b.pin).length > 0 ? 1 : 0) - (starsOf(a.pin).length > 0 ? 1 : 0)
                 || a.i - b.i)
               .map((e) => e.pin)
           // Wyjazd JEDNODNIOWY: "Wszystkie" to jedyny widok i zarazem uklad tego dnia, ktory
@@ -2206,7 +2232,9 @@ export default function SharedRoute() {
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
             onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
+            isTop={starsOf(pin).length > 0} topByMe={!!user && starsOf(pin).includes(user.id)}
+            topCount={starsOf(pin).length} topAll={starsOf(pin).length >= participantsCount && participantsCount > 1}
+            onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
             selection={selectionFor(pin)}
             menuExtras={placeMenuExtras(pin)}
@@ -2605,7 +2633,7 @@ export default function SharedRoute() {
           {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
               TripHeaderChips) - wczesniej szara linia z ikonami. */}
           {/* Chip miejsca = MIASTO (jak w makiecie: "Łódź"), kraje tylko gdy wyjazd miasta nie ma. */}
-          <HighlightChips className="mt-3" city={route.city || scopeLabel(route) || null} placesCount={pins.length} starredCount={(pins as any[]).filter((p) => p.is_top).length} />
+          <HighlightChips className="mt-3" city={route.city || scopeLabel(route) || null} placesCount={pins.length} starredCount={(pins as any[]).filter((p) => starsOf(p).length > 0).length} />
           {/* Daty wyjazdu = sama informacja. Ustawianie/zmiana zakresu (wlacza podzial na dni)
               zyje w menu "..." w belce (prosba Nat 2026-09-13; wczesniej olowek przy dacie
               i osobny wiersz "Dodaj daty" pod tytulem). */}

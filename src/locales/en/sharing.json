@@ -229,11 +229,20 @@
     "link_heading_place": "Share a link to this place",
     "day_n": "Day {{n}}",
     "more_in_app_one": "{{count}} more place in the app",
-    "more_in_app_other": "{{count}} more places in the app"
+    "more_in_app_other": "{{count}} more places in the app",
+    "link_copied": "Link copied",
+    "image_preparing": "Preparing image…",
+    "image_failed": "Could not prepare the image",
+    "image_downloaded": "Image downloaded",
+    "image_hint_instagram": "Pick Instagram in the share sheet",
+    "image_hint_save": "Pick “Save Image” to keep it in Photos"
   },
   "target": {
     "more_apps": "More apps",
-    "messages": "Messages"
+    "messages": "Messages",
+    "copy_link": "Copy link",
+    "save_png": "Download PNG",
+    "save_jpg": "Download JPG"
   },
   "card": {
     "trip_label": "PLAN",
