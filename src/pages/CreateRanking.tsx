@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
-import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
+import { countriesInRegion, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSavedPlaces } from "@/lib/placeLists";
@@ -709,7 +709,7 @@ const CreateRanking = () => {
                     <option value="">{t("city.anywhere")}</option>
                     {TRIP_REGIONS.map((region) => (
                       <optgroup key={region} label={region}>
-                        {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                        {countriesInRegion(region).map((c) => (
                           <option key={c.name} value={c.name}>{countryLabel(c.name)}</option>
                         ))}
                       </optgroup>

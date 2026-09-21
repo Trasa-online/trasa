@@ -5,7 +5,7 @@ import { goBackOr } from "@/hooks/useGoBack";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CreateHeader from "@/components/create/CreateHeader";
-import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
+import { countriesInRegion, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
 
 // Wybor kraju + miasta - PIERWSZY krok tworzenia (po "+"). Kraj = SELEKTOR (dropdown),
 // miasto = DRUM-SCROLL. Zastapil selecty na formie. Po "Dalej" ląduje na formie (/wyjazd/nowy)
@@ -91,7 +91,7 @@ export default function CountryCityPicker() {
             className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
             {TRIP_REGIONS.map((region) => (
               <optgroup key={region} label={region}>
-                {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                {countriesInRegion(region).map((c) => (
                   <option key={c.name} value={c.name}>{countryLabel(c.name)}</option>
                 ))}
               </optgroup>

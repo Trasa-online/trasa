@@ -226,6 +226,22 @@ export function countryLabel(name: string): string {
 
 export const TRIP_REGIONS: TripCountry["region"][] = ["Polska", "Europa", "Azja", "Ameryka Północna", "Ameryka Południowa", "Afryka", "Oceania"];
 
+/** Porownanie po NAZWIE WYSWIETLANEJ (PL albo EN) z regulami jezyka: „Łotwa" po „Litwie",
+ *  nie na koncu; po angielsku „Czechia" i „Croatia" stoja obok siebie. */
+export function compareCountries(a: TripCountry | string, b: TripCountry | string): number {
+  const la = countryLabel(typeof a === "string" ? a : a.name);
+  const lb = countryLabel(typeof b === "string" ? b : b.name);
+  const lang = (i18n.language || "pl").toLowerCase().startsWith("en") ? "en" : "pl";
+  return la.localeCompare(lb, lang, { sensitivity: "base" });
+}
+
+/** Kraje regionu ALFABETYCZNIE (prosba Nat 2026-09-21 - w danych sa ulozone „od najczestszych",
+ *  co na liscie czytalo sie jak rozsypanka). Kolejnosc w `TRIP_COUNTRIES` zostaje bez znaczenia
+ *  dla ekranu; kazda lista krajow ma isc przez ten helper, nie przez `filter` po regionie. */
+export function countriesInRegion(region: TripCountry["region"]): TripCountry[] {
+  return TRIP_COUNTRIES.filter((c) => c.region === region).sort(compareCountries);
+}
+
 // Kraj zawierajacy dane miasto (do odtworzenia selektora kraju z zapisanego miasta).
 export function countryForCity(city: string | null | undefined): string {
   if (!city) return "Polska";
