@@ -105,7 +105,7 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
         </div>
 
         {/* Co pobrac: caly zestaw na relacje albo sama zolta naklejka z handle (bez gwiazdek). */}
-        <div className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-muted p-1">
+        <div className="mt-4 grid grid-cols-2 gap-1 rounded-3xl bg-muted p-1">
           {STICKER_VARIANTS.map((v) => (
             <button key={v} onClick={() => { haptics.selection(); setVariant(v); }}
               className={`h-10 rounded-full text-[13px] font-bold transition-colors ${variant === v ? "bg-spontaway-yellow text-spontaway-brown" : "text-muted-foreground"}`}>

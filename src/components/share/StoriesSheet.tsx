@@ -15,7 +15,7 @@ import { drawStoryPreview, ensureStickerFont, STICKER_VARIANTS, type StickerVari
 export const STORIES_HINT_DISMISSED = "spontaway_ig_stories_hint_dismissed_v1";
 export const storiesHintDismissed = () => { try { return localStorage.getItem(STORIES_HINT_DISMISSED) === "1"; } catch { return false; } };
 
-const THUMB_W = 96, THUMB_H = 171; // 9:16
+const THUMB_W = 72, THUMB_H = 128; // 9:16, cztery obok siebie na 393 px
 
 export default function StoriesSheet({ handle, photo, onGo, onSkip }: {
   /** Miejsce: handle na nakladce -> pokazujemy wybor zestawu. Plan / kolekcja: brak. */
@@ -68,13 +68,13 @@ export default function StoriesSheet({ handle, photo, onGo, onSkip }: {
         <p className="text-center font-brand text-[24px] leading-tight text-spontaway-orange">{t("share.stories_primer_title")}</p>
 
         {handle && (
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mt-4 grid grid-cols-4 gap-1.5">
             {STICKER_VARIANTS.map((v) => (
               <button key={v} onClick={() => { haptics.selection(); setVariant(v); }} className="flex flex-col items-center gap-1.5">
                 <span className={`overflow-hidden rounded-2xl ring-[3px] transition-all ${variant === v ? "ring-[#5B2C06]" : "ring-transparent"}`}>
                   <canvas ref={(el) => { canvases.current[v] = el; }} style={{ width: THUMB_W, height: THUMB_H }} className="block bg-[#FDF184]" />
                 </span>
-                <span className={`text-[12px] font-semibold leading-tight text-center ${variant === v ? "text-[#5B2C06]" : "text-muted-foreground"}`}>{t(`sticker.variant_${v}`)}</span>
+                <span className={`text-[11px] font-semibold leading-tight text-center ${variant === v ? "text-[#5B2C06]" : "text-muted-foreground"}`}>{t(`sticker.variant_${v}`)}</span>
               </button>
             ))}
           </div>

@@ -53,8 +53,10 @@ const FONT = `400 ${FONT_PX}px Sigmar, "Baloo 2", system-ui, sans-serif`;
 // "full" = gwiazdki + pigulka (uklad z referencji), "alt" = te same gwiazdki w INNYM ukladzie
 // (klaster u gory po lewej + jedna nad pigulka), "pill" = sama pigulka bez gwiazdek. Trzy zestawy
 // do przeklikania (prosba Nat 2026-09-21) - w Stories i w panelu pobierania.
-export type StickerVariant = "full" | "alt" | "pill";
-export const STICKER_VARIANTS: StickerVariant[] = ["full", "alt", "pill"];
+// "chalk" = SAM OBRYS gwiazdek, jak pisane kreda (miekki, ziarnisty bialy slad, bez wypelnienia;
+// prosba Nat 2026-09-21) - uklad jak "full", pigulka bez zmian.
+export type StickerVariant = "full" | "alt" | "chalk" | "pill";
+export const STICKER_VARIANTS: StickerVariant[] = ["full", "alt", "chalk", "pill"];
 const PILL_MARGIN = 40; // miejsce na obwodke i cien wokol samej pigulki
 
 function pillWidth(handle: string): number {
@@ -90,6 +92,58 @@ function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: n
   ctx.shadowColor = "transparent";
   ctx.fillStyle = STICKER_ORANGE;
   ctx.fill(p);
+  ctx.restore();
+}
+
+// Deterministyczny szum (ten sam „chwiej" kredy w podgladzie, PNG i kazdej klatce GIF-a -
+// losowanie przy kazdym rysowaniu migotaloby w animacji).
+function noise(seed: number): number {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * Gwiazdka „kreda": sam obrys, bez wypelnienia. Kilka nalozonych, lekko przesunietych
+ * i przerywanych pociagniec o niskim kryciu + miekka biala poswiata - razem daja ziarnisty,
+ * nierowny slad jak kreda na tablicy. Biel, bo lezy na zdjeciu i ma byc czytelna na kazdym tle.
+ */
+function drawStarChalk(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number, scale: number, seed: number) {
+  const k = size / STAR_VB.w;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(scale, scale);
+  ctx.translate(-STAR_VB.w * k / 2, -STAR_VB.h * k / 2);
+  ctx.scale(k, k);
+  const p = getStarPath();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  // Poswiata pod spodem - miekki „pyl" kredy (slaba: mocniejsza czytala sie jak neon).
+  ctx.save();
+  ctx.shadowColor = "rgba(255,255,255,0.45)";
+  ctx.shadowBlur = 18 / k;
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.lineWidth = 14 / k;
+  ctx.stroke(p);
+  ctx.restore();
+  // Kilka CIENKICH, chwiejnych pociagniec zamiast jednej grubej kreski: kazde lekko
+  // przesuniete, z innym rytmem przerw - nakladajac sie daja nierowna, przetarta krawedz.
+  const passes = 7;
+  for (let i = 0; i < passes; i++) {
+    const j = seed * 11 + i * 1.7;
+    const dx = (noise(j) - 0.5) * 12 / k;
+    const dy = (noise(j + 0.5) - 0.5) * 12 / k;
+    ctx.save();
+    ctx.translate(dx, dy);
+    ctx.rotate((noise(j + 0.7) - 0.5) * 0.03);
+    ctx.strokeStyle = `rgba(255,255,255,${0.22 + noise(j + 1) * 0.2})`;
+    ctx.lineWidth = (3 + noise(j + 2) * 4) / k;
+    const a = 18 + noise(j + 3) * 50, b = 4 + noise(j + 4) * 14, c = 8 + noise(j + 5) * 40, d = 2 + noise(j + 6) * 8;
+    ctx.setLineDash([a / k, b / k, c / k, d / k]);
+    ctx.lineDashOffset = (noise(j + 7) * 140) / k;
+    ctx.stroke(p);
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -162,6 +216,10 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, handle: string, ph: n
     drawStar(ctx, 790, 470, 300, -0.30 + Math.sin(ph) * 0.14, 1 + Math.sin(ph + 0.9) * 0.05, 30, STAR_PINK);
     drawStar(ctx, 890, 690, 130, 0.35 + Math.sin(ph + 2.0) * 0.20, 1 + Math.sin(ph + 2.8) * 0.09, 18, STICKER_YELLOW);
     drawStar(ctx, 225, 1600, 250, 0.18 + Math.sin(ph + 4.1) * 0.14, 1 + Math.sin(ph + 4.9) * 0.06, 26, STAR_GREEN);
+  } else if (variant === "chalk") {
+    drawStarChalk(ctx, 790, 470, 300, -0.30 + Math.sin(ph) * 0.14, 1 + Math.sin(ph + 0.9) * 0.05, 1);
+    drawStarChalk(ctx, 890, 690, 130, 0.35 + Math.sin(ph + 2.0) * 0.20, 1 + Math.sin(ph + 2.8) * 0.09, 2);
+    drawStarChalk(ctx, 225, 1600, 250, 0.18 + Math.sin(ph + 4.1) * 0.14, 1 + Math.sin(ph + 4.9) * 0.06, 3);
   } else if (variant === "alt") {
     // Inny uklad: klaster u gory po LEWEJ (zielona duza + zolta mala) i rozowa nad pigulka.
     drawStar(ctx, 250, 430, 290, 0.22 + Math.sin(ph + 1.3) * 0.14, 1 + Math.sin(ph + 0.4) * 0.05, 30, STAR_GREEN);

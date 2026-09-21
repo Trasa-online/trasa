@@ -390,6 +390,7 @@
     "preparing_frames": "Przygotowuję animację… {{done}} / {{total}}",
     "variant_full": "Gwiazdki + nazwa",
     "variant_pill": "Sama nazwa",
-    "variant_alt": "Inny układ"
+    "variant_alt": "Inny układ",
+    "variant_chalk": "Kredą"
   }
 }

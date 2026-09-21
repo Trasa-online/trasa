@@ -374,6 +374,7 @@
     "preparing_frames": "Preparing the animation… {{done}} / {{total}}",
     "variant_full": "Stars + handle",
     "variant_pill": "Handle only",
-    "variant_alt": "Other layout"
+    "variant_alt": "Other layout",
+    "variant_chalk": "Chalk"
   }
 }
