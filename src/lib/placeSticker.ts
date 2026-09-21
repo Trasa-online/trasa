@@ -50,7 +50,11 @@ export async function ensureStickerFont(): Promise<void> {
 
 const FONT = `400 ${FONT_PX}px Sigmar, "Baloo 2", system-ui, sans-serif`;
 
-export type StickerVariant = "full" | "pill";
+// "full" = gwiazdki + pigulka (uklad z referencji), "alt" = te same gwiazdki w INNYM ukladzie
+// (klaster u gory po lewej + jedna nad pigulka), "pill" = sama pigulka bez gwiazdek. Trzy zestawy
+// do przeklikania (prosba Nat 2026-09-21) - w Stories i w panelu pobierania.
+export type StickerVariant = "full" | "alt" | "pill";
+export const STICKER_VARIANTS: StickerVariant[] = ["full", "alt", "pill"];
 const PILL_MARGIN = 40; // miejsce na obwodke i cien wokol samej pigulki
 
 function pillWidth(handle: string): number {
@@ -141,13 +145,63 @@ export function drawSticker(ctx: CanvasRenderingContext2D, handle: string, t: nu
     return;
   }
   ctx.clearRect(0, 0, OVERLAY_W, OVERLAY_H);
-  // Uklad z referencji: duza rozowa u gory po prawej, mala zolta pod nia, zielona po lewej
-  // u dolu, pigulka w prawym dolnym rogu. Kazda gwiazdka ma inna faze - inaczej wszystkie
-  // pulsowalyby naraz i kadr „mrugalby" jak jeden element (ta sama lekcja co przy hero landingu).
-  drawStar(ctx, 790, 470, 300, -0.30 + Math.sin(ph) * 0.14, 1 + Math.sin(ph + 0.9) * 0.05, 30, STAR_PINK);
-  drawStar(ctx, 890, 690, 130, 0.35 + Math.sin(ph + 2.0) * 0.20, 1 + Math.sin(ph + 2.8) * 0.09, 18, STICKER_YELLOW);
-  drawStar(ctx, 225, 1600, 250, 0.18 + Math.sin(ph + 4.1) * 0.14, 1 + Math.sin(ph + 4.9) * 0.06, 26, STAR_GREEN);
+  drawOverlay(ctx, handle, ph, opts?.variant ?? "full");
+}
+
+/**
+ * Nakladka na CALA relacje 9:16 dla kazdego zestawu - takze „sama nazwa" (pigulka w prawym
+ * dolnym rogu, bez gwiazdek). Tego uzywa Stories na wprost i podglad wyboru zestawu: naklejka
+ * laduje w edytorze Instagrama DOKLADNIE tam, gdzie w podgladzie. Wariant `pill` z `drawSticker`
+ * (plotno przyciete do pigulki) zostaje dla pobierania pliku.
+ */
+export function drawOverlay(ctx: CanvasRenderingContext2D, handle: string, ph: number, variant: StickerVariant) {
+  if (variant === "full") {
+    // Uklad z referencji: duza rozowa u gory po prawej, mala zolta pod nia, zielona po lewej
+    // u dolu, pigulka w prawym dolnym rogu. Kazda gwiazdka ma inna faze - inaczej wszystkie
+    // pulsowalyby naraz i kadr „mrugalby" jak jeden element (ta sama lekcja co przy hero landingu).
+    drawStar(ctx, 790, 470, 300, -0.30 + Math.sin(ph) * 0.14, 1 + Math.sin(ph + 0.9) * 0.05, 30, STAR_PINK);
+    drawStar(ctx, 890, 690, 130, 0.35 + Math.sin(ph + 2.0) * 0.20, 1 + Math.sin(ph + 2.8) * 0.09, 18, STICKER_YELLOW);
+    drawStar(ctx, 225, 1600, 250, 0.18 + Math.sin(ph + 4.1) * 0.14, 1 + Math.sin(ph + 4.9) * 0.06, 26, STAR_GREEN);
+  } else if (variant === "alt") {
+    // Inny uklad: klaster u gory po LEWEJ (zielona duza + zolta mala) i rozowa nad pigulka.
+    drawStar(ctx, 250, 430, 290, 0.22 + Math.sin(ph + 1.3) * 0.14, 1 + Math.sin(ph + 0.4) * 0.05, 30, STAR_GREEN);
+    drawStar(ctx, 470, 620, 140, -0.40 + Math.sin(ph + 3.1) * 0.20, 1 + Math.sin(ph + 2.2) * 0.09, 18, STICKER_YELLOW);
+    drawStar(ctx, 860, 1420, 240, -0.20 + Math.sin(ph + 5.0) * 0.14, 1 + Math.sin(ph + 4.0) * 0.06, 26, STAR_PINK);
+  }
   drawPill(ctx, handle, OVERLAY_W - 60, 1690);
+}
+
+/** PNG calej relacji (1080 x 1920, przezroczyste tlo) dla Stories - dowolny zestaw, bez animacji. */
+export async function overlayPng(handle: string, variant: StickerVariant): Promise<Blob> {
+  await ensureStickerFont();
+  const canvas = document.createElement("canvas");
+  canvas.width = OVERLAY_W; canvas.height = OVERLAY_H;
+  const ctx = canvas.getContext("2d")!;
+  drawOverlay(ctx, handle, 0, variant);
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
+  if (!blob) throw new Error("toBlob returned null");
+  return blob;
+}
+
+/**
+ * Podglad relacji do wyboru zestawu: zdjecie (kadr cover) albo gradient marki + nakladka,
+ * w rozmiarze miniatury. `photo` = juz zaladowany obraz (CORS z naszego Storage) albo null.
+ */
+export function drawStoryPreview(ctx: CanvasRenderingContext2D, handle: string, variant: StickerVariant, photo: HTMLImageElement | null, w: number, h: number) {
+  ctx.save();
+  ctx.clearRect(0, 0, w, h);
+  if (photo && photo.naturalWidth > 0) {
+    const k = Math.max(w / photo.naturalWidth, h / photo.naturalHeight);
+    const dw = photo.naturalWidth * k, dh = photo.naturalHeight * k;
+    ctx.drawImage(photo, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, STICKER_YELLOW); g.addColorStop(1, "#FDCD84");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  }
+  ctx.scale(w / OVERLAY_W, h / OVERLAY_H);
+  drawOverlay(ctx, handle, 0, variant);
+  ctx.restore();
 }
 
 function makeCanvas(handle: string, scale: number, variant: StickerVariant = "full"): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
@@ -176,7 +230,7 @@ export async function stickerPng(handle: string, variant: StickerVariant = "full
  * z klatki srodkowej (kolory sa stale), kazda klatka `dispose: 2` (czysci tlo), inaczej
  * poprzednie pozycje gwiazdek zostawalyby pod spodem.
  */
-export async function stickerGif(handle: string, opts?: { frames?: number; delayMs?: number; onProgress?: (done: number, total: number) => void }): Promise<Blob> {
+export async function stickerGif(handle: string, opts?: { frames?: number; delayMs?: number; variant?: StickerVariant; onProgress?: (done: number, total: number) => void }): Promise<Blob> {
   await ensureStickerFont();
   const frames = opts?.frames ?? 30;
   const delay = opts?.delayMs ?? 60;
@@ -188,7 +242,7 @@ export async function stickerGif(handle: string, opts?: { frames?: number; delay
   let palette: number[][] | null = null;
   let transparentIndex = 0;
   for (let i = 0; i < frames; i++) {
-    drawSticker(ctx, handle, i / frames, { animated: true });
+    drawSticker(ctx, handle, i / frames, { animated: true, variant: opts?.variant ?? "full" });
     const data = ctx.getImageData(0, 0, W, H).data;
     if (!palette) {
       palette = quantize(data, 255, { format: "rgba4444", oneBitAlpha: true });

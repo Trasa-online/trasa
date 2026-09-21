@@ -247,13 +247,14 @@
     "image_downloaded": "Obraz pobrany",
     "image_hint_instagram": "Wybierz Instagram w arkuszu. Link jest w schowku - w Stories dodaj naklejkę „Link” i wklej.",
     "image_hint_save": "Wybierz „Zapisz obraz”, żeby zachować go w Zdjęciach",
-    "stories_primer_title": "Otwieramy Instagram",
+    "stories_primer_title": "Relacja na Instagramie",
     "stories_primer_step1": "Naklejka jest już na relacji - możesz ją przesunąć i powiększyć.",
-    "stories_primer_step2": "Link do miejsca jest w schowku: dodaj naklejkę „Link” i wklej.",
+    "stories_primer_step2": "Link jest w schowku: dodaj naklejkę „Link” i wklej.",
     "stories_primer_step3": "Zmień tekst naklejki na „spontaway” i postaw ją pod nazwą.",
     "stories_primer_go": "Otwórz Instagram",
     "stories_primer_skip": "Nie teraz",
-    "stories_link_hint": "Link skopiowany. W Stories dodaj naklejkę „Link” i wklej."
+    "stories_link_hint": "Link skopiowany. W Stories dodaj naklejkę „Link” i wklej.",
+    "stories_primer_dismiss": "Nie pokazuj więcej"
   },
   "target": {
     "more_apps": "Więcej aplikacji",
@@ -388,6 +389,7 @@
     "preparing": "Przygotowuję nakładkę…",
     "preparing_frames": "Przygotowuję animację… {{done}} / {{total}}",
     "variant_full": "Gwiazdki + nazwa",
-    "variant_pill": "Sama nazwa"
+    "variant_pill": "Sama nazwa",
+    "variant_alt": "Inny układ"
   }
 }

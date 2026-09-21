@@ -4,7 +4,7 @@ import { X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { haptics } from "@/hooks/useHaptics";
-import { drawSticker, stickerSize, ensureStickerFont, stickerPng, stickerGif, type StickerVariant } from "@/lib/placeSticker";
+import { drawSticker, stickerSize, ensureStickerFont, stickerPng, stickerGif, STICKER_VARIANTS, type StickerVariant } from "@/lib/placeSticker";
 import { deliverShareImage } from "@/lib/shareImage";
 import { isNative } from "@/lib/platform";
 
@@ -26,7 +26,7 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
   // "full" = gwiazdki + pigulka na cala relacje; "pill" = sama zolta naklejka z handle (bez
   // gwiazdek, wiec tylko PNG - nie ma czego animowac).
   const [variant, setVariant] = useState<StickerVariant>("full");
-  const animated = variant === "full" && mode === "animated";
+  const animated = variant !== "pill" && mode === "animated";
   const [busy, setBusy] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { dragProps } = useDragToDismiss({ onDismiss: onClose, enabled: open && !busy });
@@ -70,7 +70,7 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
       const slug = handle.replace(/[^a-z0-9]/gi, "").toLowerCase() || "miejsce";
       const blob = !animated
         ? await stickerPng(handle, variant)
-        : await stickerGif(handle, { onProgress: (d, n) => { if (d % 6 === 0) toast.loading(t("sticker.preparing_frames", { done: d, total: n }), { id }); } });
+        : await stickerGif(handle, { variant, onProgress: (d, n) => { if (d % 6 === 0) toast.loading(t("sticker.preparing_frames", { done: d, total: n }), { id }); } });
       toast.dismiss(id);
       if (isNative) toast(t("share.image_hint_save"));
       const suffix = variant === "pill" ? "naklejka" : "nakladka";
@@ -105,15 +105,15 @@ export default function PlaceStickerSheet({ open, handle, placeName, onClose }: 
         </div>
 
         {/* Co pobrac: caly zestaw na relacje albo sama zolta naklejka z handle (bez gwiazdek). */}
-        <div className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
-          {(["full", "pill"] as const).map((v) => (
+        <div className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-muted p-1">
+          {STICKER_VARIANTS.map((v) => (
             <button key={v} onClick={() => { haptics.selection(); setVariant(v); }}
-              className={`h-10 rounded-full text-sm font-bold transition-colors ${variant === v ? "bg-spontaway-yellow text-spontaway-brown" : "text-muted-foreground"}`}>
-              {t(v === "full" ? "sticker.variant_full" : "sticker.variant_pill")}
+              className={`h-10 rounded-full text-[13px] font-bold transition-colors ${variant === v ? "bg-spontaway-yellow text-spontaway-brown" : "text-muted-foreground"}`}>
+              {t(`sticker.variant_${v}`)}
             </button>
           ))}
         </div>
-        {variant === "full" && (
+        {variant !== "pill" && (
           <div className="mt-2 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
             {(["static", "animated"] as const).map((m) => (
               <button key={m} onClick={() => { haptics.selection(); setMode(m); }}

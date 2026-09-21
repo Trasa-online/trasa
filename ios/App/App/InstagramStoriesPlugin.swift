@@ -21,7 +21,18 @@ public class InstagramStoriesPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "canShare", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "share", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "copy", returnType: CAPPluginReturnPromise),
     ]
+
+    /// Link do schowka - z natywki, bo `navigator.clipboard.writeText` w WKWebView dziala
+    /// tylko w gescie usera, a arkusz kopiuje po renderze obrazu (kilkaset ms pozniej).
+    @objc func copy(_ call: CAPPluginCall) {
+        guard let text = call.getString("text"), !text.isEmpty else { call.reject("missing_text"); return }
+        DispatchQueue.main.async {
+            UIPasteboard.general.string = text
+            call.resolve()
+        }
+    }
 
     private static let storiesURL = URL(string: "instagram-stories://share")!
 

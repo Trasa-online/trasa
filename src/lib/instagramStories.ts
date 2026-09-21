@@ -19,6 +19,7 @@ export const FACEBOOK_APP_ID = String(import.meta.env.VITE_FACEBOOK_APP_ID ?? ""
 
 type StoriesPlugin = {
   canShare(): Promise<{ available: boolean }>;
+  copy(o: { text: string }): Promise<void>;
   share(o: { appId: string; stickerImage?: string; backgroundImage?: string; backgroundTopColor?: string; backgroundBottomColor?: string; link?: string }): Promise<{ opened: boolean; reason?: string }>;
 };
 
@@ -31,6 +32,17 @@ function getPlugin(): StoriesPlugin {
 export async function canShareToStories(): Promise<boolean> {
   if (!isNative || !FACEBOOK_APP_ID) return false;
   try { return (await getPlugin().canShare()).available; } catch { return false; }
+}
+
+/**
+ * Link do schowka. Natywka: przez plugin (`UIPasteboard`, dziala takze po `await`); web:
+ * `navigator.clipboard` - WYLACZNIE w gescie usera, wiec wolaj to PRZED pierwszym `await`.
+ */
+export async function copyLinkToClipboard(text: string): Promise<boolean> {
+  if (isNative) {
+    try { await getPlugin().copy({ text }); return true; } catch { /* stary build bez pluginu */ }
+  }
+  try { await navigator.clipboard?.writeText(text); return true; } catch { return false; }
 }
 
 function blobToBase64(blob: Blob): Promise<string> {

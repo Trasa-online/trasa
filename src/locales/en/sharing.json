@@ -236,13 +236,14 @@
     "image_downloaded": "Image downloaded",
     "image_hint_instagram": "Pick Instagram in the share sheet. The link is in your clipboard - in Stories add a “Link” sticker and paste.",
     "image_hint_save": "Pick “Save Image” to keep it in Photos",
-    "stories_primer_title": "Opening Instagram",
+    "stories_primer_title": "Instagram story",
     "stories_primer_step1": "The sticker is already on your story - move and resize it as you like.",
     "stories_primer_step2": "The link is in your clipboard: add a “Link” sticker and paste.",
     "stories_primer_step3": "Change the sticker text to “spontaway” and place it under the name.",
     "stories_primer_go": "Open Instagram",
     "stories_primer_skip": "Not now",
-    "stories_link_hint": "Link copied. In Stories add a “Link” sticker and paste."
+    "stories_link_hint": "Link copied. In Stories add a “Link” sticker and paste.",
+    "stories_primer_dismiss": "Don't show again"
   },
   "target": {
     "more_apps": "More apps",
@@ -372,6 +373,7 @@
     "preparing": "Preparing the sticker…",
     "preparing_frames": "Preparing the animation… {{done}} / {{total}}",
     "variant_full": "Stars + handle",
-    "variant_pill": "Handle only"
+    "variant_pill": "Handle only",
+    "variant_alt": "Other layout"
   }
 }
