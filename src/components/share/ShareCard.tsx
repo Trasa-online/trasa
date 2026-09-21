@@ -14,7 +14,6 @@ import { listTheme } from "@/lib/listThemes";
 import { buildShareTargets, ShareTargetButton, type ImageChannel } from "@/components/share/shareTargets";
 import { renderShareImage, deliverShareImage, shareImageFilename } from "@/lib/shareImage";
 import { isNative } from "@/lib/platform";
-import PlaceStickerSheet from "@/components/share/PlaceStickerSheet";
 import { stickerHandle, overlayPng, type StickerVariant } from "@/lib/placeSticker";
 import StoriesSheet, { storiesHintDismissed } from "@/components/share/StoriesSheet";
 import { canShareToStories, shareToInstagramStories, storyBackgroundFromPhoto, copyLinkToClipboard } from "@/lib/instagramStories";
@@ -80,12 +79,10 @@ type StripItem = { name: string; photo?: string | null; icon: string; category?:
 /** Autor udostepnianej tresci - awatar z ramka w belce arkusza, po prawej od "udostępnij". */
 type SheetAuthor = { userId?: string | null; avatar?: string | null; frame?: string | null; color?: string | null };
 
-function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, stripDays, stripMore, plainPreview, linkHeading, author, onSticker, storyPhoto, storySticker }: {
+function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, stripDays, stripMore, plainPreview, linkHeading, author, storyPhoto, storySticker }: {
   children: React.ReactNode;
   /** Co udostepniamy - do analityki i nazwy pliku obrazu. */
   kind: "route" | "list" | "place";
-  /** Miejsce: otwiera panel nakladki na Stories (kafelek „Nakladka" w rzedzie kanalow). */
-  onSticker?: () => void;
   /** Instagram Stories na wprost (2026-09-21): zdjecie na TLO relacji (miejsce = jego okladka)... */
   storyPhoto?: string | null;
   /** ...i NAKLADKA na wierzch (miejsce = gwiazdki + pigulka z handle, zestaw wybrany w panelu).
@@ -228,7 +225,6 @@ function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, st
         onSystemShare: () => onShare?.(),
         onCopied: () => toast.success(t("share.link_copied")),
         onImage: plainPreview ? shareAsImage : undefined,
-        onSticker,
       })
     : [];
 
@@ -373,14 +369,12 @@ export function ShareCardPlace({ place, city, photos = [], onNextPhoto, onClose,
   const { t } = useTranslation("sharing");
   const noop = () => {};
   const canPick = !!onNextPhoto && photos.length > 1;
-  // Nakladka „★ @handle" na Stories (2026-09-21): handle = instagram lokalu albo nazwa bez spacji.
-  const [stickerOpen, setStickerOpen] = useState(false);
+  // Nakladka „★ @handle" na Stories (2026-09-21): handle = instagram lokalu albo nazwa „po instagramowemu".
   const handle = stickerHandle({ place_name: place.place_name, businessInstagram: (place as any).businessInstagram ?? null, city: place.city || city || null });
   return (
     <>
-    <PlaceStickerSheet open={stickerOpen} handle={handle} placeName={place.place_name} onClose={() => setStickerOpen(false)} />
     <ShareSheet kind="place" onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={place.place_name}
-      plainPreview linkHeading={t("share.link_heading_place")} onSticker={() => setStickerOpen(true)}
+      plainPreview linkHeading={t("share.link_heading_place")}
       storyPhoto={place.photo_url || null} storySticker={{ handle, render: (v) => overlayPng(handle, v) }}>
       <div className="flex h-full w-full items-center justify-center">
         {/* SwipeCard jest `absolute inset-0` - potrzebuje pudelka 9:16 o znanej wysokosci.

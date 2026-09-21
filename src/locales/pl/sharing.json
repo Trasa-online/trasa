@@ -261,8 +261,7 @@
     "messages": "Wiadomości",
     "copy_link": "Skopiuj link",
     "save_png": "Pobierz PNG",
-    "save_jpg": "Pobierz JPG",
-    "sticker": "Nakładka"
+    "save_jpg": "Pobierz JPG"
   },
   "card": {
     "trip_label": "PLAN",
@@ -380,14 +379,6 @@
     "failed": "Nie udało się zapisać wyróżnienia"
   },
   "sticker": {
-    "title": "Nakładka na Stories",
-    "desc": "Gwiazdki i pigułka z nazwą miejsca na całą relację - do wklejenia na zdjęcie. Tło jest przezroczyste.",
-    "mode_static": "Statyczna",
-    "mode_animated": "Animowana",
-    "download_png": "Pobierz PNG",
-    "download_gif": "Pobierz GIF",
-    "preparing": "Przygotowuję nakładkę…",
-    "preparing_frames": "Przygotowuję animację… {{done}} / {{total}}",
     "variant_full": "Gwiazdki + nazwa",
     "variant_pill": "Sama nazwa",
     "variant_alt": "Inny układ",

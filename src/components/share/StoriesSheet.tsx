@@ -10,7 +10,7 @@ import { drawStoryPreview, ensureStickerFont, STICKER_VARIANTS, type StickerVari
 //  2. instruktaz „link jest w schowku - dodaj naklejke Link i wklej" z guzikiem „Nie pokazuj
 //     wiecej" (prosba Nat). Po schowaniu instruktazu panel dla planu / kolekcji nie pokazuje sie
 //     wcale (nie ma czego wybierac), a dla miejsca zostaje sam wybor zestawu.
-// Panel reczny z-[97] jak PlaceStickerSheet - `Sheet` z shadcn (z-50) schowalby sie pod arkuszem
+// Panel reczny z-[97] - `Sheet` z shadcn (z-50) schowalby sie pod arkuszem
 // udostepniania na z-[95].
 export const STORIES_HINT_DISMISSED = "spontaway_ig_stories_hint_dismissed_v1";
 export const storiesHintDismissed = () => { try { return localStorage.getItem(STORIES_HINT_DISMISSED) === "1"; } catch { return false; } };

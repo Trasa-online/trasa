@@ -1,17 +1,15 @@
-// NAKLADKA MIEJSCA NA STORIES (prosba Nat 2026-09-21): kompozycja wlepek na cala relacje 9:16 -
-// gwiazdki z kolorowymi obwodkami + zolta pigulka „@handle" - do pobrania z arkusza
-// udostepniania wizytowki jako:
-//  - PNG z przezroczystym tlem (statyczna),
-//  - GIF z przezroczystym tlem (gwiazdki delikatnie sie obracaja i pulsuja, handle stoi).
+// NAKLADKA MIEJSCA NA INSTAGRAM STORIES (prosba Nat 2026-09-21): kompozycja wlepek na cala
+// relacje 9:16 - gwiazdki z kolorowymi obwodkami (albo sam obrys „kreda") + zolta pigulka
+// „@handle". Trafia do edytora relacji jako naklejka przez natywny most (instagramStories.ts),
+// a `drawStoryPreview` rysuje tym samym kodem miniatury wyboru zestawu w StoriesSheet - wiec
+// to, co user widzi, jest co do piksela tym, co laduje na relacji.
 //
-// Rysujemy na CANVAS-ie, nie z DOM-u (jak `shareImage.ts`): klatki animacji musza powstawac
-// szybko (36 klatek GIF-a), a modern-screenshot renderuje jedna klatke w ~300 ms. Ten sam
-// `drawSticker(ctx, t)` maluje podglad na zywo w arkuszu (rAF), PNG (t = 0) i klatki GIF-a -
-// wiec to, co user widzi, jest co do piksela tym, co pobiera.
+// Panel „Nakladka" z pobieraniem PNG / GIF zostal ZDJETY 2026-09-21 wieczor (decyzja Nat) -
+// ruchome naklejki ida przez kanal marki na GIPHY (scripts/giphy/stickers.ts korzysta
+// z `drawStar` / `drawStarChalk` stad).
 //
 // Font: Sigmar (font-brand) - `document.fonts.load` PRZED pierwszym rysowaniem, inaczej canvas
 // bierze zapasowy krój i nakladka wyglada inaczej niz w podgladzie.
-import { GIFEncoder, quantize, applyPalette } from "gifenc";
 import { STAR_PATH } from "@/components/BrandStar";
 
 export const STICKER_YELLOW = "#FDF184";
@@ -93,20 +91,6 @@ function pillFont(ctx: CanvasRenderingContext2D, handle: string): string {
 // prosba Nat 2026-09-21) - uklad jak "full", pigulka bez zmian.
 export type StickerVariant = "full" | "alt" | "chalk" | "pill";
 export const STICKER_VARIANTS: StickerVariant[] = ["full", "alt", "chalk", "pill"];
-const PILL_MARGIN = 40; // miejsce na obwodke i cien wokol samej pigulki
-
-function pillWidth(handle: string): number {
-  const c = document.createElement("canvas").getContext("2d")!;
-  c.font = pillFont(c, handle);
-  return c.measureText(`@${handle}`).width + PAD_X * 2;
-}
-
-/** Rozmiar plotna: cala relacja 9:16 albo SAMA pigulka (wariant „bez gwiazdek", 2026-09-21). */
-export function stickerSize(handle: string, variant: StickerVariant = "full"): { w: number; h: number } {
-  if (variant === "pill") return { w: Math.ceil(pillWidth(handle) + PILL_MARGIN * 2), h: PILL_H + PILL_MARGIN * 2 };
-  return { w: OVERLAY_W, h: OVERLAY_H };
-}
-
 export function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number, scale: number, outline: number, outlineColor: string, shadow = true) {
   const k = size / STAR_VB.w;
   ctx.save();
@@ -221,24 +205,6 @@ function drawPill(ctx: CanvasRenderingContext2D, handle: string, right: number, 
 }
 
 /**
- * Jedna klatka calej nakladki 9:16. `t` w [0, 1) = faza animacji (0 = pozycja spoczynkowa,
- * identyczna z PNG). Rysuje w jednostkach logicznych 1080 x 1920 - skalowanie robi wolajacy.
- */
-export function drawSticker(ctx: CanvasRenderingContext2D, handle: string, t: number, opts?: { animated?: boolean; variant?: StickerVariant }) {
-  const anim = opts?.animated !== false;
-  const ph = anim ? t * Math.PI * 2 : 0;
-  if (opts?.variant === "pill") {
-    // Sama zolta naklejka z handle, bez gwiazdek - nic sie nie rusza.
-    const { w, h } = stickerSize(handle, "pill");
-    ctx.clearRect(0, 0, w, h);
-    drawPill(ctx, handle, w - PILL_MARGIN, h / 2);
-    return;
-  }
-  ctx.clearRect(0, 0, OVERLAY_W, OVERLAY_H);
-  drawOverlay(ctx, handle, ph, opts?.variant ?? "full");
-}
-
-/**
  * Nakladka na CALA relacje 9:16 dla kazdego zestawu - takze „sama nazwa" (pigulka w prawym
  * dolnym rogu, bez gwiazdek). Tego uzywa Stories na wprost i podglad wyboru zestawu: naklejka
  * laduje w edytorze Instagrama DOKLADNIE tam, gdzie w podgladzie. Wariant `pill` z `drawSticker`
@@ -296,63 +262,4 @@ export function drawStoryPreview(ctx: CanvasRenderingContext2D, handle: string, 
   ctx.scale(w / OVERLAY_W, h / OVERLAY_H);
   drawOverlay(ctx, handle, 0, variant);
   ctx.restore();
-}
-
-function makeCanvas(handle: string, scale: number, variant: StickerVariant = "full"): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; w: number; h: number } {
-  const { w, h } = stickerSize(handle, variant);
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(w * scale);
-  canvas.height = Math.round(h * scale);
-  const ctx = canvas.getContext("2d")!;
-  ctx.scale(scale, scale);
-  return { canvas, ctx, w, h };
-}
-
-/** PNG z przezroczystym tlem: 1080 x 1920 (pelna relacja) albo sama pigulka (~1080 px szer.). */
-export async function stickerPng(handle: string, variant: StickerVariant = "full"): Promise<Blob> {
-  await ensureStickerFont();
-  const { w } = stickerSize(handle, variant);
-  const { canvas, ctx } = makeCanvas(handle, variant === "pill" ? Math.min(4, 1080 / w) : 1, variant);
-  drawSticker(ctx, handle, 0, { animated: false, variant });
-  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
-  if (!blob) throw new Error("toBlob returned null");
-  return blob;
-}
-
-/**
- * GIF z 1-bitowa przezroczystoscia: 36 klatek co 50 ms (1,8 s petli). Paleta liczona RAZ
- * z klatki srodkowej (kolory sa stale), kazda klatka `dispose: 2` (czysci tlo), inaczej
- * poprzednie pozycje gwiazdek zostawalyby pod spodem.
- */
-export async function stickerGif(handle: string, opts?: { frames?: number; delayMs?: number; variant?: StickerVariant; onProgress?: (done: number, total: number) => void }): Promise<Blob> {
-  await ensureStickerFont();
-  const frames = opts?.frames ?? 30;
-  const delay = opts?.delayMs ?? 60;
-  // GIF: 540 x 960 (polowa relacji) - 36 klatek w pelnej rozdzielczosci to ~70 MB surowych
-  // pikseli do kwantyzacji i kilkanascie sekund na telefonie; Instagram i tak przeskalowuje.
-  const { canvas, ctx } = makeCanvas(handle, 0.5);
-  const W = canvas.width, H = canvas.height;
-  const gif = GIFEncoder();
-  let palette: number[][] | null = null;
-  let transparentIndex = 0;
-  for (let i = 0; i < frames; i++) {
-    drawSticker(ctx, handle, i / frames, { animated: true, variant: opts?.variant ?? "full" });
-    const data = ctx.getImageData(0, 0, W, H).data;
-    if (!palette) {
-      palette = quantize(data, 255, { format: "rgba4444", oneBitAlpha: true });
-      // Kolor przezroczysty = wpis palety z alfa 0 (albo doklejony, gdy kwantyzacja go nie dala).
-      let idx = palette.findIndex((c) => c.length > 3 && c[3] === 0);
-      if (idx < 0) { palette.push([0, 0, 0, 0]); idx = palette.length - 1; }
-      transparentIndex = idx;
-    }
-    const index = applyPalette(data, palette, "rgba4444");
-    // Piksele o alfie <= 127 ida na indeks przezroczysty (kwantyzacja rgba4444 nie gwarantuje
-    // mapowania kazdego takiego piksela na wpis z alfa 0).
-    for (let p = 0, q = 3; p < index.length; p++, q += 4) if (data[q] <= 127) index[p] = transparentIndex;
-    gif.writeFrame(index, W, H, { palette: i === 0 ? palette : undefined, delay, repeat: 0, transparent: true, transparentIndex, dispose: 2 });
-    opts?.onProgress?.(i + 1, frames);
-    if (i % 6 === 5) await new Promise((r) => setTimeout(r, 0)); // oddech dla UI
-  }
-  gif.finish();
-  return new Blob([gif.bytes()], { type: "image/gif" });
 }
