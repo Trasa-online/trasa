@@ -216,7 +216,9 @@
     "filter_all_types": "All types",
     "filter_clear": "Clear filters",
     "filter_count_one": "{{count}} place",
-    "filter_count_other": "{{count}} places"
+    "filter_count_other": "{{count}} places",
+    "also_in_one": "· and {{count}} more",
+    "also_in_other": "· and {{count}} more"
   },
   "trash": {
     "title": "Trash",

@@ -219,7 +219,10 @@
     "filter_clear": "Wyczyść filtry",
     "filter_count_one": "{{count}} miejsce",
     "filter_count_few": "{{count}} miejsca",
-    "filter_count_many": "{{count}} miejsc"
+    "filter_count_many": "{{count}} miejsc",
+    "also_in_one": "· i jeszcze {{count}}",
+    "also_in_few": "· i jeszcze {{count}}",
+    "also_in_many": "· i jeszcze {{count}}"
   },
   "trash": {
     "title": "Kosz",

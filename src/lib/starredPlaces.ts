@@ -17,12 +17,37 @@ export type StarredPlace = {
    *  Pozycja kolekcji ma wlasne `city`, wiec przy niej wygrywa ono. Sluza filtrom w arkuszu. */
   city: string | null;
   countries: string[];
+  /** Skad gwiazdka - PIERWSZE zrodlo (tap w wiersz prowadzi tutaj). */
   source: { kind: "trip" | "list"; id: string; title: string };
+  /** Wszystkie plany/kolekcje, w ktorych user wyroznil TO miejsce (patrz `dedupeStarred`). */
+  sources: { kind: "trip" | "list"; id: string; title: string }[];
 };
 
 const firstOf = (v: unknown): string | null => (Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null);
 
 export const starredPlacesKey = (userId: string | null | undefined) => ["starred-places", userId ?? null] as const;
+
+// JEDNO miejsce = JEDEN wiersz (prosba Nat 2026-09-21): ta sama kawiarnia wyrozniona w planie
+// i w dwoch kolekcjach stala na profilu trzy razy. Tozsamosc miejsca = znormalizowana nazwa,
+// ta sama regula co `place_note_key` przy notkach, zdjeciach i gwiazdkach (sieciowka o tej
+// samej nazwie w dwoch miastach to swiadome uproszczenie). Zrodla sie SUMUJA (`sources`),
+// tap w wiersz prowadzi do pierwszego; zdjecie, miasto i kraje uzupelniane z kolejnych.
+function dedupeStarred(rows: StarredPlace[]): StarredPlace[] {
+  const byKey = new Map<string, StarredPlace>();
+  for (const r of rows) {
+    const key = r.place_name.trim().toLowerCase();
+    if (!key) continue;
+    const cur = byKey.get(key);
+    if (!cur) { byKey.set(key, { ...r, sources: [r.source] }); continue; }
+    if (!cur.sources.some((sx) => sx.kind === r.source.kind && sx.id === r.source.id)) cur.sources.push(r.source);
+    cur.photo = cur.photo ?? r.photo;
+    cur.google_place_id = cur.google_place_id ?? r.google_place_id;
+    cur.category = cur.category ?? r.category;
+    cur.city = cur.city ?? r.city;
+    for (const c of r.countries) if (!cur.countries.includes(c)) cur.countries.push(c);
+  }
+  return [...byKey.values()];
+}
 
 export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]> {
   const [pinStarsRes, itemsRes] = await Promise.all([
@@ -75,6 +100,7 @@ export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]
     city: p.routes?.city ?? null,
     countries: Array.isArray(p.routes?.countries) ? p.routes.countries.filter(Boolean) : [],
     source: { kind: "trip", id: p.route_id, title: p.routes?.title ?? "" },
+    sources: [],
   }));
   const lists: StarredPlace[] = starredItems.map((it) => ({
     id: `item:${it.id}`, place_name: it.place_name ?? "", category: it.category ?? null,
@@ -82,8 +108,9 @@ export async function fetchStarredPlaces(userId: string): Promise<StarredPlace[]
     city: it.city ?? it.discovery_collections?.city ?? null,
     countries: Array.isArray(it.discovery_collections?.countries) ? it.discovery_collections.countries.filter(Boolean) : [],
     source: { kind: "list", id: it.collection_id, title: it.discovery_collections?.title ?? "" },
+    sources: [],
   }));
-  const all = [...trips, ...lists];
+  const all = dedupeStarred([...trips, ...lists]);
   // Miejsce bez wlasnego zdjecia: zdjecie spolecznosci (place_photos) - ten sam most, co na
   // kafelkach list i w wizytowce.
   const bare = all.filter((p) => !p.photo);
