@@ -154,6 +154,11 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Kod QR przypiety do tej wizytowki dostaje miejsce, gdy jeszcze go nie mial ──
+    if (action === "approve" && linkedPlaceId) {
+      await admin.from("place_qr_codes").update({ place_id: linkedPlaceId }).eq("claimed_by_profile_id", profileId).is("place_id", null);
+    }
+
     // ── Audit log (append-only, service-role) ──
     await admin.from("admin_audit_log").insert({
       actor_id: user.id,

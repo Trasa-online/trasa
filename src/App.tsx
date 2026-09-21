@@ -312,6 +312,10 @@ function NativeDeepLinkHandler() {
     if (!isNative) return;
     const handlerPromise = CapApp.addListener("appUrlOpen", async ({ url }) => {
       console.log("[NativeDeepLink] appUrlOpen", { url });
+      // Universal link z kodu QR na wizytowce lokalu (2026-09-21): https://spontaway.com/q/<token>
+      // -> ta sama trasa w apce. Przez hash, bo ten handler stoi poza routerem.
+      const qr = /^https?:\/\/(?:www\.)?spontaway\.com\/q\/([a-z0-9]{4,32})/i.exec(url);
+      if (qr) { window.location.hash = `#/q/${qr[1].toLowerCase()}`; return; }
       if (!url.includes("auth/callback")) return;
       try { await Browser.close(); } catch { /* browser already closed */ }
       // Custom scheme URLs (travel.trasa.app://auth/callback?code=XYZ) - parser
@@ -765,6 +769,7 @@ const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
 const SharedList       = lazy(() => import("./pages/SharedList"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
+const QrPlace          = lazy(() => import("./pages/QrPlace"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
 const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
@@ -903,6 +908,8 @@ const App = () => (
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/lista/:id" element={<SharedList />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />
+          {/* Kod QR z wizytowki drukowanej (universal link spontaway.com/q/<token>). */}
+          <Route path="/q/:token" element={<QrPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <QuickPlanReview />} />
           <Route path="/biznes/start" element={<BusinessStart />} />

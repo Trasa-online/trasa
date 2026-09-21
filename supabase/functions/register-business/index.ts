@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
     const rawEmail = body.email;
     const placeName = (body.place_name ?? "").toString().trim();
     const phone = (body.phone ?? "").toString().trim();
+    // Kod QR z wizytowki drukowanej (2026-09-21) - opcjonalny; nieznany albo juz przejety
+    // token po prostu ignorujemy (rejestracja i tak ma przejsc).
+    const qrToken = /^[a-z0-9]{4,32}$/.test(String(body.qr_token ?? "").toLowerCase()) ? String(body.qr_token).toLowerCase() : null;
 
     if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
     const email = rawEmail.trim().slice(0, 254);
@@ -163,6 +166,21 @@ Deno.serve(async (req) => {
         .single();
       if (created.error) throw new Error(`business_profiles insert: ${created.error.message}`);
       bp = created.data as { id: string; place_id: string | null };
+    }
+
+    // ── Kod QR: przypnij token do wizytowki, a miejsce z tokenu - do wizytowki ──
+    // Token wskazuje na wiersz `places` w stanie zero (albo jeszcze na nic). Podpiecie
+    // `place_id` juz tu (nie dopiero przy zatwierdzeniu) = admin zatwierdza TE wizytowke,
+    // bez dopasowywania po nazwie, a kod od tej chwili nie ma guzika "To moj lokal".
+    if (qrToken && bp) {
+      const { data: qr } = await admin.from("place_qr_codes").select("token, place_id, claimed_by_profile_id").eq("token", qrToken).maybeSingle();
+      if (qr && !qr.claimed_by_profile_id) {
+        await admin.from("place_qr_codes").update({ claimed_by_profile_id: bp.id, claimed_at: new Date().toISOString() }).eq("token", qrToken);
+        if (qr.place_id && !bp.place_id) {
+          const { data: taken } = await admin.from("business_profiles").select("id").eq("place_id", qr.place_id).neq("id", bp.id).limit(1);
+          if (!taken?.length) await admin.from("business_profiles").update({ place_id: qr.place_id }).eq("id", bp.id);
+        }
+      }
     }
 
     // ── Link aktywacyjny do appki ──

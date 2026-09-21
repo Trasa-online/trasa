@@ -76,7 +76,7 @@ export function bizEmailShell({ title, heading, lead, ctaUrl, ctaLabel, after, f
 // ── PRZYPOMNIENIA (business-nudges, 2026-09-21) ────────────────────────────────────────
 // Trzy maile do lokali, ktore utknely w rejestracji. Copy po polsku (lokale sa polskie),
 // zawsze z jednym CTA. Tresc ma byc naturalna: przy aktywacji zakladamy, ze stary link po
-// prostu wygasl (24 h), wiec dajemy NOWY i mowimy to wprost.
+// prostu wygasl (wazny 24 h, przypomnienie idzie po 48 h), wiec dajemy NOWY i mowimy to wprost.
 
 export type MissingField = "description" | "category" | "address" | "contact" | "hours" | "cover";
 

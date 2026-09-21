@@ -6,7 +6,7 @@
 -- aktywacyjny wyslany, link nigdy nie uzyty, wizytowka pusta, w kolejce moderacji na zawsze).
 --
 -- Funkcja brzegowa `business-nudges` (cron raz dziennie) wysyla trzy rodzaje maili:
---   activation_1     - 24 h od rejestracji, konto nieaktywowane (nowy link - stary wygasl),
+--   activation_1     - 48 h od rejestracji (Nat: nie 24 h), konto nieaktywowane (nowy link - stary wygasl),
 --   activation_2     - 4 dni od rejestracji, nadal nieaktywowane (ostatnie przypomnienie),
 --   complete_profile - 2 dni od aktywacji, wizytowka niekompletna i jeszcze niezatwierdzona.
 -- Ta tabela jest pamiecia „co juz poszlo": UNIQUE (wizytowka, rodzaj) = kazdy nudge najwyzej raz.

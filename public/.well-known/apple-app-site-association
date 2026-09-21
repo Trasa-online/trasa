@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "J33M8H3SGZ.travel.trasa.app",
+        "paths": [
+          "/q/*"
+        ]
+      }
+    ]
+  }
+}

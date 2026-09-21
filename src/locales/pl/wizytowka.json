@@ -83,5 +83,8 @@
   "saved_place": "Miejsce zapisane",
   "starred_by_one": "Wyróżnione przez {{count}} osobę",
   "starred_by_few": "Wyróżnione przez {{count}} osoby",
-  "starred_by_many": "Wyróżnione przez {{count}} osób"
+  "starred_by_many": "Wyróżnione przez {{count}} osób",
+  "qr": {
+    "unknown": "Ten kod nie jest jeszcze przypisany do żadnego miejsca"
+  }
 }

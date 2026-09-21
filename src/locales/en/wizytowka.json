@@ -80,5 +80,8 @@
   "add_short": "Add",
   "saved_place": "Place saved",
   "starred_by_one": "Highlighted by {{count}} person",
-  "starred_by_other": "Highlighted by {{count}} people"
+  "starred_by_other": "Highlighted by {{count}} people",
+  "qr": {
+    "unknown": "This code is not linked to any place yet"
+  }
 }

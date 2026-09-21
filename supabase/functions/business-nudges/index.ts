@@ -8,7 +8,7 @@ import {
 //
 // Cron raz dziennie (`cron_business_nudges`, x-trigger-secret z Vault). Trzy rodzaje maili,
 // kazdy najwyzej RAZ na wizytowke (UNIQUE w `business_nudges`):
-//   activation_1     - >= 24 h od rejestracji, konto NIEAKTYWOWANE (email niepotwierdzony,
+//   activation_1     - >= 48 h od rejestracji (Nat 2026-09-21: nie 24 h), konto NIEAKTYWOWANE (email niepotwierdzony,
 //                      zero logowan). Mail z NOWYM linkiem - stary (24 h) juz wygasl.
 //   activation_2     - >= 4 dni od rejestracji, nadal nieaktywowane, po activation_1.
 //   complete_profile - >= 2 dni od AKTYWACJI, wizytowka niekompletna (brak ktoregos z: kategoria,
@@ -30,7 +30,7 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const H = 60 * 60 * 1000;
-const ACTIVATION_1_AFTER_MS = 24 * H;
+const ACTIVATION_1_AFTER_MS = 48 * H;
 const ACTIVATION_2_AFTER_MS = 4 * 24 * H;
 const COMPLETE_AFTER_MS = 2 * 24 * H;
 const SITE = "https://spontaway.com";
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { /* pusty body z crona */ }
   const dryRun = body.dry_run === true;
   const testTo = typeof body.test_to === "string" && body.test_to.includes("@") ? body.test_to.trim() : null;
-  // `ignore_delays` = pomin progi czasowe (24 h / 4 dni / 2 dni) - WYLACZNIE do podgladu
+  // `ignore_delays` = pomin progi czasowe (48 h / 4 dni / 2 dni) - WYLACZNIE do podgladu
   // i wysylki testowej, nigdy do prawdziwych maili.
   const ignoreDelays = body.ignore_delays === true && (dryRun || !!testTo);
   const after = (elapsed: number, threshold: number) => ignoreDelays || elapsed >= threshold;
