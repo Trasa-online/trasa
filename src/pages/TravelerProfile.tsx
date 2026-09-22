@@ -31,7 +31,7 @@ import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
-import { useFriendList, excludeFriend, unexcludeFriend, friendIdsKey } from "@/lib/friends";
+import { useFriendList } from "@/lib/friends";
 import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
 import { UserMinus } from "lucide-react";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
@@ -263,10 +263,10 @@ const TravelerProfile = () => {
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const { data: starred = [] } = useStarredPlaces(user?.id);
-  // ZNAJOMI = wzajemna obserwacja (patrz src/lib/friends.ts). Liczba jedzie z BAZY, nie
-  // z przeciecia dwoch list w kliencie - to ta sama funkcja, ktora bramkuje zdjecia.
-  // Sama LISTA (i wypisywanie ze znajomych) mieszka w `PeopleSheet`; tutaj potrzebny jest
-  // wylacznie licznik w rzedzie statystyk.
+  // ZNAJOMI = relacja przyjeta przez OBIE strony (patrz src/lib/friends.ts). Liczba jedzie
+  // z BAZY - to ta sama funkcja, ktora bramkuje zdjecia "tylko dla znajomych". Sama LISTA,
+  // zaproszenia czekajace na odpowiedz i usuwanie ze znajomych mieszkaja w `PeopleSheet`;
+  // tutaj potrzebny jest wylacznie licznik w rzedzie statystyk.
   const friendList = useFriendList(user?.id);
 
   // Usuwanie z oknem "Cofnij" (deferDelete): element znika od razu z listy (optymistycznie),

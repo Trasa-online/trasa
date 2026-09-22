@@ -19,6 +19,7 @@ import { applyTripOrder, fetchTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FollowButton from "@/components/social/FollowButton";
+import FriendButton from "@/components/social/FriendButton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
 import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
@@ -502,8 +503,8 @@ export default function PublicProfile() {
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
           </button>
           {/* ZNAJOMI zamiast obserwowanych - ta sama definicja co na wlasnym profilu
-              (wzajemna obserwacja, liczona przez baze). Obserwowani nie znikaja: maja
-              zakladke w arkuszu. Rzad miesci TRZY pozycje, czwarta sie nie miesci. */}
+              (relacja przyjeta przez obie strony, liczona przez baze). Obserwowani nie
+              znikaja: maja zakladke w arkuszu. Rzad miesci TRZY pozycje, czwarta nie. */}
           <button onClick={() => setFollowSheet("friends")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.friends")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{(friendIds.data ?? []).length}</p>
@@ -517,8 +518,13 @@ export default function PublicProfile() {
           </button>
           <div className="flex-1" />
           {/* Sama ikona zamiast napisu "Obserwuj" (prosba Nat 2026-09-13) - trzy statystyki
-              w rzedzie nie zostawialy miejsca na pigulke z tekstem. */}
-          <FollowButton targetUserId={profile.id} iconOnly className="shrink-0" />
+              w rzedzie nie zostawialy miejsca na pigulke z tekstem. Obok niej guzik
+              ZNAJOMOSCI (zolty): obserwowanie jest publiczne i jednostronne, znajomosc
+              wymaga zgody obu stron i to ona otwiera zdjecia "tylko dla znajomych". */}
+          <div className="flex shrink-0 items-center gap-2">
+            <FollowButton targetUserId={profile.id} iconOnly />
+            <FriendButton targetUserId={profile.id} iconOnly />
+          </div>
         </div>
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej).

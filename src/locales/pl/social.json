@@ -34,7 +34,14 @@
     "accept": "Akceptuj",
     "sent": "Wysłano",
     "request_sent": "Zaproszenie wysłane",
-    "add": "Dodaj"
+    "add": "Dodaj",
+    "add_long": "Dodaj do znajomych",
+    "request_cancelled": "Zaproszenie cofnięte",
+    "unavailable": "Nie można wysłać tego zaproszenia",
+    "remove_title": "Usunąć ze znajomych?",
+    "remove_desc": "Ta osoba straci dostęp do Twoich zdjęć tylko dla znajomych. Obserwowanie zostaje bez zmian.",
+    "remove_confirm": "Usuń ze znajomych",
+    "cancel": "Anuluj"
   },
   "follow": {
     "no_session": "Brak sesji",
@@ -141,7 +148,11 @@
     "invite_accept": "Dołączam",
     "invite_joined": "Dołączyłaś(-eś)",
     "invite_declined": "Zaproszenie odrzucone",
-    "invite_gone": "To zaproszenie jest już nieaktualne"
+    "invite_gone": "To zaproszenie jest już nieaktualne",
+    "friend_accept_btn": "Przyjmij",
+    "friend_decline_btn": "Odrzuć",
+    "friend_accepted": "Jesteście znajomymi",
+    "friend_declined": "Zaproszenie odrzucone"
   },
   "live": {
     "friend_request": "Nowe zaproszenie do znajomych 👋",
@@ -184,11 +195,6 @@
   },
   "submit": "Zgłoś",
   "friends": {
-    "request_title": "Nowe zaproszenie do znajomych 👋",
-    "request_body": "{{name}} chce dodać Cię do znajomych",
-    "accept_title": "Masz nowego znajomego 🎉",
-    "accept_body": "{{name}} przyjął(a) Twoje zaproszenie",
-    "link_body": "{{name}} dołączył(a) do Ciebie przez link",
     "none_yet": "Nie masz jeszcze znajomych"
   },
   "people": {

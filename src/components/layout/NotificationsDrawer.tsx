@@ -18,6 +18,7 @@ import { deferDelete } from "@/lib/deferDelete";
 import { PushNudgeCard } from "@/components/permissions/PermissionPrimerSheet";
 import { toast } from "sonner";
 import { respondToCollectionInvite } from "@/lib/collectionInvite";
+import { respondToFriendRequest, invalidateFriends } from "@/lib/friends";
 import { invalidateContentLists } from "@/lib/trash";
 
 interface Notification {
@@ -60,6 +61,10 @@ interface Notification {
 // „oczekujace" - karta `route_invite` / `list_invite` ma dlatego guziki „Dolaczam" (RPC
 // `respond_to_route_invite` / `respond_to_collection_invite`) i „Nie teraz" (= odmowa,
 // wiersz zaproszenia znika); tapniecie w tresc karty otwiera plan/kolekcje do podgladu.
+// AKTUALIZACJA 2026-09-22: tak samo dziala ZAPROSZENIE DO ZNAJOMYCH (`friend_request`,
+// RPC `respond_to_friend_request`) - z ta roznica, ze po akceptacji nie ma dokad przejsc,
+// a odmowa jest CICHA: zapraszajacy nie dostaje o niej zadnego sygnalu i zostaje mu samo
+// obserwowanie (patrz `src/lib/friends.ts`).
 
 type NotifT = (key: string, opts?: Record<string, unknown>) => string;
 type Tone = "orange" | "gold" | "brown";
@@ -423,10 +428,22 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
   // decyzji nie wygladala jak kolejny wiersz. Pomarancz zostaje na guziku.
   // Zaproszenie do planu / kolekcji: prawdziwa decyzja, nie tylko schowanie karty.
   const isMembershipInvite = (n: Notification) => n.type === "route_invite" || n.type === "group_invite" || n.type === "list_invite";
+  // Zaproszenie do znajomych to TAKZE decyzja, tylko odpowiada sie na nie inna funkcja -
+  // i po akceptacji nie ma dokad nawigowac (relacja nie jest ekranem).
+  const isFriendRequest = (n: Notification) => n.type === "friend_request";
+  const isDecision = (n: Notification) => isMembershipInvite(n) || isFriendRequest(n);
   const respondInvite = async (n: Notification, accept: boolean) => {
     const rid = n.route_id ?? n.metadata?.route_id ?? null;
     const cid = n.metadata?.collection_id ?? null;
     let ok = false;
+    if (isFriendRequest(n)) {
+      ok = await respondToFriendRequest(n.actor_id, accept);
+      markRead.mutate([n.id]);
+      invalidateFriends(queryClient, userId);
+      if (!ok) { toast(t("notif.invite_gone")); return; }
+      toast(accept ? t("notif.friend_accepted") : t("notif.friend_declined"));
+      return;
+    }
     if (n.type === "list_invite" && cid) {
       ok = await respondToCollectionInvite(cid, accept);
     } else if (rid) {
@@ -459,7 +476,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
 
   const renderInvite = (n: Notification) => {
     const cfg = TYPE_CONFIG[n.type];
-    const membership = isMembershipInvite(n);
+    const decision = isDecision(n);
     const username = n.actor?.username ?? t("notif.someone");
     const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale() });
     const Icon = cfg?.icon ?? Users;
@@ -487,16 +504,16 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         </div>
         <div className="mt-3 flex gap-2">
           <button
-            onClick={() => (membership ? void respondInvite(n, true) : openNotif(n))}
+            onClick={() => (decision ? void respondInvite(n, true) : openNotif(n))}
             className="flex-1 h-10 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.98] transition-transform"
           >
-            {membership ? t("notif.invite_accept") : t("notif.open_invite")}
+            {isFriendRequest(n) ? t("notif.friend_accept_btn") : decision ? t("notif.invite_accept") : t("notif.open_invite")}
           </button>
           <button
-            onClick={() => (membership ? void respondInvite(n, false) : markRead.mutate([n.id]))}
+            onClick={() => (decision ? void respondInvite(n, false) : markRead.mutate([n.id]))}
             className="flex-1 h-10 rounded-full bg-white border border-[#E6D6C8] text-[#5B2C06] text-sm font-semibold active:scale-[0.98] transition-transform"
           >
-            {t("notif.dismiss")}
+            {isFriendRequest(n) ? t("notif.friend_decline_btn") : t("notif.dismiss")}
           </button>
         </div>
       </div>

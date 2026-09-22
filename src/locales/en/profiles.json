@@ -92,11 +92,14 @@
     "traveler_fallback": "Traveler",
     "starred": "Starred",
     "starred_aria": "Starred places",
-    "no_friends": "No friends yet. Someone becomes a friend when you follow each other.",
+    "no_friends": "You have no friends yet. Open someone's profile and send a request - you become friends once they accept.",
     "people_title": "People",
     "friend_remove": "Remove from friends",
-    "friend_removed": "Removed from friends. You still follow each other.",
-    "friend_remove_failed": "Could not save the change"
+    "friend_removed": "Removed from friends. Following stays as it was.",
+    "friend_remove_failed": "Could not save the change",
+    "friend_remove_title": "Remove from friends?",
+    "friend_remove_desc": "{{name}} will lose access to your friends-only photos. Following stays as it was, and getting back to friends needs a new request.",
+    "friend_remove_cancel": "Cancel"
   },
   "guest": {
     "title": "Your traveler profile",
@@ -249,7 +252,7 @@
     "clear_search": "Clear search",
     "loading": "Loading...",
     "count_followers": "{{count}} people follow",
-    "count_friends": "{{count}} friends (you follow each other)",
+    "count_friends": "{{count}} friends",
     "count_following": "Follows {{count}} people",
     "count_filtered": "{{shown}} of {{total}} people match your search",
     "no_results": "Nobody like that here.",
@@ -260,7 +263,14 @@
     "following_state": "Following",
     "follow_failed": "Could not save that change",
     "title_mine": "People",
-    "title_of": "{{name}}'s people"
+    "title_of": "{{name}}'s people",
+    "requests_title_one": "{{count}} request waiting for your answer",
+    "requests_title_other": "{{count}} requests waiting for your answer",
+    "request_accept": "Accept",
+    "request_decline": "Decline",
+    "request_gone": "That request is gone",
+    "request_accepted": "You are friends now",
+    "request_declined": "Request declined"
   },
   "undo": "Undo"
 }

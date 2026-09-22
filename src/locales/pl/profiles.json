@@ -93,11 +93,14 @@
     "traveler_fallback": "Podróżnik",
     "starred": "Wyróżnione",
     "starred_aria": "Wyróżnione miejsca",
-    "no_friends": "Nie masz jeszcze znajomych. Znajomym zostaje osoba, którą obserwujesz i która obserwuje Ciebie.",
+    "no_friends": "Nie masz jeszcze znajomych. Wejdź na czyjś profil i wyślij zaproszenie - znajomymi zostajecie, gdy je przyjmie.",
     "people_title": "Ludzie",
     "friend_remove": "Usuń ze znajomych",
-    "friend_removed": "Usunięto ze znajomych. Nadal się obserwujecie.",
-    "friend_remove_failed": "Nie udało się zapisać zmiany"
+    "friend_removed": "Usunięto ze znajomych. Obserwowanie zostaje bez zmian.",
+    "friend_remove_failed": "Nie udało się zapisać zmiany",
+    "friend_remove_title": "Usunąć ze znajomych?",
+    "friend_remove_desc": "{{name}} straci dostęp do Twoich zdjęć tylko dla znajomych. Obserwowanie zostaje bez zmian, a powrót do znajomych wymaga nowego zaproszenia.",
+    "friend_remove_cancel": "Anuluj"
   },
   "guest": {
     "title": "Twój profil podróżnika",
@@ -256,7 +259,7 @@
     "clear_search": "Wyczyść szukanie",
     "loading": "Wczytuję...",
     "count_followers": "Obserwuje {{count}} osób",
-    "count_friends": "{{count}} znajomych (wzajemna obserwacja)",
+    "count_friends": "Znajomych: {{count}}",
     "count_following": "Obserwuje {{count}} osób",
     "count_filtered": "{{shown}} z {{total}} osób pasuje do szukanej frazy",
     "no_results": "Nikogo takiego tu nie ma.",
@@ -267,7 +270,15 @@
     "following_state": "Obserwujesz",
     "follow_failed": "Nie udało się zapisać zmiany",
     "title_mine": "Ludzie",
-    "title_of": "Ludzie: {{name}}"
+    "title_of": "Ludzie: {{name}}",
+    "requests_title_one": "{{count}} zaproszenie czeka na odpowiedź",
+    "requests_title_few": "{{count}} zaproszenia czekają na odpowiedź",
+    "requests_title_many": "{{count}} zaproszeń czeka na odpowiedź",
+    "request_accept": "Przyjmij",
+    "request_decline": "Odrzuć",
+    "request_gone": "Tego zaproszenia już nie ma",
+    "request_accepted": "Jesteście znajomymi",
+    "request_declined": "Zaproszenie odrzucone"
   },
   "undo": "Cofnij"
 }
