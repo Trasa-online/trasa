@@ -54,10 +54,16 @@ function newSessionToken(): string {
 const countryOfCity = (c?: string | null): string | null =>
   (c ? TRIP_COUNTRIES.find((x) => x.cities.some((n) => n.toLowerCase() === c.toLowerCase()))?.name ?? null : null);
 
+// ⚠️ Te cztery liczby to CENA wyszukiwarki, nie kosmetyka.
+// Nasze zrodla (katalog, moje miejsca) sa darmowe, wiec startuja od 2 znakow i szybko.
+// Google pytamy pozniej i rzadziej: podpowiedzi w sesji sa darmowe TYLKO wtedy, gdy user
+// cos wybierze - sesja porzucona bez wyboru jest liczona PO ZAPYTANIU (2,83 $/1000).
+// Dlatego dluzsze okno (500 ms zamiast 400) i 4 znaki zamiast 3: mniej rund na jedno
+// szukanie, a przy 10 tys. userow porzucone sesje sa najwieksza pozycja rachunku.
 const MIN_CHARS_LOCAL = 2;
-const MIN_CHARS_GOOGLE = 3;
+const MIN_CHARS_GOOGLE = 4;
 const ENOUGH_LOCAL_HITS = 4;
-const DEBOUNCE_MS = 400;
+const DEBOUNCE_MS = 500;
 
 export function usePlaceSearch(
   query: string,
@@ -82,9 +88,22 @@ export function usePlaceSearch(
     const t = setTimeout(async () => {
       const q = query.trim();
       try {
-        // 1. Nasz katalog.
-        const { data: mine } = await (supabase as any).rpc("search_place_catalog", { p_query: q, p_city: city, p_limit: 8 });
+        // 1. MOJE WLASNE miejsca (z moich planow) + nasz katalog. Oba zero kosztu, jedno
+        // okraglenie sieci. ⚠️ Wlasne miejsca ida PIERWSZE i BEZ filtra zasiegu: skoro user
+        // sam je kiedys dodal, to wie, czego szuka - a najczestszy przypadek to "dodaj
+        // kawiarnie, ktora mam juz w innym planie".
+        const [{ data: mine }, { data: ownRows }] = await Promise.all([
+          (supabase as any).rpc("search_place_catalog", { p_query: q, p_city: city, p_limit: 8 }),
+          (supabase as any).rpc("search_my_places", { p_query: q, p_limit: 6 }),
+        ]);
         if (!alive) return;
+        const own: PlaceSearchItem[] = ((ownRows as any[]) ?? []).map((r) => ({
+          place_name: r.place_name, address: r.address ?? null,
+          latitude: r.latitude ?? null, longitude: r.longitude ?? null,
+          category: r.category ?? null, photo_url: null,
+          place_id: null, google_place_id: r.google_place_id ?? null, rating: null,
+          source: "catalog" as const,
+        }));
         // ⚠️ ZASIEG. Nasz katalog jest dzis prawie wylacznie polski, wiec bez tego filtra plan
         // do PARYZA dostawal w podpowiedziach Muzeum Sopotu i Muzeum Warszawy (zlapane renderem
         // w WebKit). Miejsce z katalogu wchodzi tylko wtedy, gdy pasuje do miasta albo kraju
@@ -109,7 +128,7 @@ export function usePlaceSearch(
 
         // 2. Google tylko gdy trzeba.
         let fromGoogle: PlaceSearchItem[] = [];
-        if (local.length < ENOUGH_LOCAL_HITS && q.length >= MIN_CHARS_GOOGLE) {
+        if (own.length + local.length < ENOUGH_LOCAL_HITS && q.length >= MIN_CHARS_GOOGLE) {
           // Bez wspolrzednych srodka nakierowujemy Google SLOWEM: "muzeum Paryz" trafia
           // w Luwr, samo "muzeum" - w cokolwiek na swiecie. Nic to nie kosztuje.
           const input = center || !city ? q : `${q} ${city}`;
@@ -143,7 +162,7 @@ export function usePlaceSearch(
         // Dedup: to samo miejsce z naszego katalogu i z Google (po google_place_id, potem nazwie).
         const seen = new Set<string>();
         const merged: PlaceSearchItem[] = [];
-        for (const r of [...local, ...fromGoogle]) {
+        for (const r of [...own, ...local, ...fromGoogle]) {
           const k = (r.google_place_id ?? `${r.place_name}|${r.address ?? ""}`).toLowerCase();
           if (seen.has(k)) continue;
           seen.add(k);

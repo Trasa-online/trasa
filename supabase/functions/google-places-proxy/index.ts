@@ -2,7 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const BASE = "https://maps.googleapis.com/maps/api";
 const REFERER = "https://spontaway.com/";
-const CACHE_TTL_HOURS = 168; // 7 days
+// 30 dni = DOZWOLONE MAKSIMUM z regulaminu Google ("may temporarily cache latitude and
+// longitude values from the Places API for up to 30 consecutive calendar days, after which
+// Customer must delete"). Bylo 7 dni, czyli placilismy za to samo miejsce 4x czesciej, niz
+// trzeba. ⚠️ Druga polowa tej reguly - KASOWANIE - siedzi w cronie `purge-place-cache`
+// (funkcja `purge_stale_place_cache`, migracja 20260922e). Podnosisz TTL - sprawdz crona.
+const CACHE_TTL_HOURS = 720; // 30 dni
 
 // ── TRZY BEZPIECZNIKI, KAZDY O CZYM INNYM (przebudowa 2026-09-22) ────────────
 // Po przejsciu na Autocomplete w sesji wiekszosc zapytan jest DARMOWA, a placimy wylacznie za
