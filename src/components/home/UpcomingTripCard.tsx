@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { BrandTrash, BrandPin } from "@/components/BrandIcon";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
@@ -13,44 +12,21 @@ function safeDate(val: string | null | undefined): Date | null {
   const d = typeof val === "string" && val.includes("T") ? new Date(val) : parseISO(val);
   return isValid(d) ? d : null;
 }
-import { ensurePhotoCached, getCachedPhotoVariant, isCachedPhotoUrl } from "@/lib/placePhotos";
+import { getCachedPhotoVariant, isCachedPhotoUrl } from "@/lib/placePhotos";
 import { CategoryIcon } from "@/components/CategoryIcon";
 
 // ─── Lazy pin photo thumbnail ──────────────────────────────────────────────
 
 function PinThumb({ pin, onClick }: { pin: any; onClick: () => void }) {
-  // Happy path: pin.photo_url już ustawione w DB → zero kosztów Google
-  // Fallback: brak photo_url → wywołujemy cache-place-photo (pobiera z Google raz, zapisuje do Storage)
-  const initialPhoto = isCachedPhotoUrl(pin.photo_url)
+  // ⛔ ZERO GOOGLE (2026-09-22). Do tego dnia miniaturka bez zdjecia wolala tu
+  // `ensurePhotoCached` -> `cache-place-photo` -> Place Details Z ATMOSFERA ($25/1000,
+  // darmowa pula raptem 1000/mies) TYLKO po to, zeby dostac referencje zdjecia, a potem
+  // jeszcze Places Photo ($7/1000, tez 1000 darmowych). To byl CALY nasz rachunek za
+  // wrzesien - nie wyszukiwarka. Brak zdjecia = ikona kategorii, jak wszedzie indziej po
+  // decyzji "zwykle miejsce = wylacznie zdjecia userow" (2026-09-15).
+  const photo = isCachedPhotoUrl(pin.photo_url)
     ? getCachedPhotoVariant(pin.photo_url, "small")
     : null;
-  const [photo, setPhoto] = useState<string | null>(initialPhoto);
-
-  useEffect(() => {
-    if (isCachedPhotoUrl(pin.photo_url)) {
-      setPhoto(getCachedPhotoVariant(pin.photo_url, "small"));
-      return;
-    }
-    let cancelled = false;
-    ensurePhotoCached(
-      {
-        table: "pins",
-        id: pin.id,
-        place_name: pin.place_name,
-        latitude: pin.latitude,
-        longitude: pin.longitude,
-        place_id: pin.place_id,
-      },
-      pin.photo_url ?? null,
-    )
-      .then((url) => {
-        if (!cancelled && url) setPhoto(getCachedPhotoVariant(url, "small"));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [pin.id, pin.photo_url]);
 
   return (
     <button onClick={onClick} className="shrink-0 flex flex-col gap-1.5 items-start active:scale-95 transition-transform">

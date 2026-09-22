@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { checkPlaceLimit, isPlaceLimitError, placeLimitToast, type PlaceLimitKind } from "@/lib/placeLimits";
+import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { useQuery } from "@tanstack/react-query";
 import { X, Plus, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
 import { BrandMap, BrandSearch, BrandCheck } from "@/components/BrandIcon";
@@ -59,9 +60,6 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
   const [selected, setSelected] = useState<PlaceForList[]>([]);
   const [manual, setManual] = useState<PlaceForList[]>([]);   // dodane z Google (poza zapisanymi)
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<PlaceForList[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [blocked, setBlocked] = useState(false);
   const [adding, setAdding] = useState(false);
   const [detailPlace, setDetailPlace] = useState<any | null>(null);   // wizytowka miejsca (PlaceSwiperDetail)
   // Akcja "Dodaj to miejsce" w wizytowce = ten sam toggle, co kolko na wierszu, z ktorego ja
@@ -72,7 +70,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Srodek do sortowania "najblizej najpierw": centroida miejsc JUZ w trasie, a gdy brak (nowa
-  // trasa/lista) - geokod miasta (Google textsearch).
+  // trasa/lista) - srodek naszych miejsc w tym miescie (`city_center`, zero kosztu).
   //
   // UWAGA (blad zgloszony przez testerke 2026-09-01: "wyszukiwarka nic nie znajduje"): centroide
   // wolno liczyc TYLKO gdy miejsca sa SKUPIONE. Lista wielomiastowa - a taka jest kazda "Ogolne"
@@ -96,19 +94,21 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
     enabled: open && !!city && !existingCentroid,
     staleTime: 60 * 60 * 1000,
     queryFn: async () => {
-      const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: city } });
-      const r = ((data as any)?.results ?? [])[0];
-      return r?.latitude != null ? { lat: r.latitude as number, lng: r.longitude as number } : null;
+      // ⛔ Do 22.09 stal tu PLATNY Text Search ($32/1000) wolany tylko po to, zeby dostac
+      // punkt do sortowania "najblizej najpierw". Srednia wspolrzednych NASZYCH miejsc w tym
+      // miescie jest darmowa i trafniejsza - to srodek ciezkosci tego, co mamy, nie ratusz.
+      const { data } = await (supabase as any).rpc("city_center", { p_city: city });
+      const r = Array.isArray(data) ? data[0] : data;
+      return r?.latitude != null ? { lat: Number(r.latitude), lng: Number(r.longitude) } : null;
     },
   });
   const center = existingCentroid ?? geoCenter;
   // Zasieg KRAJOWY (2026-09-10). Gdy wyjazd ma kraje, wyszukiwarka pyta o kazdy z osobna,
   // a promien 20 km wokol srodka przestaje obowiazywac - przy kraju nie ma "srodka".
   const scopeCountries = (countries ?? []).filter(Boolean);
-  const countriesKey = scopeCountries.join("|");
 
   useEffect(() => {
-    if (open) { setSelected([]); setManual([]); setQuery(""); setResults([]); setBlocked(false); setAdding(false); setDetailPlace(null); setOpenLists(new Set()); }
+    if (open) { setSelected([]); setManual([]); setQuery(""); setAdding(false); setDetailPlace(null); setOpenLists(new Set()); }
   }, [open]);
 
   const { data: savedPlaces = EMPTY_ARRAY } = useQuery({
@@ -128,74 +128,13 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
     const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n;
   });
 
-  const searchMode = query.trim().length >= 2;
-
-  // Wyszukiwarka Google (debounce 350ms), tylko przy >=2 znakach.
-  //
-  // Kolejnosc zrodel (przebudowa 2026-09-13, zgloszenie Nat: "BADI cafe" w liscie z Warszawy
-  // dawal cukiernie z Kudowy-Zdroju). Wczesniej zasieg krajowy WYPIERAL miasto: fraza szla
-  // jako "BADI cafe Polska", a sortowanie po odleglosci bylo wylaczone - Google oddawal
-  // przypadkowe lokale z calego kraju. Teraz:
-  //  1. MIASTO najpierw: "<fraza> <miasto>" + nakierowanie na srodek (centroida miejsc
-  //     z listy albo geokod miasta). To trafia w lokal, o ktory user pyta.
-  //  2. KRAJE tylko gdy sa potrzebne: brak miasta, wyjazd po kilku krajach albo miasto
-  //     oddalo mniej niz dwa wyniki. Kazdy kraj to platne zapytanie - nie dokladamy ich
-  //     "na wszelki wypadek".
-  //  3. Wyniki z miasta na gorze, reszta posortowana "blisko srodka najpierw" - zawsze, gdy
-  //     srodek jest znany (takze przy zasiegu krajowym).
-  useEffect(() => {
-    if (!searchMode) { setResults([]); setSearching(false); return; }
-    let alive = true;
-    setSearching(true);
-    const t = setTimeout(async () => {
-      try {
-        const q = query.trim();
-        const ask = (scope: string, bias?: { lat: number; lng: number } | null) =>
-          supabase.functions.invoke("google-places-proxy", {
-            body: { action: "textsearch", query: `${q} ${scope}`.trim(), ...(bias ? { latitude: bias.lat, longitude: bias.lng } : {}) },
-          });
-        const responses: any[] = [];
-        let cityHits: any[] = [];
-        if (city) {
-          const r = await ask(city, center);
-          responses.push(r);
-          cityHits = ((r.data as any)?.results ?? []) as any[];
-        }
-        if (!alive) return;
-        const countryScopes = countriesKey ? countriesKey.split("|").slice(0, 2) : [];
-        if (countryScopes.length && (!city || countryScopes.length > 1 || cityHits.length < 2)) {
-          responses.push(...(await Promise.all(countryScopes.map((scope) => ask(scope)))));
-        } else if (!city && !countryScopes.length) {
-          // Lista bez miasta i bez krajow (np. "Ogolne"): sama fraza, jak dotad.
-          responses.push(await ask("", center));
-        }
-        if (!alive) return;
-        setBlocked(responses.some((r) => !!(r.data as any)?.quota_exceeded));
-        const seenKeys = new Set<string>();
-        const all = responses.flatMap((r) => ((r.data as any)?.results ?? []) as any[]).filter((r) => {
-          const k = `${String(r.name ?? "").toLowerCase()}|${String(r.full_address ?? "").toLowerCase()}`;
-          if (seenKeys.has(k)) return false;
-          seenKeys.add(k);
-          return true;
-        });
-        // "W obrebie miasta" (~20km od srodka) = KOLEJNOSC, nie odsiew. Twardy filtr konczyl sie
-        // pusta lista, gdy srodek byl zly albo nieznany - user widzial "brak wynikow" dla
-        // miejsca, ktore Google normalnie zwraca. Bliskie ida na gore, dalekie na dol.
-        const near = (r: any) => !center || r.latitude == null || r.longitude == null
-          || distKm(center, { lat: r.latitude, lng: r.longitude }) <= SCOPE_KM;
-        const ordered = [...all.filter(near), ...all.filter((r) => !near(r))];
-        setResults(ordered.slice(0, 6).map((r) => ({
-          place_name: r.name, address: r.full_address ?? null, latitude: r.latitude ?? null, longitude: r.longitude ?? null,
-          category: categoryFromGoogleTypes(r.types), photo_url: null, place_id: null,
-          // google_place_id niesiemy dalej - przy zapisie po nim znajdujemy nasz rekord `places`
-          // (a z nim wizytowke biznesowa lokalu).
-          google_place_id: r.place_id ?? null, rating: null,
-        })));
-      } catch { if (alive) setResults([]); }
-      finally { if (alive) setSearching(false); }
-    }, 350);
-    return () => { alive = false; clearTimeout(t); };
-  }, [query, searchMode, city, countriesKey, center]);
+  // WYSZUKIWARKA: nasz katalog najpierw, Google Autocomplete w sesji dopiero gdy trzeba.
+  // ⛔ Do 2026-09-22 stal tu wlasny efekt bijacy PLATNYM Text Searchem przy kazdym nacisnieciu
+  // klawisza, i to od jednego do trzech razy naraz (fraza + miasto, fraza + kraj, fraza + drugi
+  // kraj). Ten sam kod istnial rownolegle w `usePlaceSearch` - dwie kopie jednej wyszukiwarki.
+  // Teraz jest jedna, w hooku, i to ona pilnuje kosztu.
+  const { results, searching, blocked, searchMode, resolve } =
+    usePlaceSearch(query, { city, countries: scopeCountries, center, scopeKm: SCOPE_KM, enabled: open });
 
   const isSel = (p: PlaceForList) => selected.some((s) => keyOf(s) === keyOf(p));
   const toggle = (p: PlaceForList) => setSelected((prev) => prev.some((s) => keyOf(s) === keyOf(p)) ? prev.filter((s) => keyOf(s) !== keyOf(p)) : [...prev, p]);
@@ -207,8 +146,13 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
   // bo po wybraniu jednej od razu mnie resetuje i wracam na poczatek".
   // Ponowne tapniecie ODZNACZA - inaczej pomylkowego wyboru nie dalo sie cofnac bez
   // zamykania arkusza (wiersz pokazywal ptaszka, ale klik nic nie robil).
-  const pickGoogle = (p: PlaceForList, addOnly = false) => {
+  const pickGoogle = async (p: PlaceForList, addOnly = false) => {
     haptics.light();
+    // Podpowiedz z Google nie ma jeszcze adresu ani wspolrzednych - dociagamy je JEDNYM
+    // zapytaniem dopiero teraz, gdy user ja wybral (i to ono zamyka darmowa sesje pisania).
+    if ((p as any).source === "google" && p.latitude == null) {
+      p = (await resolve(p as any)) as PlaceForList;
+    }
     const drop = !addOnly && selected.some((s) => keyOf(s) === keyOf(p));
     setManual((prev) => drop ? prev.filter((m) => keyOf(m) !== keyOf(p))
       : prev.some((m) => keyOf(m) === keyOf(p)) ? prev : [p, ...prev]);
@@ -368,7 +312,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
                 <p className="py-6 text-center text-sm text-muted-foreground">{t("add_place.no_results")}</p>
               )}
               <div className="space-y-1.5">
-                {results.map((r, i) => renderPlaceRow({ rowKey: `${keyOf(r)}-${i}`, place: r, subtitle: r.address, onToggle: () => pickGoogle(r), selected: isSel(r) }))}
+                {results.map((r, i) => renderPlaceRow({ rowKey: `${keyOf(r)}-${i}`, place: r, subtitle: r.address, onToggle: () => void pickGoogle(r), selected: isSel(r) }))}
               </div>
             </div>
           ) : (
@@ -455,7 +399,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
         wiec od razu jest zaznaczone i odblokowuje "Dodaj". */}
     {/* Z mapy zawsze DODAJEMY (`addOnly`) - tapniecie pinezki to intencja "chce to miejsce",
         a nie przelacznik; odznacza sie na liscie w arkuszu. */}
-    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => pickGoogle(p, true)} />
+    <PlaceMapPicker open={mapOpen} onClose={() => setMapOpen(false)} city={city} center={center} onPick={(p) => void pickGoogle(p, true)} />
     {/* Wizytowka miejsca (klik w wiersz). Vaul-drawer nakłada się na arkusz dodawania. */}
     <PlaceSwiperDetail
       open={!!detailPlace} onOpenChange={(o) => { if (!o) { setDetailPlace(null); setDetailCtx(null); } }} place={detailPlace}

@@ -21,9 +21,13 @@
  * Koszt szacunkowy: <$0.01 per lokal (reviews to malo tekstu). Dla 5 lokali = ~$0.05.
  */
 
+import { requirePaidGoogleOps } from "./_paidGoogleGuard";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+
+requirePaidGoogleOps("poc-popular-dishes (Place Details z recenzjami)");
+
 
 // ─── env ─────────────────────────────────────────────────────────────────────
 

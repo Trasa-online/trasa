@@ -7,7 +7,11 @@
  *
  * Uruchom:  npx tsx scripts/backfill-wroclaw-coords.ts
  */
+import { requirePaidGoogleOps } from "./_paidGoogleGuard";
 import { readFileSync, writeFileSync } from "node:fs";
+
+requirePaidGoogleOps("backfill-wroclaw-coords (Text Search)");
+
 
 // wczytaj .env bez dotenv
 try {

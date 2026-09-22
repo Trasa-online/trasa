@@ -108,6 +108,26 @@ Deno.serve(async (req) => {
     return jsonResponse({ photo_url: null, cached: false, reason: "rate_limited" });
   }
 
+  // ⛔ TYLKO ADMIN ALBO SERVICE_ROLE (2026-09-22). Ta funkcja bije w DWA najdrozsze SKU naraz:
+  // Place Details z atmosfera ($25/1000) po referencje zdjecia i Places Photo ($7/1000) po samo
+  // zdjecie - obie z darmowa pula raptem 1000 wywolan miesiecznie. Do 22.09 mogl ja wywolac
+  // KAZDY zalogowany user (apka robila to sama przy zapisie planu i przy renderze miniaturek),
+  // i to bylo cale nasze 36 zl za wrzesien. Zdjec Google i tak nie pokazujemy przy zwyklych
+  // miejscach (decyzja 2026-09-15), wiec zostaje wylacznie reczne uzycie z panelu ops
+  // (ponowne pobranie okladki po zgloszeniu) i skrypty contentowe z kluczem service_role.
+  {
+    const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    let allowed = bearer === serviceRoleKey;
+    if (!allowed && bearer) {
+      const { data: u } = await sb.auth.getUser(bearer);
+      if (u?.user?.id) {
+        const { data: isAdmin } = await sb.rpc("has_role", { _user_id: u.user.id, _role: "admin" });
+        allowed = isAdmin === true;
+      }
+    }
+    if (!allowed) return jsonResponse({ photo_url: null, cached: false, reason: "forbidden" }, 403);
+  }
+
   try {
     const body = await req.json();
     const {

@@ -90,7 +90,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const pickActive = open && step === "listPick";
   // Zasieg wyszukiwarki to KRAJE listy (2026-09-10). Wczesniej zawezal ja geokod miasta w
   // promieniu 30 km - przy liscie obejmujacej caly kraj wycinal wiekszosc trafien.
-  const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode } =
+  const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode, resolve: resolvePlace } =
     usePlaceSearch(listQuery, { countries: listCountries, enabled: pickActive });
 
   // Wyjazd
@@ -147,11 +147,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // trzeba bylo wpisac ja od nowa. Zgloszenie testerki: "chcialabym kilka od razu wybrac,
   // a nie moge, bo po wybraniu jednej od razu mnie resetuje i wracam na poczatek".
   // Ponowne tapniecie ODZNACZA (wiersz i tak pokazywal ptaszka, ale klik nic nie robil).
-  const pickResult = (r: PlaceForList) => {
+  const pickResult = async (r: PlaceForList) => {
     haptics.light();
-    setManualPlaces((prev) => prev.some((m) => keyOfPlace(m) === keyOfPlace(r))
-      ? prev.filter((m) => keyOfPlace(m) !== keyOfPlace(r))
-      : [r, ...prev]);
+    // Podpowiedz z Google nie niesie jeszcze adresu ani wspolrzednych - jedno zapytanie
+    // dopiero przy WYBORZE (i ono zamyka darmowa sesje pisania). Wynik z naszego katalogu
+    // ma wszystko od razu i nie kosztuje nic.
+    const full = (r as any).source === "google" && r.latitude == null
+      ? ((await resolvePlace(r as any)) as PlaceForList)
+      : r;
+    setManualPlaces((prev) => prev.some((m) => keyOfPlace(m) === keyOfPlace(full))
+      ? prev.filter((m) => keyOfPlace(m) !== keyOfPlace(full))
+      : [full, ...prev]);
   };
   const removeManual = (p: PlaceForList) => setManualPlaces((prev) => prev.filter((m) => keyOfPlace(m) !== keyOfPlace(p)));
   // Licznik na guziku kroku "miejsca": przy wybieraniu kilku naraz zaznaczone wiersze
@@ -482,7 +488,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   )}
                   {listResults.map((r, i) => renderListRow({
                     rowKey: `${keyOfPlace(r)}-${i}`, place: r, subtitle: r.address,
-                    onToggle: () => pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
+                    onToggle: () => void pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
                   }))}
                 </div>
               ) : loadingSaved ? (

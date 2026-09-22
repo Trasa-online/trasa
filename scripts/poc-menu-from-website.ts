@@ -27,9 +27,13 @@
  *   SUPABASE_SERVICE_ROLE_KEY
  */
 
+import { requirePaidGoogleOps } from "./_paidGoogleGuard";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+
+requirePaidGoogleOps("poc-menu-from-website (Place Details)");
+
 
 // ─── env ─────────────────────────────────────────────────────────────────────
 

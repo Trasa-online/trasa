@@ -73,12 +73,14 @@ export default function TripProposalsSheet({
     enabled: enabled && !!city,
     staleTime: 60 * 60 * 1000,
     queryFn: async () => {
-      const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "textsearch", query: city } });
-      const r = ((data as any)?.results ?? [])[0];
+      // ⛔ Do 22.09 stal tu PLATNY Text Search ($32/1000) po sam srodek miasta. Teraz srednia
+      // wspolrzednych naszych miejsc w tym miescie - darmowa i trafniejsza.
+      const { data } = await (supabase as any).rpc("city_center", { p_city: city });
+      const r = Array.isArray(data) ? data[0] : data;
       return r?.latitude != null ? { lat: r.latitude as number, lng: r.longitude as number } : null;
     },
   });
-  const { results, searching, blocked, searchMode } =
+  const { results, searching, blocked, searchMode, resolve: resolvePlace } =
     usePlaceSearch(query, { city, center: geoCenter, scopeKm: 30, enabled });
 
   const { data: proposals = [], refetch: refetchProposals, isLoading: loadingProposals, isRefetching } = useQuery({
@@ -136,6 +138,11 @@ export default function TripProposalsSheet({
     if (!user || !routeId) return;
     if (proposedKeys.has(keyOf(p))) { toast(t("toast.already")); return; }
     haptics.light();
+    // Podpowiedz z Google dostaje adres i wspolrzedne dopiero teraz - jedno zapytanie
+    // na miejsce, ktore ktos naprawde wybral (i ono zamyka darmowa sesje pisania).
+    if ((p as any).source === "google" && (p as any).latitude == null) {
+      p = (await resolvePlace(p as any)) as ProposalInput;
+    }
     const ok = await addRouteProposal(routeId, user.id, p);
     if (!ok) { haptics.error(); toast.error(t("toast.add_failed")); return; }
     haptics.success();

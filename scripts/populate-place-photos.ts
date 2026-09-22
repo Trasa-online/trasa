@@ -16,7 +16,11 @@
  * ⚠️  Service role key omija RLS — używaj tylko lokalnie, nigdy nie commituj do repo!
  */
 
+import { requirePaidGoogleOps } from "./_paidGoogleGuard";
 import { createClient } from "@supabase/supabase-js";
+
+requirePaidGoogleOps("populate-place-photos (Text Search + Places Photo)");
+
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
