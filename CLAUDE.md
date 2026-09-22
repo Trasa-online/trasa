@@ -572,6 +572,41 @@ Okładka w eksploracji (`routes.list_cover_url`) i okładka członka (`setMyRout
 - Lokalizacja: `api/` (root), NIE `src/api/`
 - Sekretne zmienne: Vercel Dashboard → Environment Variables (bez VITE_ prefix)
 
+### ⛔ Rejestracja NIE MOZE padac na regulach nazwy uzytkownika (2026-09-22, migracja `20260922_safe_profile_username`)
+
+Testerka nie mogla zalozyc konta ani przez Google, ani przez Apple. Logi auth mowily
+`500: Database error saving new user ... ERROR: username_not_allowed (SQLSTATE P0001)` - 8 prob
+z jednego IP miedzy 13:12 a 13:46. Przyczyna: `handle_new_user` bral nazwe uzytkownika WPROST
+z czesci adresu przed `@`, a straznik `reject_banned_username` (migracja `20260914b`) odrzuca
+nazwy dluzsze niz **20 znakow**. `usagi.lukowska.contact@gmail.com` daje 22 znaki, wyjatek
+z triggera na `profiles` wywracal cala transakcje tworzenia wiersza w `auth.users` i konto
+NIE POWSTAWALO w ogole (w bazie nie bylo po niej sladu - stad „nie ma takiego uzytkownika").
+
+⚠️ To nie byl problem jednego dostawcy: ta sama sciezka bije w e-mail, Google i Apple, bo wszystkie
+koncza sie insertem do `auth.users`. Adres z `+`, z wielkimi literami, z diakrytykami albo
+z zakazanym slowem w srodku padal tak samo.
+
+- **Nazwa startowa jest SANITYZOWANA, nie brana wprost:** `safe_profile_username(base, uid)`
+  zostawia tylko `[a-z0-9._-]`, tnie do **16 znakow** (zostaje miejsce na licznik unikalnosci),
+  a gdy nic nie zostanie albo wpadnie na liste zakazanych - daje `user_<uuid8>`. Uzywaja jej
+  `handle_new_user` i `ensure_current_user_profile` (obie mialy ten sam blad).
+- ⚠️ **Wolanie `normalize_username_for_match(v)` z JEDNYM argumentem jest niejednoznaczne** (42725):
+  istnieja dwa warianty, `(text)` i `(text, boolean default true)`. Podawaj oba argumenty jawnie
+  i sprawdzaj OBA warianty (`true`/`false`), dokladnie jak `reject_banned_username`.
+- **Imie od dostawcy tez przechodzi przez straznika** (`reject_banned_first_name`: max 30 znakow,
+  bez wulgaryzmow) - za dlugie albo zakazane zapisujemy jako NULL, bo user i tak podaje imie
+  w onboardingu. Blokowanie rejestracji z powodu imienia z Google byloby absurdem.
+- ⛔ **`handle_new_user` nie moze juz wywrocic rejestracji:** zalozenie profilu siedzi w bloku
+  z `exception ... raise warning`, wiec nawet nowa, nieprzewidziana regula na `profiles` zostawia
+  konto zalozone, a profil dorabia `ensure_current_user_profile` przy pierwszym zapytaniu klienta.
+  Dokladajac straznik na `profiles` pamietaj, ze dotyka on TAKZE wiersza tworzonego automatycznie.
+- ⛔ To NIE jest poluzowanie regul: limit 20 znakow i lista slow dzialaja bez zmian dla nazw,
+  ktore user wpisuje SAM (sprawdzone na prodzie - reczna nazwa 31 znakow nadal `username_not_allowed`).
+- Sprawdzone na prodzie w `BEGIN … ROLLBACK` na siedmiu przypadkach: adres testerki (profil
+  `usagi.lukowska.c`, imie zachowane), adres z `+` i wielkimi literami, adres z samych kropek
+  (`user_<uuid8>`), kolizja dwoch adresow o tej samej czesci przed `@` (`…c1`), imie 58 znakow
+  (NULL), anonim (nadal bez profilu), lista „Ogólne" zakladana przez trigger pochodny.
+
 ### Logowanie przez Apple - trzy miejsca, ktore trzeba trzymac razem
 
 Sign in with Apple psuje sie samo, bo **sekret klienta wygasa maksymalnie po 6 miesiacach**
