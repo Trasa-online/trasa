@@ -130,6 +130,29 @@ async function callerWithinLimit(sb: ReturnType<typeof createClient>, req: Reque
   }
 }
 
+
+// ── PLACES API (NEW) Z AUTOMATYCZNYM ODWROTEM DO STAREGO (2026-09-22) ────────
+// Nowe API jest TANSZE za dokladnie te sama robote: Place Details Essentials to 5 $/1000
+// z pula 10 000 darmowych, stare Place Details - 17 $/1000 z pula 5 000. Przy 10 tys. userow
+// to roznica rzedu 6-7 tys. zl miesiecznie.
+//
+// ⚠️ Dzis klucz serwerowy ma je ZABLOKOWANE w ograniczeniach klucza (`API_KEY_SERVICE_BLOCKED`),
+// dlatego kod probuje nowego, a przy odmowie leci starym i ZAPAMIETUJE to na czas zycia
+// instancji (jedno nieudane zapytanie na instancje, bledy nie sa platne). Gdy Nat dopisze
+// "Places API (New)" do ograniczen klucza, oszczednosc wlaczy sie sama, bez wdrozenia.
+//
+// ⛔ Autocomplete i Place Details MUSZA byc z tej samej rodziny w obrebie jednej sesji -
+// inaczej Google nie uzna sesji za zamknieta i policzy kazda podpowiedz osobno. Flaga jest
+// wspolna dla obu akcji wlasnie po to.
+const NEW_BASE = "https://places.googleapis.com/v1";
+let newApiOk: boolean | null = null;   // null = jeszcze nie sprawdzone w tej instancji
+
+function newApiDenied(status: number, payload: unknown): boolean {
+  if (status !== 403) return false;
+  const reason = (payload as { error?: { details?: { reason?: string }[] } })?.error?.details?.[0]?.reason;
+  return reason === "API_KEY_SERVICE_BLOCKED" || reason === "SERVICE_DISABLED" || reason === "API_KEY_HTTP_REFERRER_BLOCKED";
+}
+
 // In-memory caches (live for the duration of the function instance)
 const citysearchCache = new Map<string, { results: any[]; ts: number }>();
 const textsearchCache = new Map<string, { results: any[]; ts: number }>();
@@ -196,17 +219,52 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" },
         });
       }
-      const params = new URLSearchParams({ input, key: apiKey, language: "pl" });
       const token = typeof body.sessionToken === "string" ? body.sessionToken.slice(0, 64) : "";
+      const iso = typeof body.country === "string" && /^[a-z]{2}$/i.test(body.country) ? body.country.toLowerCase() : null;
+
+      if (newApiOk !== false) {
+        const payload: Record<string, unknown> = { input, languageCode: "pl", includedPrimaryTypes: ["establishment"] };
+        if (token) payload.sessionToken = token;
+        if (iso) payload.includedRegionCodes = [iso];
+        if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+          payload.locationBias = { circle: { center: { latitude: body.latitude, longitude: body.longitude },
+            radius: Math.max(1000, Math.min(50000, Number(body.radius) || 20000)) } };
+        }
+        const r = await fetch(`${NEW_BASE}/places:autocomplete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, Referer: REFERER },
+          body: JSON.stringify(payload),
+        });
+        const d = await r.json().catch(() => null);
+        if (r.ok) {
+          newApiOk = true;
+          const results = (((d as any)?.suggestions ?? []) as any[])
+            .map((sg) => sg?.placePrediction)
+            .filter(Boolean)
+            .slice(0, 8)
+            .map((pp: any) => ({
+              name: pp.structuredFormat?.mainText?.text ?? pp.text?.text ?? "",
+              secondary: pp.structuredFormat?.secondaryText?.text ?? "",
+              place_id: pp.placeId ?? null,
+              types: pp.types ?? [],
+            }))
+            .filter((x: any) => x.place_id);
+          return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Api": "new" } });
+        }
+        // 403 od ograniczen klucza = zapamietaj i nie probuj wiecej w tej instancji.
+        // Kazdy inny blad traktujemy jako jednorazowy i tez schodzimy na stare API.
+        if (newApiDenied(r.status, d)) newApiOk = false;
+        else console.error("places new autocomplete:", r.status, JSON.stringify(d)?.slice(0, 200));
+      }
+
+      const params = new URLSearchParams({ input, key: apiKey, language: "pl" });
       if (token) params.set("sessiontoken", token);
       // `types=establishment` odsiewa adresy i dzielnice - do wyjazdu dodaje sie LOKALE.
       // Wyszukiwarka miast podaje wlasne `(cities)`.
       params.set("types", typeof body.types === "string" ? body.types : "establishment");
       // Zasieg krajowy - nakierowanie, ktore nic nie kosztuje, a decyduje o trafnosci
       // (bez niego plan do Francji dostawal podpowiedzi z Polski).
-      if (typeof body.country === "string" && /^[a-z]{2}$/i.test(body.country)) {
-        params.set("components", `country:${body.country.toLowerCase()}`);
-      }
+      if (iso) params.set("components", `country:${iso}`);
       if (typeof body.latitude === "number" && typeof body.longitude === "number") {
         params.set("location", `${body.latitude},${body.longitude}`);
         params.set("radius", String(Math.max(1000, Math.min(50000, Number(body.radius) || 20000))));
@@ -307,10 +365,46 @@ Deno.serve(async (req) => {
       if (!(await consumeGoogleQuota(sb, 1))) {
         return new Response(JSON.stringify({ result: null, quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
       }
-      // ⚠️ `sessiontoken` ZAMYKA sesje autocomplete - dzieki temu wszystkie podpowiedzi
-      // z pisania sa darmowe, a placi sie tylko za to jedno zapytanie. Bez tokenu kazda
-      // podpowiedz jest liczona osobno.
-      const stok = typeof body.sessionToken === "string" ? `&sessiontoken=${encodeURIComponent(body.sessionToken.slice(0, 64))}` : "";
+      // ⚠️ Token sesji ZAMYKA sesje autocomplete - dzieki temu wszystkie podpowiedzi z pisania
+      // sa darmowe, a placi sie tylko za to jedno zapytanie. Bez tokenu kazda podpowiedz jest
+      // liczona osobno.
+      const sessTok = typeof body.sessionToken === "string" ? body.sessionToken.slice(0, 64) : "";
+
+      // Nowe API: "Place Details Essentials" (5 $/1000, 10 000 darmowych) zamiast starego
+      // Place Details (17 $/1000, 5 000). ⛔ Maska pol MUSI zostac w puli Essentials -
+      // dorzucenie np. `rating` albo `regularOpeningHours` przenosi cale zapytanie do
+      // drozszego SKU (Pro/Enterprise), czyli podnosi cene 3-5x za jedno slowo wiecej.
+      if (newApiOk !== false) {
+        const url = `${NEW_BASE}/places/${encodeURIComponent(pid)}?languageCode=pl${sessTok ? `&sessionToken=${encodeURIComponent(sessTok)}` : ""}`;
+        const r = await fetch(url, {
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "id,displayName,formattedAddress,location,types",
+            Referer: REFERER,
+          },
+        });
+        const d = await r.json().catch(() => null);
+        if (r.ok && (d as any)?.id) {
+          newApiOk = true;
+          const payload = {
+            result: {
+              name: (d as any).displayName?.text ?? "",
+              full_address: (d as any).formattedAddress ?? "",
+              latitude: (d as any).location?.latitude ?? null,
+              longitude: (d as any).location?.longitude ?? null,
+              types: (d as any).types ?? [],
+              place_id: (d as any).id ?? pid,
+            },
+          };
+          sb.from("place_details_cache").upsert({ cache_key: pkey, data: payload, cached_at: new Date().toISOString() }, { onConflict: "cache_key" })
+            .then(() => {}, (e: Error) => console.error("placeid cache write:", e.message));
+          return new Response(JSON.stringify(payload), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Api": "new" } });
+        }
+        if (newApiDenied(r.status, d)) newApiOk = false;
+        else console.error("places new details:", r.status, JSON.stringify(d)?.slice(0, 200));
+      }
+
+      const stok = sessTok ? `&sessiontoken=${encodeURIComponent(sessTok)}` : "";
       const res = await fetch(`${BASE}/place/details/json?place_id=${encodeURIComponent(pid)}&fields=place_id,name,formatted_address,geometry,types&key=${apiKey}&language=pl${stok}`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const r = data?.result;
