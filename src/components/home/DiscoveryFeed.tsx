@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { GridTile, LIST_TILES, type GridItem, type GridPlace } from "@/components/home/FeedTiles";
 import { listTheme } from "@/lib/listThemes";
-import { buildTripStaticMapUrl } from "@/lib/staticMap";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { scopeLabel } from "@/lib/tripScope";
 import { pinCoverKeys, fetchPlacePhotosForKeys, pickPlaceCover } from "@/lib/placePhotoSocial";
@@ -19,7 +18,7 @@ import { haptics } from "@/hooks/useHaptics";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
 import { X, Sparkles, ChevronRight, ArrowRight, Eye, List, GalleryHorizontalEnd, SlidersHorizontal, Plus, ArrowLeft, Images, Bookmark, Building2, Users, Navigation, Loader2 } from "lucide-react";
-import { BrandCalendar, BrandTrash, BrandSearch, BrandGlobe, BrandPencil, BrandPin } from "@/components/BrandIcon";
+import { BrandCalendar, BrandTrash, BrandSearch, BrandGlobe, BrandPencil, BrandPin, BrandMap } from "@/components/BrandIcon";
 import { API_BASE } from "@/lib/platform";
 import { useDebounce } from "@/hooks/useDebounce";
 import { expandCity } from "@/lib/cities";
@@ -36,7 +35,7 @@ import { format as fmtDate, parseISO as parseISODate, isValid as isValidDate } f
 import { dateLocale } from "@/lib/dateLocale";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 // Karta trasy w feedzie + helper mapki: wspoldzielone z profilem (zakladka Wyjazdy).
-import TrasaBigCard, { buildMiniMapUrl, TRASA_CARD_H, type LatLng } from "@/components/home/TrasaBigCard";
+import TrasaBigCard, { TRASA_CARD_H, type LatLng } from "@/components/home/TrasaBigCard";
 import { PlaceTile } from "@/components/profile/PlaceTile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "@/components/social/FollowButton";
@@ -292,7 +291,6 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
   // Okladka hero = reczny cover_url autora; fallback do zdjecia pierwszego miejsca. + mini mapka.
   const coverItem = col.items.find((i) => i.photo_url) ?? col.items[0];
   const coverUrl = resolveStored(col.cover_url) ?? resolveStored(coverItem?.photo_url);
-  const heroMap = buildMiniMapUrl(col.items);
 
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
   // Najpierw pyta o date (przez onAdopt -> drawer w feedzie), potem laduje w PlanWizard.
@@ -465,8 +463,12 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               <Images className="h-4 w-4" />
             </button>
           )}
-          {/* Miniatura w rogu (prawy dol): klik PODMIENIA okladke z mapka i odwrotnie. */}
-          {heroMap && mapPins.length > 0 && (
+          {/* Prawy dol: przelacznik okladka <-> ZYWA mapa. ⛔ Do 2026-09-23 byla tu miniatura
+              ze STATYCZNA mapa Google - zdjeta razem z mini-mapkami na okladkach (decyzja
+              Nat): kazda taka miniatura to osobne, platne wywolanie Maps Static odswiezane
+              co dobe. Sam przelacznik zostaje, bo zywa mapa montuje sie dopiero po tapnieciu
+              i nie kosztuje nic, dopoki nikt jej nie otworzy. */}
+          {mapPins.length > 0 && (
             <button
               type="button"
               onClick={() => { haptics.selection(); setHeroMode((m) => (m === "photo" ? "map" : "photo")); }}
@@ -476,10 +478,9 @@ export function CollectionDetail({ col, onClose, onAdopt }: { col: DiscoveryColl
               {mapOnHero ? (
                 coverUrl
                   ? <img src={coverUrl} alt="" aria-hidden className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-amber-200 to-orange-300 flex items-center justify-center text-lg">📍</div>
+                  : <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><BrandPin className="h-5 w-5 text-primary" /></div>
               ) : (
-                <img src={heroMap} alt="" aria-hidden className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+                <div className="w-full h-full bg-[#fcede3] flex items-center justify-center"><BrandMap className="h-6 w-6 text-primary" /></div>
               )}
             </button>
           )}
@@ -1097,7 +1098,6 @@ function BigCard({
   const { t } = useTranslation("homefeed");
   const [noteOpen, setNoteOpen] = useState(false);
   const cover = photo ?? getRandomPinPlaceholder(id);
-  const miniMap = buildMiniMapUrl(pins);
 
   return (
     <div className="w-full">
@@ -1119,13 +1119,6 @@ function BigCard({
               </span>
             )}
           </div>
-          {/* Mini mapka Google (prawy dolny rog) - jak w referencji */}
-          {miniMap && (
-            <div className="absolute bottom-3 right-3 h-16 w-16 rounded-2xl overflow-hidden ring-2 ring-white/85 shadow-md bg-muted">
-              <img src={miniMap} alt="" aria-hidden loading="lazy" className="w-full h-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
-            </div>
-          )}
         </div>
       </button>
 
@@ -1248,7 +1241,7 @@ function collectionToGridItem(col: DiscoveryCollection): GridItem {
     authorFrame: col.author_frame ?? null, authorFrameColor: col.author_frame_color ?? null,
     showAuthor: !!(col.author_username || col.author_name),
     at: new Date(col.updated_at ?? 0).getTime(),
-    placesCount: col.items.length, days: null, mapUrl: null,
+    placesCount: col.items.length, days: null,
     theme: listTheme(col.theme, col.id), places,
     visitedCount: col.visited_count ?? 0,
     newCount: (col as any).new_count ?? 0,
@@ -1345,7 +1338,6 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave,
 }) {
   const { t } = useTranslation("homefeed");
   const cover = photo ?? getRandomPinPlaceholder(id);
-  const miniMap = buildMiniMapUrl(pins);
   const countLabel = placeCount > 0
     ? t("places_count", { count: placeCount })
     : null;
@@ -1357,12 +1349,6 @@ function SavedTile({ id, photo, title, city, placeCount, pins, onOpen, onUnsave,
       <div className="relative w-[118px] shrink-0 aspect-[4/5] rounded-2xl overflow-hidden bg-muted">
         <img src={cover} alt="" className="w-full h-full object-cover"
           onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(id + "_fb"); }} />
-        {miniMap && (
-          <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
-            <img src={miniMap} alt="" className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
-          </div>
-        )}
       </div>
       <div className="flex-1 min-w-0 flex flex-col py-0.5 pr-0.5">
         <div className="flex items-start gap-2">
@@ -2485,7 +2471,6 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
                   authorFrame: r.author_frame ?? null, authorFrameColor: r.author_frame_color ?? null,
                   showAuthor: !!r.author_id,
                   at: 0, placesCount: r.placeCount ?? 0, days: r.days ?? null,
-                  mapUrl: buildTripStaticMapUrl(r.pins ?? [], "200x200"),
                   pins: r.pins ?? [],
                   theme: null, places: [],
                 }}

@@ -59,9 +59,16 @@ function BillingSection() {
   const due = net(thisMonth);
   const list = gross(thisMonth);
   const saved = thisMonth.reduce((a, r) => a + r.credits, 0);
-  // Ostatni dzien, ktory Google juz rozliczyl - od niego liczymy tempo.
-  const lastDay = thisMonth.length ? Math.max(...thisMonth.map((r) => Number(r.day.slice(8, 10)))) : 0;
-  const forecast = lastDay > 0 ? (due / lastDay) * getDaysInMonth(now) : 0;
+  // ⛔ OKRES LICZYMY Z DANYCH, NIE OD PIERWSZEGO DNIA MIESIACA (poprawka 2026-09-23,
+  // zgloszenie Nat: "w Google mam 43 zl, a w panelu 13,53 zl"). Eksport rozliczen ruszyl
+  // 20.09 i Google NIE uzupelnia go wstecz, wiec mamy dane z 4 dni, a panel pisal "za dni
+  // 1-23" i dzielil tempo przez 23 - czyli klamal o zakresie i zanizal prognoze szesciokrotnie.
+  const dayNums = thisMonth.map((r) => Number(r.day.slice(8, 10)));
+  const lastDay = dayNums.length ? Math.max(...dayNums) : 0;
+  const firstDay = dayNums.length ? Math.min(...dayNums) : 0;
+  const coveredDays = new Set(thisMonth.map((r) => r.day)).size;
+  const partialMonth = firstDay > 1;
+  const forecast = coveredDays > 0 ? (due / coveredDays) * getDaysInMonth(now) : 0;
   const syncedAt = rows.length ? rows.reduce((a, r) => (r.synced_at > a ? r.synced_at : a), rows[0].synced_at) : null;
 
   // Rozbicie na uslugi (Places API, Maps JavaScript API, Geocoding...), netto, malejaco.
@@ -97,10 +104,24 @@ function BillingSection() {
             </div>
           ) : (
             <>
+              {partialMonth && (
+                <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5">
+                  <p className="text-xs font-semibold text-amber-900">
+                    Ten miesiąc jest niepełny - eksport rozliczeń rusza od dnia {firstDay}.
+                  </p>
+                  <p className="text-[11px] text-amber-800 mt-0.5 leading-snug">
+                    Google nie uzupełnia eksportu wstecz, więc dni {firstDay > 2 ? `1-${firstDay - 1}` : "wcześniejsze"} nie są tu liczone.
+                    W Google Cloud zobaczysz za ten miesiąc kwotę WYŻSZĄ - to nie jest błąd panelu.
+                    Od następnego miesiąca obie liczby będą się zgadzać.
+                  </p>
+                </div>
+              )}
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="text-3xl font-black text-slate-900 tabular-nums">{money(due, cur)}</p>
-                  <p className="text-sm text-slate-500 mt-0.5">do zapłaty za dni 1-{lastDay}</p>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    do zapłaty za dni {firstDay}-{lastDay} ({coveredDays} {coveredDays === 1 ? "dzień" : "dni"} w eksporcie)
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-slate-700 tabular-nums">≈ {money(forecast, cur)}</p>
