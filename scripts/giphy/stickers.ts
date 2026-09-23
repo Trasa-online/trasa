@@ -148,7 +148,36 @@ const markDraw = (w: number, h: number): Draw => (ctx, t) =>
     drawMarkStar(ctx, 1 + Math.sin(ph) * 0.03, 0);
   });
 
+// 7. ZNAK STOI, ZYJE SAMA GWIAZDKA (prosba Nat 2026-09-23). Roznica wobec #4: tam gwiazdka
+//    tylko pulsowala w miejscu, tu dodatkowo PLYNIE po malej elipsie i kolysze sie w obie
+//    strony - czyta sie jak iskra przy znaku, a nie jak oddychajacy element interfejsu.
+// ⛔ „S" jest calkowicie nieruchome i w pelnym kryciu. Zero animacji `opacity` na znaku
+//    (regula z CLAUDE.md: animowane krycie wyglada jak gradient, a znak ma byc plaski
+//    `#F75708`) - caly ruch niesie gwiazdka.
+// ⚠️ Amplituda ruchu jest MALA (±14 jednostek na 618 x 636 znaku, czyli ~2%): przy wiekszej
+//    gwiazdka odkleja sie od „S" i wyglada, jakby odpadla od logo.
+const markStarAlive = (w: number, h: number): Draw => (ctx, t) =>
+  withMark(ctx, w, h, () => {
+    const { s } = markPaths();
+    ctx.fillStyle = STICKER_ORANGE;
+    ctx.fill(s);
+    const ph = t * TAU;
+    ctx.save();
+    // Plyniecie po elipsie: pelny obieg na petle, szerzej w poziomie niz w pionie.
+    ctx.translate(Math.cos(ph) * 14, Math.sin(ph) * 9);
+    // Puls i kolysanie maja INNE fazy niz obieg - inaczej ruch wyglada mechanicznie
+    // (wszystko osiaga skrajnosc w tej samej chwili).
+    drawMarkStar(ctx, 1 + Math.sin(ph + 0.6) * 0.12, Math.sin(ph + 2.1) * 0.14);
+    ctx.restore();
+  });
+
 export type Sticker = { name: string; blob: Blob; w: number; h: number };
+
+/** Sama animacja #7 - bez renderowania calej szostki (prosba Nat 2026-09-23). */
+export async function renderStarAlive(): Promise<Sticker> {
+  const [w, h] = [720, 740];
+  return { name: "7-logo-s-zywa-gwiazdka", blob: await encodeGif(markStarAlive(w, h), w, h, 48, 40), w, h };
+}
 
 export async function renderAll(): Promise<Sticker[]> {
   try { await document.fonts.load("400 96px Sigmar"); } catch { /* bez znaczenia - tu nie ma tekstu */ }
@@ -162,5 +191,6 @@ export async function renderAll(): Promise<Sticker[]> {
   await add("4-logo-s-pulsujaca-gwiazdka", markPulse(720, 740), 720, 740);
   await add("5-logo-s-rysowane-stempel", markDraw(720, 740), 720, 740, 72, 50);
   await add("6-gwiazdka-zolta-obwodka", starSingle, 720, 720);
+  out.push(await renderStarAlive());
   return out;
 }
