@@ -47,7 +47,11 @@
     "more": "Więcej",
     "trip_saved": "Zapisano plan",
     "no_following": "{{name}} nikogo jeszcze nie obserwuje.",
-    "no_followers": "Nikt jeszcze nie obserwuje {{name}}."
+    "no_followers": "Nikt jeszcze nie obserwuje {{name}}.",
+    "follow": "Obserwuj",
+    "unfollow": "Przestań obserwować",
+    "followed": "Obserwujesz tę osobę",
+    "unfollowed": "Nie obserwujesz już tej osoby"
   },
   "profile": {
     "header_fallback": "profil",

@@ -46,7 +46,11 @@
     "more": "More",
     "trip_saved": "Plan saved",
     "no_following": "{{name}} does not follow anyone yet.",
-    "no_followers": "No one follows {{name}} yet."
+    "no_followers": "No one follows {{name}} yet.",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "followed": "You are following them",
+    "unfollowed": "You stopped following them"
   },
   "profile": {
     "header_fallback": "profile",

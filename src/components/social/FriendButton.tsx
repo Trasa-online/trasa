@@ -16,15 +16,15 @@ import { cn } from "@/lib/utils";
 
 // GUZIK ZNAJOMOSCI: Dodaj -> Wyslano -> (u drugiej strony) Akceptuj -> Znajomi.
 //
-// ⚠️ Stoi OBOK guzika obserwowania i to nie jest dublowanie: obserwowanie jest publiczne
-// i jednostronne, znajomosc - obustronna i to ona otwiera zdjecia "tylko dla znajomych".
-// ⛔ Rozroznia je IKONA, nie sam kolor: znajomosc to DWIE osoby (`Users`), obserwowanie -
-// jedna (`BrandUserPlus` / `UserCheck`). Pierwsza wersja miala w obu kolkach osobe
-// z ptaszkiem i roznily sie wylacznie tlem - sprawdzone renderem w WebKit, nie dalo sie ich
-// od siebie odczytac. Kolor niesie dodatkowo stan: zolty = relacja (marka), szary = czekam,
-// pomaranczowy = guzik czegos ODE MNIE chce ("Przyjmij").
-// ⚠️ Stan "jestescie znajomymi" ma jeszcze PLAKIETKE z ptaszkiem w rogu - bez niej wyglada
-// dokladnie jak "dodaj do znajomych".
+// ⛔ NA PROFILU PUBLICZNYM STOI TYLKO TEN JEDEN GUZIK (decyzja Nat 2026-09-23, model
+// z Facebooka). Przez dobe staly tam DWA kolka - "obserwuj" i "dodaj do znajomych" - i Nat
+// zglosila to jako mylace: oba dotycza relacji, oba maja ludzika, a roznica miedzy nimi jest
+// dla usera niewidoczna. Teraz jest jedno zdanie do podjecia: "dodaj do znajomych".
+// Obserwowanie dzieje sie SAMO przy wyslaniu zaproszenia, a gdy druga strona nie przyjmie -
+// zostaje samo obserwowanie. Reczne "przestan obserwowac" przenieslo sie do menu "⋮".
+//
+// Kolory niosa stan: pomaranczowy = akcja ode mnie ("Dodaj", "Przyjmij"), szary = czekam,
+// zolty marki = jestesmy znajomymi (ten sam kolor, co plakietka "Znajomi" w listach ludzi).
 //
 // ⛔ Wyslanie zaproszenia ZAKLADA TEZ OBSERWACJE (patrz `src/lib/friends.ts`), wiec po
 // tapnieciu odswiezamy takze stan guzika obok - inaczej pokazywalby "Obserwuj" mimo ze
@@ -33,11 +33,13 @@ import { cn } from "@/lib/utils";
 interface Props {
   targetUserId: string;
   className?: string;
-  /** Sama ikona w kolku - naglowek profilu publicznego (tak samo jak `FollowButton`). */
+  /** Sama ikona w kolku - listy ludzi, gdzie na napis nie ma miejsca. */
   iconOnly?: boolean;
+  /** Pelna szerokosc z napisem - profil publiczny. */
+  block?: boolean;
 }
 
-export default function FriendButton({ targetUserId, className, iconOnly = false }: Props) {
+export default function FriendButton({ targetUserId, className, iconOnly = false, block = false }: Props) {
   const { t } = useTranslation("social");
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -70,8 +72,8 @@ export default function FriendButton({ targetUserId, className, iconOnly = false
 
   const label =
     status === "friends" ? t("friend.friends")
-    : status === "pending_in" ? t("friend.accept")
-    : status === "pending_out" ? t("friend.sent")
+    : status === "pending_in" ? t("friend.accept_request")
+    : status === "pending_out" ? t("friend.request_pending")
     : t("friend.add_long");
 
   const onTap = () => {
@@ -98,9 +100,9 @@ export default function FriendButton({ targetUserId, className, iconOnly = false
     );
 
   const tone =
-    status === "pending_in" ? "bg-primary text-white shadow-sm"
-    : status === "pending_out" ? "bg-muted text-muted-foreground border border-border/50"
-    : "bg-[#FDF184] text-[#5B2C06]";
+    status === "friends" ? "bg-[#FDF184] text-[#5B2C06]"
+    : status === "pending_out" ? "bg-secondary text-muted-foreground"
+    : "bg-primary text-white shadow-sm";
 
   const confirm = (
     <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
@@ -144,7 +146,13 @@ export default function FriendButton({ targetUserId, className, iconOnly = false
       <button
         onClick={onTap}
         disabled={busy}
-        className={cn("shrink-0 h-9 px-4 rounded-full text-[13px] font-bold flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-60", tone, className)}
+        className={cn(
+          // ⚠️ gap-3, nie gap-2: plakietka ("+" albo ptaszek) wystaje 8 px poza ikone i przy
+          // mniejszym odstepie dotykala pierwszej litery napisu.
+          "rounded-full font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-transform disabled:opacity-60",
+          block ? "h-11 w-full text-[15px]" : "shrink-0 h-9 px-4 text-[13px]",
+          tone, className,
+        )}
       >
         {icon} {label}
       </button>

@@ -39,7 +39,9 @@
     "remove_title": "Remove from friends?",
     "remove_desc": "They will lose access to your friends-only photos. Following stays as it was.",
     "remove_confirm": "Remove friend",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "accept_request": "Accept request",
+    "request_pending": "Request sent"
   },
   "follow": {
     "no_session": "No session",

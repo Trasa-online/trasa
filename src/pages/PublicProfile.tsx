@@ -12,18 +12,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { toggleRouteLike } from "@/lib/likes";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { ArrowLeft } from "lucide-react";
-import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { BrandIcon, LIST_ICON, STAR_ICON, BrandUserPlus } from "@/components/BrandIcon";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
 import { haptics } from "@/hooks/useHaptics";
 import { applyTripOrder, fetchTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import FollowButton from "@/components/social/FollowButton";
 import FriendButton from "@/components/social/FriendButton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
 import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
-import { useFollowCounts } from "@/hooks/useFollow";
+import { useFollowCounts, useIsFollowing, followUser, unfollowUser } from "@/hooks/useFollow";
 import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
 import { useFriendIds } from "@/lib/friends";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -305,6 +304,23 @@ export default function PublicProfile() {
   const canInteract = !!user && !!profile?.id && user.id !== profile.id;
   // Moderacja (wymog App Store 1.2): menu "..." z blokowaniem i zgloszeniem profilu.
   const [menuOpen, setMenuOpen] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const { data: isFollowing = false } = useIsFollowing(user?.id, profile?.id);
+  const toggleFollow = async () => {
+    if (!profile || followBusy) return;
+    setFollowBusy(true);
+    try {
+      haptics.light();
+      if (isFollowing) await unfollowUser(profile.id); else await followUser(profile.id);
+      queryClient.invalidateQueries({ queryKey: ["is-following", user?.id, profile.id] });
+      queryClient.invalidateQueries({ queryKey: ["follow-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["following-ids", user?.id] });
+      toast(isFollowing ? t("public.unfollowed") : t("public.followed"));
+      setMenuOpen(false);
+    } catch {
+      toast.error(t("people.follow_failed"));
+    } finally { setFollowBusy(false); }
+  };
   const [blocked, setBlocked] = useState(false);
   useEffect(() => {
     if (!user?.id || !profile?.id || user.id === profile.id) return;
@@ -446,7 +462,14 @@ export default function PublicProfile() {
                   {menuOpen && (
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 top-11 z-40 w-56 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
+                      <div className="absolute right-0 top-11 z-40 w-60 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
+                        {/* Obserwowanie jako pozycja menu, nie drugi guzik w naglowku: przy
+                            zaproszeniu do znajomych zaczyna sie samo, a recznie rusza je
+                            garstka osob. Ten sam uklad, co na Facebooku. */}
+                        <button onClick={toggleFollow} disabled={followBusy} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-60">
+                          <BrandUserPlus className="h-4 w-4 shrink-0" />
+                          {isFollowing ? t("public.unfollow") : t("public.follow")}
+                        </button>
                         <button onClick={toggleBlock} className="w-full px-4 py-3 text-left text-sm font-medium text-destructive flex items-center gap-2.5 active:bg-muted">
                           <Ban className="h-4 w-4 shrink-0" /> {blocked ? t("public.unblock") : t("public.block")}
                         </button>
@@ -516,16 +539,16 @@ export default function PublicProfile() {
               <BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />{starred.length}
             </p>
           </button>
-          <div className="flex-1" />
-          {/* Sama ikona zamiast napisu "Obserwuj" (prosba Nat 2026-09-13) - trzy statystyki
-              w rzedzie nie zostawialy miejsca na pigulke z tekstem. Obok niej guzik
-              ZNAJOMOSCI (zolty): obserwowanie jest publiczne i jednostronne, znajomosc
-              wymaga zgody obu stron i to ona otwiera zdjecia "tylko dla znajomych". */}
-          <div className="flex shrink-0 items-center gap-2">
-            <FollowButton targetUserId={profile.id} iconOnly />
-            <FriendButton targetUserId={profile.id} iconOnly />
-          </div>
         </div>
+
+        {/* ⛔ JEDEN GUZIK RELACJI (decyzja Nat 2026-09-23, model z Facebooka). Przez dobe staly
+            tu DWA kolka - "obserwuj" i "dodaj do znajomych" - i to bylo mylace: oba o relacji,
+            oba z ludzikiem, roznica niewidoczna. Teraz jedna decyzja: wysylam zaproszenie
+            (i przy okazji zaczynam obserwowac), a gdy druga strona nie przyjmie - zostaje samo
+            obserwowanie. "Przestan obserwowac" siedzi w menu "⋮" w belce, jak na Facebooku.
+            ⚠️ Pelna szerokosc, nie kolko: ikona sama w sobie nie mowi, co sie stanie po
+            tapnieciu, a to jest najwazniejsza akcja na tym ekranie. */}
+        {canInteract && <FriendButton targetUserId={profile.id} block />}
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej).
             PRZYKLEJONE u gory, tak jak na wlasnym profilu: przy wlaczonym snapie pierwszy

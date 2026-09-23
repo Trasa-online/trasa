@@ -41,7 +41,9 @@
     "remove_title": "Usunąć ze znajomych?",
     "remove_desc": "Ta osoba straci dostęp do Twoich zdjęć tylko dla znajomych. Obserwowanie zostaje bez zmian.",
     "remove_confirm": "Usuń ze znajomych",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "accept_request": "Przyjmij zaproszenie",
+    "request_pending": "Zaproszenie wysłane"
   },
   "follow": {
     "no_session": "Brak sesji",
