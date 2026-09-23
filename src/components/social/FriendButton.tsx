@@ -35,11 +35,9 @@ interface Props {
   className?: string;
   /** Sama ikona w kolku - listy ludzi, gdzie na napis nie ma miejsca. */
   iconOnly?: boolean;
-  /** Pelna szerokosc z napisem - profil publiczny. */
-  block?: boolean;
 }
 
-export default function FriendButton({ targetUserId, className, iconOnly = false, block = false }: Props) {
+export default function FriendButton({ targetUserId, className, iconOnly = false }: Props) {
   const { t } = useTranslation("social");
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -70,7 +68,17 @@ export default function FriendButton({ targetUserId, className, iconOnly = false
     }
   };
 
+  // ⚠️ KROTKIE napisy, bo guzik stoi W RZEDZIE STATYSTYK (prosba Nat 2026-09-23). Pelne
+  // "Dodaj do znajomych" ma przy 13 px okolo 180 px z ikona i paddingiem, a po trzech
+  // licznikach ("Obserwujacy / Znajomi / Wyroznione") zostaje na telefonie ~150 px. Kontekst
+  // niesie sasiedni licznik "Znajomi", wiec samo "Dodaj" czyta sie jednoznacznie; pelne
+  // zdanie zostaje w `aria-label`.
   const label =
+    status === "friends" ? t("friend.friends")
+    : status === "pending_in" ? t("friend.accept")
+    : status === "pending_out" ? t("friend.sent")
+    : t("friend.add");
+  const aria =
     status === "friends" ? t("friend.friends")
     : status === "pending_in" ? t("friend.accept_request")
     : status === "pending_out" ? t("friend.request_pending")
@@ -146,11 +154,12 @@ export default function FriendButton({ targetUserId, className, iconOnly = false
       <button
         onClick={onTap}
         disabled={busy}
+        aria-label={aria}
+        title={aria}
         className={cn(
           // ⚠️ gap-3, nie gap-2: plakietka ("+" albo ptaszek) wystaje 8 px poza ikone i przy
           // mniejszym odstepie dotykala pierwszej litery napisu.
-          "rounded-full font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-transform disabled:opacity-60",
-          block ? "h-11 w-full text-[15px]" : "shrink-0 h-9 px-4 text-[13px]",
+          "shrink-0 h-9 px-3.5 rounded-full text-[13px] font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-transform disabled:opacity-60",
           tone, className,
         )}
       >

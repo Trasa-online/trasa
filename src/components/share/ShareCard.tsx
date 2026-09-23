@@ -438,7 +438,7 @@ export function ShareCardList({ title, city, items, author, avatar, authorId, au
     authorAvatar: avatar ?? null, authorId: authorId ?? null,
     authorFrame: authorFrame ?? null, authorFrameColor: authorFrameColor ?? null,
     showAuthor: true,
-    at: 0, placesCount: items.length, days: null, mapUrl: null,
+    at: 0, placesCount: items.length, days: null,
     theme: listTheme(theme ?? null, collectionId),
     places,
     visitedCount,

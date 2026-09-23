@@ -744,7 +744,7 @@ const TravelerProfile = () => {
       authorFrameColor: l.author_frame_color ?? null,
       showAuthor: !!(l.author_username || l.author_name),
       at: new Date(l.updated_at ?? 0).getTime(),
-      placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+      placesCount: (l.tiles ?? []).length, days: null,
       theme: listTheme(l.theme, l.id), places,
       visitedCount: l.visited_count ?? 0,
     };
@@ -793,7 +793,7 @@ const TravelerProfile = () => {
                   showAuthor: true,
                   coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
                   at: new Date(l.updated_at ?? 0).getTime(),
-                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  placesCount: (l.tiles ?? []).length, days: null,
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
                   // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla

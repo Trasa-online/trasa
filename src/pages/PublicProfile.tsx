@@ -539,16 +539,16 @@ export default function PublicProfile() {
               <BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />{starred.length}
             </p>
           </button>
+          <div className="flex-1" />
+          {/* ⛔ JEDEN GUZIK RELACJI (decyzja Nat 2026-09-23, model z Facebooka). Przez dobe
+              staly tu DWA kolka - "obserwuj" i "dodaj do znajomych" - i to bylo mylace: oba
+              o relacji, oba z ludzikiem, roznica niewidoczna. Teraz jedna decyzja: wysylam
+              zaproszenie (i przy okazji zaczynam obserwowac), a gdy druga strona nie przyjmie
+              - zostaje samo obserwowanie. "Przestan obserwowac" siedzi w menu "⋮" w belce.
+              ⚠️ Stoi W RZEDZIE STATYSTYK i ma napis, nie sama ikone (prosba Nat): guzik pelnej
+              szerokosci pod rzedem zabieral pasek ekranu, a samo kolko nie mowilo, co robi. */}
+          {canInteract && <FriendButton targetUserId={profile.id} />}
         </div>
-
-        {/* ⛔ JEDEN GUZIK RELACJI (decyzja Nat 2026-09-23, model z Facebooka). Przez dobe staly
-            tu DWA kolka - "obserwuj" i "dodaj do znajomych" - i to bylo mylace: oba o relacji,
-            oba z ludzikiem, roznica niewidoczna. Teraz jedna decyzja: wysylam zaproszenie
-            (i przy okazji zaczynam obserwowac), a gdy druga strona nie przyjmie - zostaje samo
-            obserwowanie. "Przestan obserwowac" siedzi w menu "⋮" w belce, jak na Facebooku.
-            ⚠️ Pelna szerokosc, nie kolko: ikona sama w sobie nie mowi, co sie stanie po
-            tapnieciu, a to jest najwazniejsza akcja na tym ekranie. */}
-        {canInteract && <FriendButton targetUserId={profile.id} block />}
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej).
             PRZYKLEJONE u gory, tak jak na wlasnym profilu: przy wlaczonym snapie pierwszy
@@ -615,7 +615,7 @@ export default function PublicProfile() {
                   showAuthor: true,
                   coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
                   at: new Date(l.updated_at ?? 0).getTime(),
-                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  placesCount: (l.tiles ?? []).length, days: null,
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
                 };
