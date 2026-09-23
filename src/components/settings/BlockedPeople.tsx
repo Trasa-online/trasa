@@ -105,8 +105,8 @@ export default function BlockedPeople({ userId }: { userId: string }) {
           <AlertDialogTitle>{t("blocked.confirm_title", { name: pending?.first_name || pending?.username || "" })}</AlertDialogTitle>
           <AlertDialogDescription>{t("blocked.confirm_desc")}</AlertDialogDescription>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={confirmUnblock} disabled={busy}>{t("blocked.unblock")}</AlertDialogAction>
             <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmUnblock} disabled={busy}>{t("blocked.unblock")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

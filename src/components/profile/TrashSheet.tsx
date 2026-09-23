@@ -134,10 +134,10 @@ export default function TrashSheet({ open, onOpenChange }: { open: boolean; onOp
             {t("trash.purge_desc", { name: confirm?.title || t(confirm?.kind === "trip" ? "trash.trip_fallback" : "trash.list_fallback") })}
           </AlertDialogDescription>
           <AlertDialogFooter>
+            <AlertDialogCancel>{t("trash.cancel")}</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={() => confirm && void purge(confirm)}>
               {t("trash.purge")}
             </AlertDialogAction>
-            <AlertDialogCancel>{t("trash.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

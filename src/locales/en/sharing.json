@@ -173,7 +173,10 @@
     "photos_other": "{{count}} photos",
     "place_gone_with": "Along with the place, {{parts}} added by participants will disappear. This cannot be undone.",
     "and": " and ",
-    "delete_trip_desc": "“{{title}}” will be gone from your profile for good. This cannot be undone."
+    "delete_trip_desc": "“{{title}}” will be gone from your profile for good. This cannot be undone.",
+    "delete_photo_title": "Delete this photo?",
+    "delete_photo_desc": "It will disappear from this plan for everyone in it. Right after deleting you can still undo it from the notice at the top of the screen.",
+    "delete_photo_confirm": "Delete photo"
   },
   "choose_places_desc": "Select the places that make it into the plan.",
   "reorder_hint": "Drag to reorder",

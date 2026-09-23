@@ -321,13 +321,13 @@ export default function PeopleSheet({ open, onClose, tab, onTab, ownerId, myId, 
             {t("profile.friend_remove_desc", { name: confirmRemove?.first_name || confirmRemove?.username || "" })}
           </AlertDialogDescription>
           <AlertDialogFooter>
+            <AlertDialogCancel>{t("profile.friend_remove_cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground"
               onClick={() => { const p = confirmRemove; setConfirmRemove(null); if (p) void doRemove(p); }}
             >
               {t("profile.friend_remove")}
             </AlertDialogAction>
-            <AlertDialogCancel>{t("profile.friend_remove_cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

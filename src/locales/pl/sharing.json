@@ -182,7 +182,10 @@
     "photos_many": "{{count}} zdjęć",
     "place_gone_with": "Razem z miejscem znikną {{parts}} dodane przez uczestników. Tego nie da się cofnąć.",
     "and": " i ",
-    "delete_trip_desc": "„{{title}}” zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć."
+    "delete_trip_desc": "„{{title}}” zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.",
+    "delete_photo_title": "Usunąć to zdjęcie?",
+    "delete_photo_desc": "Zniknie z tego planu u wszystkich uczestników. Zaraz po usunięciu możesz to jeszcze cofnąć w powiadomieniu na górze ekranu.",
+    "delete_photo_confirm": "Usuń zdjęcie"
   },
   "choose_places_desc": "Zaznacz miejsca, które wchodzą do planu.",
   "reorder_hint": "Przeciągnij, by zmienić kolejność",

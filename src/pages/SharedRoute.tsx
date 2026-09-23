@@ -250,6 +250,15 @@ export default function SharedRoute() {
   const [datesSheetOpen, setDatesSheetOpen] = useState(false);
   const [daysSheetOpen, setDaysSheetOpen] = useState(false);
   const [askRemoveDay, setAskRemoveDay] = useState<number | null>(null);
+  // ⛔ USUNIECIE ZDJECIA PYTA (zgloszenie Nat 2026-09-23: "dla destrukcyjnej akcji usuwania
+  // zdjecia nie ma walidacji"). Do tego dnia kosz w podgladzie i krzyzyk na miniaturze kasowaly
+  // OD RAZU - zostawal toast z "Cofnij", ale on zyje kilka sekund i trzeba go zlapac. Zdjecia
+  // z wyjazdu sa nie do odtworzenia, jesli user nie ma juz oryginalu w telefonie.
+  // ⚠️ Jeden stan na OBIE drogi usuwania (galeria wyjazdu i zdjecie przy miejscu), zeby
+  // pytanie bylo dokladnie takie samo niezaleznie od tego, skad user je wywolal.
+  const [askDeletePhoto, setAskDeletePhoto] = useState<
+    { kind: "gallery"; url: string } | { kind: "pin"; id: string } | null
+  >(null);
   const [askShorten, setAskShorten] = useState<{ to: number; moving: number } | null>(null);
   const [dayDraft, setDayDraft] = useState(1);   // wlasciciel: zakres dat wyjazdu
   const [planMapOpen, setPlanMapOpen] = useState(false);
@@ -2050,7 +2059,7 @@ export default function SharedRoute() {
                     className="w-full h-full object-cover active:opacity-90 transition-opacity"
                   />
                   <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
-                  {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                  {(ph.user_id === user?.id || isOwner) && <button onClick={() => setAskDeletePhoto({ kind: "pin", id: ph.id })} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>
               ))}
             </div>
@@ -3248,8 +3257,11 @@ export default function SharedRoute() {
               i dodatkowych ikon), zostaje na niej tylko wybor okladki.
               Kosz widzi wlasciciel wyjazdu (odpowiada za cala galerie) ORAZ uczestnik przy
               WLASNYM zdjeciu - skoro moze je dodac, musi tez moc je zabrac. */}
+          {/* ⚠️ Podglad zamykamy RAZEM z otwarciem pytania: nakladka podgladu stoi na z-[95],
+              a arkusz potwierdzenia na z-50, wiec inaczej pytanie schowaloby sie pod zdjeciem,
+              a tapniecie obok trafialoby w podglad i zamykalo go w trakcie decyzji. */}
           {(isOwner || (isGroupMember && isMyGalleryPhoto(visiblePhotos[viewerIndex]))) && (
-            <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(visiblePhotos[viewerIndex]); setViewerIndex(null); }}
+            <button onClick={(e) => { e.stopPropagation(); const u = visiblePhotos[viewerIndex]; setViewerIndex(null); setAskDeletePhoto({ kind: "gallery", url: u }); }}
               aria-label={t("aria.delete_photo")}
               className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
               style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
@@ -3502,6 +3514,33 @@ export default function SharedRoute() {
         </SheetContent>
       </Sheet>
 
+      {/* USUNIECIE ZDJECIA. Czerwony guzik, bo to jest akcja niszczaca - w odroznieniu od
+          skrocenia wyjazdu nizej, gdzie nic nie ginie. Copy mowi WPROST, co sie stanie
+          i komu zniknie, a "Cofnij" w toascie zostaje jako druga siatka bezpieczenstwa. */}
+      <AlertDialog open={askDeletePhoto !== null} onOpenChange={(o) => { if (!o) setAskDeletePhoto(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirm.delete_photo_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("confirm.delete_photo_desc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground"
+              onClick={(e) => {
+                e.preventDefault();
+                const a = askDeletePhoto;
+                setAskDeletePhoto(null);
+                if (a?.kind === "gallery") void handleDeletePhoto(a.url);
+                else if (a?.kind === "pin") void removePlacePhoto(a.id);
+              }}
+            >
+              {t("confirm.delete_photo_confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* SKROCENIE WYJAZDU. To NIE jest akcja destrukcyjna - nic nie ginie, miejsca tylko
           zjezdzaja na ostatni dzien - wiec guzik jest pomaranczowy, nie czerwony. Pytamy
           mimo to, bo z samego krokomierza nie widac, ze cokolwiek sie przesunie. */}
@@ -3514,10 +3553,10 @@ export default function SharedRoute() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); const a = askShorten; setAskShorten(null); if (a) void saveDayCount(a.to); }}>
               {t("day.shorten_confirm")}
             </AlertDialogAction>
-            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -3542,9 +3581,9 @@ export default function SharedRoute() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); const d = askRemoveDay; setAskRemoveDay(null); if (d) void removeDay(d); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("day.remove")}</AlertDialogAction>
-            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

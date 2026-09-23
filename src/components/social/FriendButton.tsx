@@ -120,13 +120,13 @@ export default function FriendButton({ targetUserId, className, iconOnly = false
             "usun ze znajomych" odobserwuje go przy okazji (nie odobserwowuje). */}
         <AlertDialogDescription>{t("friend.remove_desc")}</AlertDialogDescription>
         <AlertDialogFooter>
+          <AlertDialogCancel>{t("friend.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground"
             onClick={() => void run(() => removeFriend(targetUserId), t("friend.removed"))}
           >
             {t("friend.remove_confirm")}
           </AlertDialogAction>
-          <AlertDialogCancel>{t("friend.cancel")}</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
