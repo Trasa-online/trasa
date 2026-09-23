@@ -1,4 +1,5 @@
 import { BrandSpinner } from "@/components/BrandSpinner";
+import { PlaceCardSkeletonList, PlaceCardSkeletonStack } from "@/components/plan-wizard/PlaceCardSkeleton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, Plus, Check } from "lucide-react";
@@ -1025,6 +1026,14 @@ function hasOwnCover(p: MockPlace): boolean {
 // W obrebie KAZDEGO tieru przeplot kategorii + ranking wazony zamiast czystego shuffle.
 // Biznes rozpoznajemy po `businessPlan`, ktore enrichWithBusinessProfile ustawia tylko gdy
 // nested business_profiles istnieje.
+// Cache wierszy `places` na czas ZYCIA APLIKACJI (5 minut). Zakladka "Miejsca" montuje sie
+// od nowa przy kazdym przejsciu z innej zakladki, a zapytanie o miejsca to ~2 s i ponad
+// megabajt danych - bez tego kazdy powrot placil pelna cene. ⚠️ Swiadomie MODULOWY, nie
+// `sessionStorage`: ma zyc tyle, co uruchomienie apki (ta sama zasada, co przy pamieci
+// pozycji scrolla), i nie zajmowac miejsca na dysku telefonu.
+const PLACES_CACHE_TTL_MS = 5 * 60_000;
+let placesRowsCache: { key: string; at: number; rows: any[] } | null = null;
+
 function partitionBusinessFirst(places: MockPlace[], keysWithUserPhotos?: Set<string>): MockPlace[] {
   const bizPhoto: MockPlace[] = [];
   const bizNoPhoto: MockPlace[] = [];
@@ -1077,8 +1086,15 @@ function pickEventPillTitle(bp: any, refDate?: string): string | undefined {
 
 // Select `places` + zagniezdzony business_profiles (+ business_events) - jedno zrodlo prawdy
 // dla wizytowki (swiper i "Zapisane"). Zmiana tu propaguje do wszystkich call sites.
+// ⛔ NIE `*`. Kolumny wypisane jawnie, bo `places.description_archive` to 182 kB na 1000
+// wierszy (zmierzone na prodzie), ktorych NIKT nie czyta - a caly ten payload leci do telefonu
+// przy kazdym wejsciu w zakladke "Miejsca". ⚠️ Dokladasz kolumne do `places`, ktora ma byc
+// widoczna w karcie - dopisz ja TUTAJ, inaczej bedzie `undefined` bez zadnego bledu.
+const PLACE_COLUMNS =
+  "id, city, place_name, category, address, latitude, longitude, rating, price_level, photo_url, vibe_tags, description, best_time, is_active, created_at, google_place_id, primary_category, subcategory, photo_cached_at, gallery_urls, opening_hours";
+
 export const PLACE_BUSINESS_SELECT =
-  "*, business_profiles(plan, is_premium, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
+  PLACE_COLUMNS + ", business_profiles(plan, is_premium, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
 
 // Doczytuje pojedyncze miejsce po places.id (UUID) i wzbogaca profilem biznesowym -
 // uzywane przez "Zapisane" zeby tap w kafelek otwieral pelna wizytowke (jak w swiperze).
@@ -1309,6 +1325,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
   useEffect(() => {
     setLoading(true);
+    // ⚠️ Flaga anulowania: bez niej odpowiedz ze STAREGO miasta potrafila nadpisac kolejke
+    // juz po przelaczeniu, a `setState` po odmontowaniu lecial w konsole.
+    let cancelled = false;
     // Safety net: if the fetch hangs for any reason, drop the loader after 12s
     const safetyTimeout = setTimeout(() => {
       console.warn("[PlaceSwiper] fetch safety timeout fired, forcing loading=false", { city, categoryFilter });
@@ -1321,36 +1340,46 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       // city === "all" (opcja "Wszystkie") -> bez filtra miasta (wszystkie miejsca).
       const scoped = !!city && city !== "all";
+      const cityKeys = scoped ? expandCity(city) : [];
+      const cacheKey = scoped ? cityKeys.join(",") : "all";
+      const fresh = placesRowsCache && placesRowsCache.key === cacheKey
+        && Date.now() - placesRowsCache.at < PLACES_CACHE_TTL_MS;
+
       let placesQuery = (supabase as any)
         .from("places")
         .select(PLACE_BUSINESS_SELECT)
         .eq("is_active", true);
-      if (scoped) placesQuery = placesQuery.in("city", expandCity(city));
-      const { data, error: placesError } = await placesQuery;
+      if (scoped) placesQuery = placesQuery.in("city", cityKeys);
 
-      if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
-      console.log("[PlaceSwiper] fetched places:", { count: data?.length ?? 0, city, categoryFilter });
-      if (!data?.length) { setLoading(false); return; }
-
-      // Fetch already-rated place IDs for this user+city z DZISIAJ. Reset codzienny
-      // = polubienia/odrzuty z wczoraj i wcześniej nie ukrywają miejsc dziś. User
-      // każdy nowy dzień zaczyna z czystą talia. Reactions w DB persyst dla taste profile,
-      // ale UI filter polega tylko na today (gte start of today UTC).
-      let ratedPlaceIds = new Set<string>();
+      // Reakcje z DZISIAJ (reset codzienny: wczorajsze polubienia nie ukrywaja miejsc dzis).
+      // ⚠️ RÓWNOLEGLE z miejscami - te dwa zapytania nic o sobie nie wiedza, a szly jedno
+      // po drugim i dokladaly ~0,7 s do pustego ekranu (zmierzone na prodzie 2026-09-23).
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      let reactionsQuery: any = null;
       if (user) {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        let reactionsQuery = (supabase as any)
+        reactionsQuery = (supabase as any)
           .from("user_place_reactions")
           .select("place_id")
           .eq("user_id", user.id)
           .gte("created_at", todayStart.toISOString());
-        if (scoped) reactionsQuery = reactionsQuery.in("city", expandCity(city));
-        const { data: reactions } = await reactionsQuery;
-        if (reactions?.length) {
-          ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
-        }
+        if (scoped) reactionsQuery = reactionsQuery.in("city", cityKeys);
       }
+
+      const [placesRes, reactionsRes] = await Promise.all([
+        fresh ? Promise.resolve({ data: placesRowsCache!.rows, error: null }) : placesQuery,
+        reactionsQuery ?? Promise.resolve({ data: [] }),
+      ]);
+      if (cancelled) return;
+
+      const { data, error: placesError } = placesRes as { data: any[] | null; error: unknown };
+      if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
+      if (data?.length && !fresh) placesRowsCache = { key: cacheKey, at: Date.now(), rows: data };
+      if (!data?.length) { setLoading(false); return; }
+
+      let ratedPlaceIds = new Set<string>();
+      const reactions = (reactionsRes as { data: { place_id: string }[] | null })?.data;
+      if (reactions?.length) ratedPlaceIds = new Set(reactions.map((r) => r.place_id));
 
       const enriched = (data as any[]).map((pp: any) => enrichWithBusinessProfile(pp, date.toISOString().slice(0, 10)));
       const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
@@ -1385,10 +1414,12 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       };
 
       // Ktore miejsca maja juz zdjecia od userow - decyduje o tierze 2 kolejki (patrz
-      // partitionBusinessFirst). Best-effort: blad = kolejka jak dawniej, bez wywalania ekranu.
-      const photoKeys = await fetchPlaceKeysWithPhotos(
-        remaining.flatMap((p) => pinCoverKeys(p as any)),
-      ).catch(() => new Set<string>());
+      // partitionBusinessFirst).
+      // ⛔ NIE czekamy na to przed pokazaniem kart. To ~1,4 s (1765 kluczy w 6 paczkach,
+      // zmierzone na prodzie), a wplywa WYLACZNIE na kolejnosc kolejki. Kolejke budujemy od
+      // razu, a gdy odpowiedz przyjdzie, poprawiamy sam OGON - karty, ktore user juz widzi,
+      // zostaja na swoich miejscach (inaczej pierwsza karta podmienialaby sie pod palcem).
+      const photoKeys = new Set<string>();
 
       setAllPlaces(enriched);
       if (liked.length) setLikedPlaces(liked);
@@ -1430,12 +1461,28 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         setQueue(applyNearestSort(partitionBusinessFirst(remaining, photoKeys)));
       }
       setLoading(false);
+
+      // Dopiero teraz (ekran juz stoi) pytamy o zdjecia userow i poprawiamy ogon kolejki.
+      void fetchPlaceKeysWithPhotos(remaining.flatMap((p) => pinCoverKeys(p as any)))
+        .then((keys) => {
+          if (cancelled || !keys.size) return;
+          setQueue((prev) => {
+            if (prev.length < 6) return prev;
+            const HEAD = 4;   // to, co user ma juz przed oczami, nie rusza sie
+            const head = prev.slice(0, HEAD);
+            const headIds = new Set(head.map((p) => p.id));
+            const tail = prev.filter((p) => !headIds.has(p.id));
+            return [...head, ...applyNearestSort(partitionBusinessFirst(tail, keys))];
+          });
+        })
+        .catch(() => { /* best-effort: kolejka zostaje w kolejnosci bez zdjec */ });
       } catch (err) {
         console.error("[PlaceSwiper] fetchPlaces threw:", err);
         setLoading(false);
       }
     };
     fetchPlaces().finally(() => clearTimeout(safetyTimeout));
+    return () => { cancelled = true; clearTimeout(safetyTimeout); };
     // UWAGA: sortByNearest CELOWO nie jest w deps - zmiana sortu nie przebudowuje queue
     // (inaczej ocenione miejsca wracaly = reset swipe). Sort stosowany reaktywnie nizej.
   }, [city, user, categoryFilterKey, dietFilterKey, refreshNonce]);
@@ -1847,11 +1894,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <BrandSpinner size={34} />
-      </div>
-    );
+    // Szkielet o geometrii prawdziwej karty (prosba Nat 2026-09-23). Samo kolo z kropkami na
+    // pustym ekranie nie mowilo, CO sie laduje, a przy wolnej sieci potrafi wisiec kilka sekund.
+    return exploreMode ? <PlaceCardSkeletonList /> : <PlaceCardSkeletonStack exploreMode={exploreMode} />;
   }
 
   // All cards swiped
