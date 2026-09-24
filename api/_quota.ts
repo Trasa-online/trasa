@@ -27,10 +27,11 @@
 // tutaj sluzy wylacznie do policzenia zadania i nigdy nie opuszcza funkcji brzegowej.
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-// ⛔ TOKEN zyje w kodzie SERWEROWYM (katalog api/ nie trafia do paczki przegladarki). Chroni
-// wylacznie przed nabijaniem NASZEGO licznika z zewnatrz - gdyby ktos mogl wolac RPC bez tokenu,
-// zablokowalby nam obrazki jednym skryptem.
-const QUOTA_TOKEN = "P24k23k7po8533LbqL_Z8T2TUEHwjv60";
+// ⛔ ZADNYCH SEKRETOW W TYM PLIKU (wyciek zgloszony przez skaner GitHuba, 2026-09-24).
+// Stal tu TOKEN chroniacy licznik przed nabijaniem z zewnatrz - przy zalozeniu, ze katalog
+// `api/` to kod serwerowy. Jest, ale trafia tez do REPOZYTORIUM: sekret w kodzie jest
+// sekretem tylko do pierwszego `git push`. Token zostal uniewazniony w bazie (migracja
+// 20260924h), a mocna wersja licznika idzie KLUCZEM SERWISOWYM ze zmiennych srodowiskowych.
 
 // ⚠️ Te same stale, co w api/share.ts - razem z ZAPASOWYM kluczem anon. Zmiennych `VITE_*`
 // nie ma w srodowisku funkcji brzegowych Vercela (dlatego share.ts od poczatku ma zapas),
@@ -66,7 +67,7 @@ async function consume(bucket: string, limit: number, windowMinutes: number): Pr
   const fn = SERVICE_KEY ? "try_consume_rate_limit" : "try_consume_edge_quota";
   const payload = SERVICE_KEY
     ? { p_bucket: `edge:${bucket}`, p_limit: limit, p_window_minutes: windowMinutes }
-    : { p_token: QUOTA_TOKEN, p_bucket: bucket, p_limit: limit, p_window_minutes: windowMinutes };
+    : { p_bucket: bucket, p_limit: limit, p_window_minutes: windowMinutes };
   try {
     const res = await fetch(`${SUPA}/rest/v1/rpc/${fn}`, {
       method: "POST",
