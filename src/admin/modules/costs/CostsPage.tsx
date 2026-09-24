@@ -7,6 +7,8 @@ import {
   useTextsearchMonthly,
   useDailyGoogleQuota,
   useGoogleBilling,
+  useManualBilling,
+  saveManualBilling,
   syncGoogleBilling,
   TEXTSEARCH_MONTHLY_LIMIT,
   DAILY_CALL_LIMIT,
@@ -68,7 +70,18 @@ function BillingSection() {
   const firstDay = dayNums.length ? Math.min(...dayNums) : 0;
   const coveredDays = new Set(thisMonth.map((r) => r.day)).size;
   const partialMonth = firstDay > 1;
-  const forecast = coveredDays > 0 ? (due / coveredDays) * getDaysInMonth(now) : 0;
+  // Reczne uzupelnienie dni SPRZED eksportu (patrz useApiCosts / migracja 20260924f).
+  // Bez tego wielka liczba w panelu nie zgadzala sie z konsola Google - i to ona byla
+  // punktem odniesienia Nat (zgloszenie 2026-09-24).
+  const { data: manual } = useManualBilling(monthKey);
+  const manualAmount = manual?.amount ?? 0;
+  const total = due + manualAmount;
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualDraft, setManualDraft] = useState("");
+  const [manualSaving, setManualSaving] = useState(false);
+  // ⚠️ Prognoza idzie z TEMPA dni, ktore realnie mamy - dosypanie recznej kwoty sprzed
+  // eksportu nie moze jej zawyzac (to koszt juz PONIESIONY, nie przyszly).
+  const forecast = coveredDays > 0 ? (due / coveredDays) * getDaysInMonth(now) + manualAmount : 0;
   const syncedAt = rows.length ? rows.reduce((a, r) => (r.synced_at > a ? r.synced_at : a), rows[0].synced_at) : null;
 
   // Rozbicie na uslugi (Places API, Maps JavaScript API, Geocoding...), netto, malejaco.
@@ -114,13 +127,51 @@ function BillingSection() {
                     W Google Cloud zobaczysz za ten miesiąc kwotę WYŻSZĄ - to nie jest błąd panelu.
                     Od następnego miesiąca obie liczby będą się zgadzać.
                   </p>
+                  {/* Jedyne uczciwe wyjscie na TEN miesiac: przepisac brakujacy kawalek
+                      z konsoli. Cloud Billing API nie oddaje kosztow, a eksport nie cofa sie. */}
+                  {!manualOpen ? (
+                    <button
+                      onClick={() => { setManualOpen(true); setManualDraft(manualAmount ? String(manualAmount) : ""); }}
+                      className="mt-2 text-[11px] font-bold text-amber-900 underline underline-offset-2"
+                    >
+                      {manualAmount > 0 ? "Zmień kwotę sprzed eksportu" : `Wpisz kwotę z Google za dni 1-${Math.max(1, firstDay - 1)}`}
+                    </button>
+                  ) : (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="number" step="0.01" min="0" inputMode="decimal" autoFocus
+                        value={manualDraft}
+                        onChange={(e) => setManualDraft(e.target.value)}
+                        placeholder="np. 23.03"
+                        className="h-8 w-28 rounded-lg border border-amber-300 bg-white px-2 text-xs tabular-nums outline-none focus:border-amber-500"
+                      />
+                      <button
+                        disabled={manualSaving}
+                        onClick={async () => {
+                          setManualSaving(true);
+                          const v = manualDraft.trim() === "" ? null : Number(manualDraft.replace(",", "."));
+                          const res = await saveManualBilling(monthKey, v, `dni 1-${Math.max(1, firstDay - 1)} z konsoli Google`);
+                          setManualSaving(false);
+                          if (!res.ok) { setSyncMsg(`Błąd zapisu: ${res.error}`); return; }
+                          setManualOpen(false);
+                          qc.invalidateQueries({ queryKey: ["api-costs", "billing-manual", monthKey] });
+                        }}
+                        className="h-8 rounded-lg bg-amber-900 px-3 text-[11px] font-bold text-white disabled:opacity-50"
+                      >
+                        Zapisz
+                      </button>
+                      <button onClick={() => setManualOpen(false)} className="text-[11px] font-semibold text-amber-900/70">Anuluj</button>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-3xl font-black text-slate-900 tabular-nums">{money(due, cur)}</p>
+                  <p className="text-3xl font-black text-slate-900 tabular-nums">{money(total, cur)}</p>
                   <p className="text-sm text-slate-500 mt-0.5">
-                    do zapłaty za dni {firstDay}-{lastDay} ({coveredDays} {coveredDays === 1 ? "dzień" : "dni"} w eksporcie)
+                    {manualAmount > 0
+                      ? <>do zapłaty w tym miesiącu ({money(due, cur)} z eksportu + {money(manualAmount, cur)} wpisane ręcznie)</>
+                      : <>do zapłaty za dni {firstDay}-{lastDay} ({coveredDays} {coveredDays === 1 ? "dzień" : "dni"} w eksporcie)</>}
                   </p>
                 </div>
                 <div className="text-right">
