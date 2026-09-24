@@ -1,40 +1,33 @@
-import { useLayoutEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { goBackOr } from "@/hooks/useGoBack";
-import { scrollDocumentToTop } from "@/lib/scrollTop";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import LegalShell from "@/pages/legal/LegalShell";
 
-// POLITYKA PRYWATNOSCI. Przeglad 2026-09-24 (prosba Nat): marka „spontaway", kontakt na
-// hello@spontaway.com, a lista narzedzi i podmiotow trzecich doprowadzona do stanu
-// FAKTYCZNEGO - doszly Sentry (bledy, bez zgody, uzasadniony interes), Google Analytics
-// i Vercel Analytics (strona www), Apple APNs (push), Google Cloud Vision (sprawdzanie
-// zdjec), Anthropic (tlumaczenia na zadanie) i Lovable AI (funkcje AI).
+// POLITYKA PRYWATNOSCI - PL i EN (prosba Nat 2026-09-24). Dokument idzie za jezykiem APLIKACJI,
+// obie wersje leza w jednym pliku - polityka, ktorej wersje jezykowe mieszkaja osobno,
+// rozjezdza sie przy pierwszej poprawce.
 //
-// ⚠️ Dopisujac do apki NOWE narzedzie, ktore dotyka danych uzytkownika, dopisz je TUTAJ -
-// polityka, ktora nie wymienia realnego procesora, jest gorsza niz jej brak.
-import { ArrowLeft } from "lucide-react";
+// Kontakt: `admin@spontaway.com` we wszystkim, co dotyczy DANYCH OSOBOWYCH (wybor Nat),
+// `hello@spontaway.com` w pozostalych sprawach.
+//
+// ⚠️ Lista narzedzi i podmiotow trzecich ma byc zgodna ze STANEM FAKTYCZNYM: sa tu Sentry
+// (bledy, bez zgody - uzasadniony interes), Google Analytics i Vercel Analytics (strona www),
+// Apple APNs (push), Google Cloud Vision (sprawdzanie zdjec), Anthropic (tlumaczenia
+// na zadanie) i Lovable AI. Dokladajac narzedzie dotykajace danych usera - dopisz je TUTAJ,
+// w OBU jezykach. Polityka, ktora nie wymienia realnego procesora, jest gorsza niz jej brak.
 
 const Privacy = () => {
-  const navigate = useNavigate();
-  // Dokument zawsze otwiera sie OD POCZATKU - takze gdy przyszlismy z drugiego
-  // dokumentu ze srodka jego tresci (patrz scrollDocumentToTop).
-  useLayoutEffect(() => { scrollDocumentToTop(); }, []);
+  const { i18n } = useTranslation();
+  const en = (i18n.language ?? "pl").toLowerCase().startsWith("en");
+  return <LegalShell title={en ? "Privacy Policy" : "Polityka Prywatności"}>{en ? <PrivacyEn /> : <PrivacyPl />}</LegalShell>;
+};
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe-4 pb-3 flex items-center gap-3">
-        <button onClick={() => goBackOr(navigate, "/")} className="p-1 text-foreground/70 hover:text-foreground transition-colors">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-base font-bold">Polityka Prywatności</h1>
-      </header>
-
-      <div className="flex-1 px-5 py-6 max-w-lg mx-auto w-full space-y-6 text-sm leading-relaxed">
-
+const PrivacyPl = () => (
+  <>
         <section>
           <h2 className="font-bold text-base mb-2">1. Administrator danych osobowych</h2>
           <p className="text-muted-foreground">
             Administratorem Twoich danych osobowych przetwarzanych w&nbsp;ramach aplikacji <strong>spontaway</strong> (dalej: „Aplikacja") jest Bartosz Tomala, e-mail:{" "}
-            <a href="mailto:hello@spontaway.com" className="underline">hello@spontaway.com</a> (dalej: „Operator" lub „Administrator").
+            <a href="mailto:admin@spontaway.com" className="underline">admin@spontaway.com</a> (dalej: „Operator" lub „Administrator").
           </p>
           <p className="text-muted-foreground mt-2">
             Niniejsza polityka opisuje, jakie dane zbieramy, w&nbsp;jakim celu i&nbsp;na jakiej podstawie prawnej.
@@ -121,7 +114,7 @@ const Privacy = () => {
           </ul>
           <p className="text-muted-foreground mt-2">
             Aby zrealizować swoje prawa, skontaktuj się z&nbsp;nami pod adresem{" "}
-            <a href="mailto:hello@spontaway.com" className="underline">hello@spontaway.com</a>.
+            <a href="mailto:admin@spontaway.com" className="underline">admin@spontaway.com</a>.
           </p>
         </section>
 
@@ -222,6 +215,10 @@ const Privacy = () => {
           <h2 className="font-bold text-base mb-2">13. Kontakt</h2>
           <p className="text-muted-foreground">
             W&nbsp;sprawach dotyczących ochrony danych osobowych skontaktuj się z&nbsp;Administratorem pod adresem:{" "}
+            <a href="mailto:admin@spontaway.com" className="underline">admin@spontaway.com</a>.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            W&nbsp;pozostałych sprawach (działanie Aplikacji, reklamacje, zgłoszenia treści) pisz na{" "}
             <a href="mailto:hello@spontaway.com" className="underline">hello@spontaway.com</a>.
           </p>
         </section>
@@ -233,9 +230,219 @@ const Privacy = () => {
         <p className="text-xs text-muted-foreground">
           Ostatnia aktualizacja: 24 września 2026
         </p>
-      </div>
-    </div>
-  );
-};
+  </>
+);
+
+const PrivacyEn = () => (
+  <>
+    <section>
+      <h2 className="font-bold text-base mb-2">1. Data controller</h2>
+      <p className="text-muted-foreground">
+        The controller of your personal data processed in the <strong>spontaway</strong> app (the „App") is Bartosz Tomala, e-mail:{" "}
+        <a href="mailto:admin@spontaway.com" className="underline">admin@spontaway.com</a> (the „Operator" or „Controller").
+      </p>
+      <p className="text-muted-foreground mt-2">
+        This policy describes what data we collect, for what purpose and on what legal basis.
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">2. What data we collect</h2>
+      <p className="text-muted-foreground">When you use the App we collect:</p>
+      <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
+        <li>your e-mail address and first name (from Apple or Google sign-in),</li>
+        <li>your username and profile photo,</li>
+        <li>your trip plans and place collections, saved and liked content, and your reactions to places,</li>
+        <li>places you mark as visited (we store the fact and the name of the place, without your coordinates),</li>
+        <li>social connections: who you follow, friend requests, membership in shared plans and collections, messages in a plan chat,</li>
+        <li>onboarding survey answers (for example how you heard about the App, what you use it for, gender - giving it is optional),</li>
+        <li>photos and notes you add to places, plans and collections,</li>
+        <li>a push notification token (if you allow notifications),</li>
+        <li>device identifier and technical information (device type, system, App version).</li>
+      </ul>
+      <p className="text-muted-foreground mt-2">
+        If you sign in with Apple or Google, the Operator receives your e-mail address and public first name from them. We do not receive your password or any other data from your Apple/Google account.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        <strong>Location.</strong> With your consent, the App reads your location to show the distance to places and order them from the nearest. The location is used <strong>on your device</strong>, is not stored on our servers and is not shared with anyone. You can withdraw this consent at any time in your system settings.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        On mobile (iOS) the App may ask for access to the <strong>camera</strong> and <strong>photo library</strong> in order to take or pick a profile photo and photos for a plan. This access is optional and you can withdraw it at any time in iOS settings.
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">3. Legal bases and purposes</h2>
+      <p className="text-muted-foreground">We process data:</p>
+      <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
+        <li>to provide the service, run your account and deliver App features - Art. 6(1)(b) GDPR (performance of a contract),</li>
+        <li>for analytics, statistics and improving the App - Art. 6(1)(a) GDPR (consent),</li>
+        <li>for personalisation (including the order of places shown) based on your interactions - Art. 6(1)(a) GDPR (consent),</li>
+        <li>to translate content when you ask for a translation (the „Translate" button) - Art. 6(1)(b) GDPR,</li>
+        <li>to screen photos automatically for inappropriate content and to moderate reports - Art. 6(1)(f) GDPR (user safety),</li>
+        <li>to send push notifications - Art. 6(1)(a) GDPR (consent given in the system),</li>
+        <li>to detect and fix errors and to keep the App secure - Art. 6(1)(f) GDPR (legitimate interest).</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">4. Personalisation</h2>
+      <p className="text-muted-foreground">
+        The App may adapt what it shows you (including the order of places) based on your interactions - saved and liked places and your reactions.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        Personalisation happens only with your explicit consent, which you can withdraw at any time in App Settings.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        Personalisation is auxiliary - it does not produce legal effects concerning you or similarly significantly affect you (Art. 22 GDPR).
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">5. How long we keep data</h2>
+      <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
+        <li>for as long as you have an account,</li>
+        <li>plans and collections you delete - 7 days in the Trash (you can restore them), then deleted permanently,</li>
+        <li>up to 30 days after account deletion (for technical and security reasons),</li>
+        <li>PostHog analytics data - according to the tool's settings (12-14 months by default),</li>
+        <li>error reports (Sentry) - up to 90 days,</li>
+        <li>content translations - we keep the result so the same text is not translated twice,</li>
+        <li>backups - up to 30 days from creation.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">6. Your rights</h2>
+      <p className="text-muted-foreground">You have the right to:</p>
+      <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
+        <li>access your data,</li>
+        <li>rectify it,</li>
+        <li>erase it (you can delete your account at any time in Settings),</li>
+        <li>restrict processing,</li>
+        <li>data portability,</li>
+        <li>object to processing,</li>
+        <li>withdraw consent at any time (without affecting the lawfulness of processing before withdrawal),</li>
+        <li>lodge a complaint with the President of the Polish Personal Data Protection Office (<a href="https://uodo.gov.pl" target="_blank" rel="noreferrer" className="underline">uodo.gov.pl</a>).</li>
+      </ul>
+      <p className="text-muted-foreground mt-2">
+        To exercise your rights, contact us at{" "}
+        <a href="mailto:admin@spontaway.com" className="underline">admin@spontaway.com</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">7. Analytics and tracking technologies</h2>
+      <p className="text-muted-foreground">
+        The App uses analytics tools only after you give explicit consent (in the mobile app during onboarding, on the website through the consent banner). You can change your consent in Settings.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        <strong>PostHog</strong> - analysis of user behaviour (screens visited, session length, device type, interface interactions). Servers in the European Union (eu.posthog.com).
+      </p>
+      <p className="text-muted-foreground mt-2">
+        <strong>Google Analytics 4</strong> (website) - visit statistics. It runs in consent mode: without your consent it does not store data on your device.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        <strong>Microsoft Clarity</strong> (website only, after consent) - session recording to identify errors and usability problems. Clarity does not run in the mobile app.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        <strong>Vercel Analytics and Speed Insights</strong> (website only) - aggregated visit and loading-speed statistics, without identifying individuals.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        <strong>Sentry</strong> - App error reports (error type, screen, version, device model). It runs INDEPENDENTLY of analytics consent, on the basis of legitimate interest - without these reports crashes cannot be fixed. Servers in the European Union (DE region).
+      </p>
+      <p className="text-muted-foreground mt-2">
+        You can withdraw analytics consent at any time in App Settings.
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">8. Third parties</h2>
+      <p className="text-muted-foreground">We use the following service providers, who process data on our behalf:</p>
+      <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
+        <li><strong>Supabase</strong> - database and authentication (servers in the EU),</li>
+        <li><strong>Google Maps / Google Places API</strong> - maps and place search (we send the text query, for example a city name),</li>
+        <li><strong>Apple (Sign in with Apple)</strong> - optional sign-in with an Apple ID,</li>
+        <li><strong>Google (OAuth)</strong> - optional sign-in with a Google account,</li>
+        <li><strong>PostHog</strong> - behavioural analytics (servers in the EU),</li>
+        <li><strong>Vercel</strong> - web app hosting (servers in the EU),</li>
+        <li><strong>Resend</strong> - e-mail delivery (notifications, venue account activation and password reset),</li>
+        <li><strong>Apple (APNs)</strong> - delivery of push notifications to iOS devices,</li>
+        <li><strong>Google Cloud Vision</strong> - automated screening of photos for inappropriate content (we send the photo URL),</li>
+        <li><strong>Anthropic</strong> - translating content at your request (we send only the text you ask to translate, without account data),</li>
+        <li><strong>Lovable AI</strong> - AI-supported features (including planning suggestions and recognising a place from a photo) when you use them,</li>
+        <li><strong>Sentry</strong> - App error reports (servers in the EU),</li>
+        <li><strong>Microsoft Clarity</strong> - website session recording, after consent.</li>
+      </ul>
+      <p className="text-muted-foreground mt-2">
+        Data is shared only to the extent necessary for the App to work.
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">9. Transfers outside the EEA</h2>
+      <p className="text-muted-foreground">
+        Some providers (for example Google, Apple, PostHog Cloud) may process data in the United States or other countries outside the European Economic Area. Transfers take place on the basis of:
+      </p>
+      <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
+        <li>European Commission adequacy decisions (the Data Privacy Framework for the USA),</li>
+        <li>standard contractual clauses (SCC) approved by the European Commission,</li>
+        <li>other appropriate safeguards under Art. 46 GDPR.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">10. Data security</h2>
+      <p className="text-muted-foreground">
+        We apply appropriate technical and organisational measures to protect your data, including:
+      </p>
+      <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
+        <li>encrypted transmission (HTTPS / TLS 1.2+),</li>
+        <li>password hashing (bcrypt),</li>
+        <li>database access control (Row Level Security),</li>
+        <li>regular backups.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">11. Deleting your account and data</h2>
+      <p className="text-muted-foreground">
+        You can permanently delete your account and all related data straight from App Settings. The operation is <strong>irreversible</strong>.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        After deletion we keep a minimum of technical data for 30 days (in case recovery is needed in an emergency), after which it is permanently erased.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        Content you added to <strong>shared</strong> plans and collections before deleting your account may remain visible to the other participants - the same applies to messages sent in a chat. Before deletion the App shows what disappears for good and what stays with others.
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">12. Changes to this policy</h2>
+      <p className="text-muted-foreground">
+        The Operator may change this policy. We will inform you about significant changes in the App or by e-mail.
+      </p>
+    </section>
+
+    <section>
+      <h2 className="font-bold text-base mb-2">13. Contact</h2>
+      <p className="text-muted-foreground">
+        For personal data matters, contact the Controller at{" "}
+        <a href="mailto:admin@spontaway.com" className="underline">admin@spontaway.com</a>.
+      </p>
+      <p className="text-muted-foreground mt-2">
+        For anything else (how the App works, complaints, content reports) write to{" "}
+        <a href="mailto:hello@spontaway.com" className="underline">hello@spontaway.com</a>.
+      </p>
+    </section>
+
+    <p className="text-xs text-muted-foreground pt-4 border-t border-border/40">
+      See also: <Link to="/terms" className="underline">Terms of Service</Link>
+    </p>
+
+    <p className="text-xs text-muted-foreground">
+      Last updated: 24 September 2026
+    </p>
+  </>
+);
 
 export default Privacy;

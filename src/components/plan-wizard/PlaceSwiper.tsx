@@ -533,8 +533,16 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         );
       })()}
 
-      {/* Chip dystansu - prawy gorny rog, nad paginacja */}
-      {isTop && !shareMode && distanceLabel && (
+      {/* Chip dystansu - prawy gorny rog, nad paginacja.
+          ⚠️ BEZ `isTop` (zgloszenie Nat 2026-09-24: „pigulka z odlegloscia nie zawsze sie
+          pokazuje"). `isTop` w zakladce Miejsca bierze sie z `activeCardId`, ktore ustawia
+          dopiero zdarzenie scrolla - zanim user przewinie, albo gdy kolejnosc kart sie
+          przebuduje (filtr, odswiezenie, przywrocenie pozycji), widoczna karta potrafi miec
+          `isTop=false` i chip znikal bez powodu. Sam dystans to czysta arytmetyka, nic nie
+          doczytuje, wiec moze sie renderowac na kazdej karcie. Guzik „Pokaz dystans" nizej
+          ZOSTAJE pod `isTop` - to cel dotyku i na wystajacym skrawku sasiedniej karty
+          nie ma po co stac. */}
+      {!shareMode && distanceLabel && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm">
           <Navigation className="h-3 w-3 text-white/90" />
           <span className="text-white text-[11px] font-semibold">{distanceLabel}</span>
@@ -1334,12 +1342,23 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // Lokalizacja: CICHY auto-detect przez GPS (tylko gdy user juz dal zgode - tryResolveOnSite
   // nie promptuje). Jestes w miescie -> chip "od Ciebie" pojawia sie sam. Nie ma zadnego
   // pytania do usera; gdy nie wyjdzie, na karcie zostaje chip "Pokaz dystans".
+  //
+  // ⚠️ `tryResolveOnSite` potrzebuje SRODKA MIASTA, zeby sprawdzic „czy jestes na miejscu",
+  // a zakladka Miejsca jest globalna (`city="all"`) - dla niej srodka nie ma i funkcja
+  // konczyla sie na „no-gps", NIC nie ustawiajac. Efekt: u kogos, kto ma zgode na lokalizacje,
+  // chip z odlegloscia raz byl (bo punkt zostal z innego ekranu), a raz go nie bylo
+  // (zgloszenie Nat 2026-09-24). Gdy zgoda JUZ jest, ustawiamy punkt wprost - bez pytania,
+  // bez dialogu systemowego.
+  const silentGpsTried = useRef(false);
   useEffect(() => {
     if (loading || distanceRef) return;
     let cancelled = false;
     (async () => {
-      await tryResolveOnSite(city);
-      if (cancelled) return;
+      const res = await tryResolveOnSite(city);
+      if (cancelled || res !== "no-gps" || silentGpsTried.current) return;
+      silentGpsTried.current = true;     // jedna proba na zamontowanie - GPS bywa niedostepny
+      if ((await getSystemStatus("location")) !== "granted") return;
+      await setGpsReference();
     })();
     return () => { cancelled = true; };
   }, [loading, distanceRef, city]);

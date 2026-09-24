@@ -12,6 +12,7 @@ import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
 import { PLANNING_DISABLED } from "@/lib/appMode";
 import { haptics } from "@/hooks/useHaptics";
+import { scrollMainToTop } from "@/lib/scrollTop";
 
 const HOME_FILTERS_KEY = "trasa_home_filters";
 
@@ -78,6 +79,16 @@ const BottomNav = () => {
   const { t } = useTranslation("nav");
   const navigate = useNavigate();
   const location = useLocation();
+  // PONOWNE TAPNIECIE AKTYWNEJ ZAKLADKI = POWROT NA GORE (prosba Nat 2026-09-24; odruch z iOS).
+  // Dotad dzialalo to wylacznie przez tapniecie w gorna belke albo w pasek statusu - czyli
+  // w miejsca, o ktorych trzeba wiedziec. Zakladka jest tym, w co user celuje naturalnie.
+  // ⚠️ Gdy nie ma czego przewijac (`scrollMainToTop` oddaje `false`), NIE dajemy haptyki
+  // i nie blokujemy nawigacji - tapniecie ma sie wtedy zachowac jak zwykle wejscie w zakladke.
+  const reTapScrollsUp = (path: string) => (e: React.MouseEvent) => {
+    if (!location.pathname.startsWith(path)) return;
+    e.preventDefault();
+    if (scrollMainToTop()) haptics.light();
+  };
   const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   // Nowy arkusz tworzenia (sheet-first, native). "+" -> "Co dzisiaj tworzymy?" [Lista|Wyjazd].
@@ -287,7 +298,7 @@ const BottomNav = () => {
             Wyjazdy(/home) · Profil - B2C na webie jest za waitlista. */}
         <div className={NAV_PILL}>
           {isNative && (
-            <NavLink to="/eksploruj" replace end={false} data-ob="nav-eksploruj" aria-label={t("tabs.explore")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+            <NavLink to="/eksploruj" replace end={false} onClick={reTapScrollsUp("/eksploruj")} data-ob="nav-eksploruj" aria-label={t("tabs.explore")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
               {() => <><NavIcon src="/Ikona_Eksploracja.svg" className={NAV_ICON} /><span className={NAV_LABEL}>{t("tabs.explore")}</span></>}
             </NavLink>
           )}
@@ -297,11 +308,11 @@ const BottomNav = () => {
             </NavLink>
           )}
           {isNative && (
-            <NavLink to="/miejsca" replace end={false} data-ob="nav-miejsca" aria-label={t("tabs.places")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+            <NavLink to="/miejsca" replace end={false} onClick={reTapScrollsUp("/miejsca")} data-ob="nav-miejsca" aria-label={t("tabs.places")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
               {() => <><NavIcon src="/Ikona_Miejsca.svg" className={NAV_ICON} /><span className={NAV_LABEL}>{t("tabs.places")}</span></>}
             </NavLink>
           )}
-          <NavLink to="/moj-profil" replace end={false} data-ob="nav-profil" aria-label={t("common:nav.profile")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
+          <NavLink to="/moj-profil" replace end={false} onClick={reTapScrollsUp("/moj-profil")} data-ob="nav-profil" aria-label={t("common:nav.profile")} className={`${NAV_ITEM} ${NAV_ITEM_IDLE}`} activeClassName={NAV_ITEM_ACTIVE}>
             {() => <><NavIcon src="/Ikona_Profil.svg" className={NAV_ICON} /><span className={NAV_LABEL}>{t("common:nav.profile")}</span></>}
           </NavLink>
         </div>

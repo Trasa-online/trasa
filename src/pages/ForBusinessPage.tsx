@@ -570,7 +570,7 @@ export default function ForBusinessPage() {
                 </a>
               </div>
               <div className="px-5 pt-0 pb-4">
-                <a href="mailto:trasa.app@gmail.com" className="block w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
+                <a href="mailto:hello@spontaway.com" className="block w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
                   Kontakt →
                 </a>
               </div>
