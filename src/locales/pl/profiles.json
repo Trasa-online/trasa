@@ -284,5 +284,14 @@
     "request_accepted": "Jesteście znajomymi",
     "request_declined": "Zaproszenie odrzucone"
   },
-  "undo": "Cofnij"
+  "undo": "Cofnij",
+  "reward": {
+    "eyebrow": "Nagroda odblokowana",
+    "title": "Dziękujemy za wsparcie!",
+    "desc": "Ta nakładka na awatar jest naszym podziękowaniem - od teraz jest Twoja. Zawsze znajdziesz ją w Ustawieniach → Customizuj.",
+    "wear_cta": "Załóż nakładkę",
+    "later": "Może później",
+    "wear_done": "Nakładka założona",
+    "wear_failed": "Nie udało się założyć nakładki. Spróbuj z Ustawień → Customizuj."
+  }
 }

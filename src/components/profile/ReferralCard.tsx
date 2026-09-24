@@ -10,6 +10,7 @@ import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
 import { TESTFLIGHT_URL } from "@/lib/testflight";
 import { REFERRAL_GOAL, fetchReferralStats, inviteLink } from "@/lib/referral";
+import { fetchRewardGrant, rewardGrantKey } from "@/lib/rewardGrant";
 
 // Zapraszanie znajomych (2026-09-10). Zamiast paywalla - ekran zachety.
 //
@@ -49,9 +50,24 @@ export default function ReferralCard({ userId }: { userId: string }) {
     staleTime: 60_000,
   });
 
+  // Nagroda przyznana RECZNIE (frame_grants) - ten sam klucz czyta `RewardThanksBanner`,
+  // wiec to jedno zapytanie na dwoch czytelnikow.
+  const { data: reward } = useQuery({
+    queryKey: rewardGrantKey(userId),
+    enabled: !!userId,
+    staleTime: Infinity,
+    queryFn: fetchRewardGrant,
+  });
+
   const code = data?.code ?? null;
   const invited = data?.invited ?? 0;
-  const done = invited >= REFERRAL_GOAL;
+  // ⚠️ „Masz komplet" takze przy grancie recznym: od 24.09 zaproszenia ida prosto na TestFlight
+  // i licznik ich NIE ZLICZA, wiec bez tego osoba z przyznana nagroda czytalaby „zaproś 3 osoby
+  // i odblokuj nakładkę", majac ja juz na awatarze.
+  const done = invited >= REFERRAL_GOAL || !!reward;
+  // Nieodebrane podziekowanie ma pierwszenstwo - dwie zolte karty jedna nad druga, w tym jedna
+  // mowiaca „zapraszaj", a druga „dziekujemy", czytaja sie jak blad.
+  if (reward && !reward.seen) return null;
   if (!code || dismissed) return null;
   const link = inviteLink();
 

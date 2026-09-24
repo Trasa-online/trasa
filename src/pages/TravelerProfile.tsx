@@ -38,6 +38,7 @@ import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
 import { listTheme } from "@/lib/listThemes";
 import ReferralCard from "@/components/profile/ReferralCard";
+import RewardThanksBanner from "@/components/profile/RewardThanksBanner";
 import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
@@ -968,6 +969,9 @@ const TravelerProfile = () => {
             zakladkami, bo to jedyne miejsce na profilu, ktore user widzi bez przewijania.
             BEZ opakowania z paddingiem: odstep niesie sama karta, wiec po jej zamknieciu
             nie zostaje pusty pas (zgloszenie Nat 2026-09-10). */}
+        {/* Podziekowanie za nakladke przyznana recznie - stoi w tym samym miejscu co karta
+            zaproszen i na czas swojej widocznosci ja zastepuje (patrz ReferralCard). */}
+        <RewardThanksBanner userId={user.id} />
         <ReferralCard userId={user.id} />
         <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={user.id} />
 

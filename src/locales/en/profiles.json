@@ -276,5 +276,14 @@
     "request_accepted": "You are friends now",
     "request_declined": "Request declined"
   },
-  "undo": "Undo"
+  "undo": "Undo",
+  "reward": {
+    "eyebrow": "Reward unlocked",
+    "title": "Thank you for your support!",
+    "desc": "This avatar frame is our thank-you - it is yours from now on. You will always find it in Settings → Customise.",
+    "wear_cta": "Wear the frame",
+    "later": "Maybe later",
+    "wear_done": "Frame applied",
+    "wear_failed": "Could not apply the frame. Try Settings → Customise."
+  }
 }
