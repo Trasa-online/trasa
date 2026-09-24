@@ -39,6 +39,9 @@ W Tailwind odpowiedniki klas:
 - Tekst główny = `text-foreground` (mapuje na #0E0E0E)
 - Tekst secondary = `text-muted-foreground`
 
+**LANDING: MODAL „POBIERZ" MA DWIE DROGI (prosba Nat 2026-09-24).** Przed premiera (`APP_LIVE = false`) modal dawal WYLACZNIE zapis na powiadomienie o premierze, wiec kazdy, kto chcial wejsc do apki - w tym osoby zaproszone do testow linkiem `?ref=` - ladowal w slepym zaulku. Teraz nad formularzem stoi pomaranczowy guzik **„Dołącz przedpremierowo"** prowadzacy prosto na TestFlight (`TESTFLIGHT_URL`, ten sam adres co w apce i w `api/share.ts`), pod nim dopisek „Na iPhone - instalacja przez TestFlight", a nizej, za rozdzielaczem „albo", zapis na powiadomienie (dla Androida i dla tych, ktorym nie spieszy sie do wersji testowej). ⚠️ Szybsza droga stoi WYZEJ - czlowiek, ktory kliknal „Pobierz", przyszedl po apke, a nie po newsletter. Skutek uboczny na plus: **stare linki zaproszeniowe (`spontaway.com/?ref=<kod>`), rozeslane zanim zaproszenia przeszly na TestFlight, znowu dzialaja** - i to bez nowego builda natywnego, bo landing jedzie z `main` na Vercela.
+⚠️ Przy okazji modal stal sie PRZEWIJALNY: `items-start` + `my-auto` na panelu zamiast `items-center`. Na iPhonie SE panel ma juz 658 px przy 667 px ekranu, a przy centrowaniu flexem tresc, ktora sie nie miesci, wyjezdza poza ekran i nie da sie do niej doscrollowac (znany blad `items-center` + `overflow-auto`). Zmierzone w WebKit: SE = 55 px do przewiniecia, iPhone 16 i Pro Max = zero, panel dalej na srodku.
+
 **Paleta landingu spontaway (2026-09-02).** Marketingowa strona B2C pod `spontaway.com`
 (route `/`, [SpontawayLanding.tsx](src/pages/SpontawayLanding.tsx)) ma własną, węższą
 paletę z Figmy („Landing B2C ... high-fi copy"), w Tailwindzie jako `spontaway.*`:

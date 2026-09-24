@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import posthog from "posthog-js";
 import { supabase } from "@/integrations/supabase/client";
+import { TESTFLIGHT_URL } from "@/lib/testflight";
 import { pendingReferralCode } from "@/lib/referral";
 import { capabilities } from "@/lib/platform";
 
@@ -105,7 +106,10 @@ const COPY = {
     modal: {
       titleSoon: "Premiera już wkrótce",
       titleLive: "Pobierz Spontaway",
-      bodySoon: "Spontaway pojawi się w App Store lada moment. Zostaw swojego maila, a powiadomimy Cię o starcie:",
+      bodySoon: "Spontaway jest już w testach przedpremierowych. Wejdź od razu na iPhonie albo zostaw maila, a powiadomimy Cię o premierze:",
+      betaCta: "Dołącz przedpremierowo",
+      betaHint: "Na iPhone - instalacja przez TestFlight",
+      or: "albo",
       bodyLive: "Zeskanuj kod telefonem albo pobierz aplikację prosto ze sklepu.",
       qrHint: "Zeskanuj kod telefonem",
       close: "Zamknij",
@@ -179,7 +183,10 @@ const COPY = {
     modal: {
       titleSoon: "Launching very soon",
       titleLive: "Get Spontaway",
-      bodySoon: "Spontaway hits the App Store any moment now. Leave your email and we will tell you when it is live:",
+      bodySoon: "Spontaway is already in pre-release testing. Jump in now on iPhone, or leave your email and we will tell you when it goes live:",
+      betaCta: "Join the pre-release",
+      betaHint: "iPhone only - installs through TestFlight",
+      or: "or",
       bodyLive: "Scan the code with your phone, or download the app straight from the store.",
       qrHint: "Scan the code with your phone",
       close: "Close",
@@ -348,13 +355,18 @@ function DownloadModal({ c, lang, onClose }: { c: Copy; lang: Lang; onClose: () 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-5 py-8"
+      /* ⚠️ `items-start` + `my-auto` na panelu, a NIE `items-center`: modal urosl o droge do
+         testow (2026-09-24) i na iPhonie SE ma juz 658 px przy 667 px ekranu. Przy centrowaniu
+         flexem tresc, ktora sie nie miesci, wyjezdza POZA ekran i nie da sie do niej doscrollowac
+         (znany blad `items-center` + `overflow-auto`). Tak modal nadal stoi na srodku, gdy jest
+         miejsce, a robi sie przewijalny, gdy go brakuje - np. przy wiekszej czcionce systemowej. */
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-5 py-8"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="relative w-full max-w-[420px] overflow-hidden rounded-[28px] bg-white shadow-2xl"
+        className="relative my-auto w-full max-w-[420px] overflow-hidden rounded-[28px] bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -377,10 +389,38 @@ function DownloadModal({ c, lang, onClose }: { c: Copy; lang: Lang; onClose: () 
           <p className="mt-2 text-[14px] leading-[1.45] text-spontaway-brown">
             {nb(APP_LIVE ? c.modal.bodyLive : c.modal.bodySoon)}
           </p>
-          {/* Przed premiera modal zbiera zapisy na powiadomienie - to jedyne miejsce, gdzie
-              mierzymy realne zainteresowanie, skoro apki nie da sie jeszcze pobrac. */}
+          {/* Przed premiera modal daje DWIE drogi (prosba Nat 2026-09-24):
+              1. „Dołącz przedpremierowo" - prosto do TestFlight. Apka DZIALA i przyjmuje
+                 testerow, wiec czlowiek, ktory wlasnie kliknal „Pobierz", ma dostac to,
+                 po co przyszedl. Do tej pory landing oferowal wylacznie zapis na
+                 powiadomienie, wiec kazdy zaproszony do testow ladowal w slepym zaulku -
+                 takze ci, ktorzy dostali stary link zaproszeniowy (`?ref=`) i dostana go
+                 jeszcze, bo link zyje w cudzych wiadomosciach.
+              2. Zapis na powiadomienie - dla Androida i dla tych, ktorym nie spieszy sie
+                 do wersji testowej; to nadal jedyne miejsce, gdzie mierzymy zainteresowanie.
+              ⛔ Kolejnosc nie jest przypadkowa: szybsza droga stoi wyzej. */}
           {!APP_LIVE && (
             <div className="mt-4 w-full">
+              <a
+                href={TESTFLIGHT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => posthog.capture("landing_testflight_click", { source: "download_modal", lang })}
+                className="flex h-[48px] w-full items-center justify-center rounded-full bg-spontaway-orange px-5 text-[15px] font-extrabold text-white transition-colors hover:bg-[#d94a05] active:scale-[0.98]"
+              >
+                {c.modal.betaCta}
+              </a>
+              <p className="mt-1.5 text-center text-[11px] font-semibold text-spontaway-brown/70">
+                {nb(c.modal.betaHint)}
+              </p>
+
+              {/* „albo" z kreskami - dwie rowne drogi, a nie guzik i przypis pod nim. */}
+              <div className="my-3 flex items-center gap-3">
+                <span className="h-px flex-1 bg-spontaway-brown/20" />
+                <span className="text-[12px] font-bold uppercase tracking-wide text-spontaway-brown/60">{c.modal.or}</span>
+                <span className="h-px flex-1 bg-spontaway-brown/20" />
+              </div>
+
               <LaunchNotifyForm c={c} lang={lang} />
             </div>
           )}
