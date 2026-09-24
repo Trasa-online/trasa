@@ -22,8 +22,14 @@
 // zablokowalby nam obrazki jednym skryptem.
 const QUOTA_TOKEN = "P24k23k7po8533LbqL_Z8T2TUEHwjv60";
 
+// ⚠️ Te same stale, co w api/share.ts - razem z ZAPASOWYM kluczem anon. Zmiennych `VITE_*`
+// nie ma w srodowisku funkcji brzegowych Vercela (dlatego share.ts od poczatku ma zapas),
+// a bez klucza ten modul przepuszczalby WSZYSTKO po cichu: pierwsza wersja nie ruszyla ani
+// jednego licznika na prodzie i wygladalo, jakby limit dzialal. Klucz anon jest publiczny
+// z definicji - siedzi w paczce przegladarki.
 const SUPA = process.env.VITE_SUPABASE_URL || "https://api.spontaway.com";
-const ANON = process.env.VITE_SUPABASE_ANON_KEY ?? "";
+const ANON = process.env.VITE_SUPABASE_ANON_KEY
+  || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoeHBoZmNwZWh4c2h2aWpxdGxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTA5MzAsImV4cCI6MjA3ODg2NjkzMH0.NqtDrpd-lKHh11bxtjshs2o6eHl5sDdVImnsW8t1OhU";
 
 export type EdgeQuotaKind = "photo" | "map";
 
