@@ -275,5 +275,9 @@
     "empty_desc": "Rozszerz promień albo zdejmij filtr, żeby zobaczyć pozostałe miejsca.",
     "show_all": "Pokaż wszystkie",
     "need_location": "Włącz lokalizację, żeby filtrować miejsca po odległości."
+  },
+  "refresh": {
+    "release": "Puść, żeby odświeżyć",
+    "doing": "Odświeżam…"
   }
 }

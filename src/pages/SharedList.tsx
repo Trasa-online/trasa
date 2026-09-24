@@ -1360,6 +1360,7 @@ export default function SharedList() {
           }))}
           onAdd={handleAddPlacesToList}
           limit={{ kind: "collection_places", current: items.length }}
+          draftKey={`list:${id}`}
         />
       )}
 

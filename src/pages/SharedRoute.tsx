@@ -2982,6 +2982,7 @@ export default function SharedRoute() {
           }))}
           onAdd={handleAddPlaces}
           limit={{ kind: "trip_places", current: pins.length }}
+          draftKey={`trip:${id}`}
         />
       )}
 

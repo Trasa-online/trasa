@@ -9,7 +9,7 @@ import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
-import { askPermission } from "@/lib/permissionPrompts";
+import { askPermission, getSystemStatus } from "@/lib/permissionPrompts";
 import { rememberItem, recallItem } from "@/hooks/useScrollRestore";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
@@ -1248,6 +1248,18 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // Bumping refreshNonce trigeruje re-fetch w useEffect (np. po "Zacznij od nowa")
   // - czyscimy DB reactions z dziennej + localStorage exploreLikes i fetchujemy queue na nowo.
   const [refreshNonce, setRefreshNonce] = useState(0);
+  // ── ODSWIEZENIE GESTEM w zakladce Miejsca (prosba Nat 2026-09-24) ──────────────────────
+  // „Swipe w gore na koncu listy ma pokazac nowe pozycje na poczatku". Dziala tez w druga
+  // strone (pociagniecie w dol na samej gorze), bo to ten sam odruch.
+  //
+  // ⛔ NIE przez `PullToRefresh`: ten komponent wstawia do scrollera SPACER o zmiennej
+  // wysokosci, a tutaj scroller ma `snap-y snap-mandatory` i zamrozony rozmiar karty 9:16
+  // (CLAUDE.md) - rosnacy spacer przesuwalby punkty zaczepienia pod palcem. Tu zmienia sie
+  // tylko KOLEJNOSC, bez dokladania czegokolwiek do ukladu.
+  const pullStart = useRef<{ y: number; edge: "top" | "bottom" } | null>(null);
+  const [pullArmed, setPullArmed] = useState(false);
+  const [refreshingCards, setRefreshingCards] = useState(false);
+  const PULL_TRIGGER = 80;
   const [resetting, setResetting] = useState(false);
   // Po powrocie appki na wierzch (event z useAppResume) dociagnij swieze miejsca - zeby edycje
   // profilu lokalu byly widoczne bez remountu. Tylko exploreMode (HomeSwipe): tam polubione sa
@@ -1413,13 +1425,29 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         ?? (typeof startingLocation === "object" && startingLocation
           ? { lat: startingLocation.latitude, lng: startingLocation.longitude }
           : null);
+      // ⚠️ Dystans nieznany musi byc LICZBA, nie Infinity: `Infinity - Infinity` daje NaN,
+      // a komparator zwracajacy NaN zostawia elementy w kolejnosci nieokreslonej (silnik
+      // nie ma jak ich porownac). Dwadziescia aktywnych miejsc w bazie nie ma wspolrzednych,
+      // wiec trafialo to realnie.
+      const FAR = 1e9;
+      const kmFrom = (p: MockPlace): number =>
+        startCoords && p.latitude && p.longitude
+          ? haversineKm(startCoords, { lat: p.latitude, lng: p.longitude })
+          : FAR;
+      // Pasmo 1 km. W zakladce Miejsca kolejnosc ma sie opierac o lokalizacje usera
+      // (zgloszenie Nat 2026-09-24: "powinno pokazywac miejsca od najblizszego"), ale
+      // ⛔ NIE jako twardy sort co do metra: wtedy feed staje sie lista "wszystkie kawiarnie
+      // z jednej ulicy", bo przeplot kategorii przestaje cokolwiek znaczyc. Sortujemy wiec
+      // po PASMACH, a w pasmie zostaje kolejnosc z `partitionBusinessFirst` (biznesy, zdjecia,
+      // przeplot kategorii) - sort tablicowy jest stabilny, wiec to trzyma sie samo.
+      const BAND_KM = 1;
       const applyNearestSort = (arr: MockPlace[]) => {
-        if (!sortByNearest || !startCoords) return arr;
-        return [...arr].sort((a, b) => {
-          const da = a.latitude && a.longitude ? haversineKm(startCoords, { lat: a.latitude, lng: a.longitude }) : Infinity;
-          const db = b.latitude && b.longitude ? haversineKm(startCoords, { lat: b.latitude, lng: b.longitude }) : Infinity;
-          return da - db;
-        });
+        if (!startCoords) return arr;
+        // Jawne "od najblizszego" (wejscie z "Biezace polozenie") - twardy sort.
+        if (sortByNearest) return [...arr].sort((a, b) => kmFrom(a) - kmFrom(b));
+        // Domyslnie tylko w zakladce Miejsca; kreator planu ma wlasna kolejnosc kroku 3.
+        if (!exploreMode) return arr;
+        return [...arr].sort((a, b) => Math.floor(kmFrom(a) / BAND_KM) - Math.floor(kmFrom(b) / BAND_KM));
       };
 
       // Ktore miejsca maja juz zdjecia od userow - decyduje o tierze 2 kolejki (patrz
@@ -1527,6 +1555,46 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const isSearching = searchQuery.trim().length >= 2;
+  // Odswiezenie kart: nowe ziarno kolejnosci (`interleaveByCategory` losuje przy kazdym
+  // przebiegu) + swieza pozycja GPS, jesli zgoda juz jest. Wiersze miejsc ida z 5-minutowego
+  // cache modulu, wiec to jest natychmiastowe i NIC nie kosztuje.
+  const refreshCards = async () => {
+    if (refreshingCards) return;
+    setRefreshingCards(true);
+    haptics.light();
+    try {
+      // ⚠️ Cicho - bez pytania o zgode. Punkt sprzed kilku godzin ustawia zla kolejnosc
+      // „od najblizszego", a user wlasnie poprosil o odswiezenie, nie o dialog systemowy.
+      if ((await getSystemStatus("location")) === "granted") await setGpsReference();
+    } catch { /* brak pozycji - kolejnosc zostaje na starym punkcie */ }
+    setExploreVisible(24);
+    setRefreshNonce((n) => n + 1);
+    if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0;
+    setRefreshingCards(false);
+  };
+
+  const onPullTouchStart = (e: React.TouchEvent) => {
+    const el = scrollWrapRef.current;
+    if (!el || refreshingCards || e.touches.length !== 1) { pullStart.current = null; return; }
+    const atTop = el.scrollTop <= 2;
+    const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight <= 2;
+    pullStart.current = atTop ? { y: e.touches[0].clientY, edge: "top" }
+      : atEnd ? { y: e.touches[0].clientY, edge: "bottom" } : null;
+    if (pullArmed) setPullArmed(false);
+  };
+  const onPullTouchMove = (e: React.TouchEvent) => {
+    const st = pullStart.current;
+    if (!st || e.touches.length !== 1) return;
+    const dy = e.touches[0].clientY - st.y;
+    const ok = st.edge === "top" ? dy > PULL_TRIGGER : dy < -PULL_TRIGGER;
+    if (ok !== pullArmed) { setPullArmed(ok); if (ok) haptics.selection(); }
+  };
+  const onPullTouchEnd = () => {
+    const armed = pullArmed;
+    pullStart.current = null;
+    if (armed) { setPullArmed(false); void refreshCards(); }
+  };
+
   // Reset okna infinite-scrolla przy zmianie miasta / filtrow / wyszukiwania.
   useEffect(() => { setExploreVisible(24); if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0; }, [city, categoryFilterKey, dietFilterKey, isSearching, maxDistanceKm]);
   const baseQueue = isSearching
@@ -1541,8 +1609,10 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     const coords = ref?.coords ?? (typeof startingLocation === "object" && startingLocation
       ? { lat: (startingLocation as any).latitude, lng: (startingLocation as any).longitude } : null);
     if (!coords) return baseQueue;
+    // ⚠️ Brak wspolrzednych = DUZA LICZBA, nie Infinity: `Infinity - Infinity` daje NaN,
+    // a komparator z NaN zostawia pary w kolejnosci nieokreslonej.
     const km = (p: MockPlace) =>
-      p.latitude && p.longitude ? haversineKm(coords, { lat: p.latitude, lng: p.longitude }) : Infinity;
+      p.latitude && p.longitude ? haversineKm(coords, { lat: p.latitude, lng: p.longitude }) : 1e9;
     // Filtr promienia (zakladka Miejsca). ⚠️ Miejsce BEZ wspolrzednych wypada - nie da sie
     // powiedziec, czy jest w promieniu, a "moze tak, moze nie" w filtrze odleglosci jest
     // gorsze niz brak wyniku.
@@ -2157,6 +2227,10 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));
             }
           }}
+          onTouchStart={exploreMode ? onPullTouchStart : undefined}
+          onTouchMove={exploreMode ? onPullTouchMove : undefined}
+          onTouchEnd={exploreMode ? onPullTouchEnd : undefined}
+          onTouchCancel={exploreMode ? onPullTouchEnd : undefined}
           // Glowny scroller zakladki Miejsca: stukniecie w pasek statusu wraca na PIERWSZA
           // karte (patrz src/lib/scrollTop.ts). Snap sam dociaga ja do krawedzi.
           data-scroll-main
@@ -2190,6 +2264,16 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             );
           })}
         </div>
+        {/* Wskaznik odswiezenia gestem. ⚠️ `absolute`, wiec NIE dotyka ukladu karty 9:16 -
+            inaczej doszlaby wysokosc do odjecia w liczeniu rozmiaru (zamrozony sizing). */}
+        {(pullArmed || refreshingCards) && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+            style={{ top: "max(0.5rem, env(safe-area-inset-top))" }}>
+            <span className="rounded-full bg-black/55 backdrop-blur px-3 py-1.5 text-[12px] font-semibold text-white">
+              {refreshingCards ? t("refresh.doing") : t("refresh.release")}
+            </span>
+          </div>
+        )}
         {/* Puls "scroll w dol" - afordancja, znika po pierwszym przewinieciu.
             Centrowanie (-translate-x-1/2) MUSI byc na osobnym, zewnetrznym divie - animate-bounce
             nadpisuje transform elementu (translateY), co skasowaloby -translate-x-1/2 i przesunelo

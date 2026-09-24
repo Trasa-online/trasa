@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { checkPlaceLimit, isPlaceLimitError, placeLimitToast, type PlaceLimitKind } from "@/lib/placeLimits";
+import { loadAddPlaceDraft, saveAddPlaceDraft, clearAddPlaceDraft } from "@/lib/addPlaceDraft";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
 import { useQuery } from "@tanstack/react-query";
 import { X, Plus, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
@@ -48,13 +49,15 @@ interface Props {
   // Limit miejsc (wyjazd 100 / kolekcja 30, 2026-09-20): `current` = ile juz jest. Sprawdzane
   // PRZED wysylka - baza i tak odrzuci nadmiar (trigger), ale user ma dostac liczbe, nie "nie udalo sie".
   limit?: { kind: PlaceLimitKind; current: number };
+  /** Klucz szkicu (np. `list:<id>`, `trip:<id>`). Bez niego arkusz nic nie pamieta. */
+  draftKey?: string;
 }
 
 // Drawer "Dodaj nowe miejsce" (redesign 2026-08-21). Dodaje miejsca do ISTNIEJACEJ trasy/listy.
 // Domyslnie: siatka Twoich zapisanych + kafelek "Dodaj nowe miejsce" (fokus na wyszukiwarke).
 // Wpisanie frazy (>=2 znaki) -> Google Places (proxy) -> klik wyniku = nowy zaznaczony kafelek +
 // odblokowanie "Dalej". "Dalej" zapisuje wybrane miejsca (onAdd).
-export default function AddPlaceSheet({ open, onClose, city, countries, existingPlaces, onAdd, limit }: Props) {
+export default function AddPlaceSheet({ open, onClose, city, countries, existingPlaces, onAdd, limit, draftKey }: Props) {
   const { t } = useTranslation("route");
   const { user } = useAuth();
   const [selected, setSelected] = useState<PlaceForList[]>([]);
@@ -107,9 +110,25 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
   // a promien 20 km wokol srodka przestaje obowiazywac - przy kraju nie ma "srodka".
   const scopeCountries = (countries ?? []).filter(Boolean);
 
+  // Otwarcie arkusza wraca do NIEDOKONCZONEGO wyboru, jesli taki zostal (patrz addPlaceDraft.ts).
+  // Do 24.09 kazde otwarcie czyscilo wszystko, wiec przypadkowe zamkniecie gestem kasowalo
+  // prace z kilkunastu tapniec (zgloszenie Nat).
   useEffect(() => {
-    if (open) { setSelected([]); setManual([]); setQuery(""); setAdding(false); setDetailPlace(null); setOpenLists(new Set()); }
-  }, [open]);
+    if (!open) return;
+    const d = loadAddPlaceDraft(draftKey);
+    setSelected(d?.selected ?? []);
+    setManual(d?.manual ?? []);
+    setQuery(d?.query ?? "");
+    setAdding(false); setDetailPlace(null); setOpenLists(new Set());
+  }, [open, draftKey]);
+
+  // Zapis szkicu przy KAZDEJ zmianie wyboru, a nie przy zamknieciu: zamkniecie gestem odmontuje
+  // arkusz, a w efekcie sprzatajacym stan bywa juz nieaktualny (React zdejmuje go w tej samej
+  // klatce). Zapis „na biezaco" jest tani - to jedna mapa w pamieci modulu.
+  useEffect(() => {
+    if (!open) return;
+    saveAddPlaceDraft(draftKey, { selected, manual, query });
+  }, [open, draftKey, selected, manual, query]);
 
   const { data: savedPlaces = EMPTY_ARRAY } = useQuery({
     queryKey: ["saved-places", user?.id],
@@ -189,6 +208,7 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
     haptics.light();
     try {
       await onAdd(selected);
+      clearAddPlaceDraft(draftKey);
       haptics.success();
       toast.success(t("add_place.added", { count: selected.length }));
       onClose();
@@ -250,8 +270,14 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
         <span className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-[#f0a583] text-white"><BrandCheck className="h-3.5 w-3.5 stroke-[3]" /></span>
       ) : (
         <button onClick={opts.onToggle} aria-label={opts.selected ? t("add_place.remove") : t("add_place.add_to_route")}
-          className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-          {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+          /* ⚠️ „Dodaj" jest POMARANCZOWE i WYPELNIONE (prosba Nat 2026-09-24: „zmien kolor
+             z neutralnego na pomaranczowy brandowy, zeby byl bardziej widoczny"). Szare kolko
+             z szarym plusem gubilo sie w wierszu obok kolorowej ikony kategorii i bialego
+             kolka Google - najwazniejsza akcja na tym ekranie wygladala na nieaktywna.
+             Stan ZAZNACZONE zostaje peachy z ptaszkiem: pomaranczowy niesie „zrob to",
+             peachy - „zrobione". */
+          className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "bg-primary text-white"}`}>
+          {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-4 w-4" strokeWidth={2.75} />}
         </button>
       )}
     </div>
@@ -265,10 +291,16 @@ export default function AddPlaceSheet({ open, onClose, city, countries, existing
 
         {/* Naglowek */}
         <div className="flex items-center justify-between gap-2 px-5 pt-1 pb-3 shrink-0">
-          <button onClick={onClose} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">{t("common:buttons.cancel")}</button>
+          {/* ⚠️ „Anuluj" czysci szkic, zamkniecie GESTEM go zostawia. To jest cala roznica miedzy
+              „rezygnuje" a „wypadek" - a tylko druga sytuacja byla zgloszona jako strata. */}
+          <button onClick={() => { clearAddPlaceDraft(draftKey); onClose(); }} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 shrink-0">{t("common:buttons.cancel")}</button>
           <h2 className="text-[18px] font-semibold text-foreground truncate">{t("add_place.title")}</h2>
+          {/* ⚠️ „Dodaj (N)" jest POMARANCZOWE, gdy cos jest wybrane (prosba Nat 2026-09-24).
+              Do 24.09 aktywny i nieaktywny stan roznily sie tylko odcieniem SZAROSCI na bialej
+              pigulce - user nie widzial, ze arkusz czeka na potwierdzenie, i wychodzil z niego
+              bez dodania. Nieaktywny zostaje przygaszony (nie ma czego zapisac). */}
           <button onClick={doAdd} disabled={!selected.length || adding}
-            className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 ${selected.length && !adding ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
+            className={`text-sm font-bold rounded-full px-3.5 py-1.5 shrink-0 transition-colors ${selected.length && !adding ? "bg-primary text-white active:scale-95" : "border border-black/[0.07] bg-white text-[#bcbcbc]"}`}>
             {adding ? "..." : addLabel}
           </button>
         </div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { categoryFromGoogleTypes } from "@/lib/placeCategoryIcon";
 import { TRIP_COUNTRIES, countryIso } from "@/lib/tripCountries";
+import { useDistanceReference } from "@/lib/distanceReference";
 
 // Wynik wyszukiwarki miejsc - ksztalt zgodny z PlaceForList (bez opcjonalnych pol).
 export interface PlaceSearchItem {
@@ -16,6 +17,9 @@ export interface PlaceSearchItem {
   rating: number | null;
   /** Skad wynik: nasz katalog (zero kosztu) czy podpowiedz Google (wymaga `resolve`). */
   source?: "catalog" | "google";
+  /** Dystans od punktu odniesienia w METRACH. Podpowiedzi Google dostaja go od Google
+   *  (parametr `origin`), nasze zrodla liczymy sami. Sluzy WYLACZNIE do sortowania. */
+  distance_m?: number | null;
 }
 
 // WSPOLNA WYSZUKIWARKA MIEJSC. Przebudowa 2026-09-22 (ciecie kosztow Google).
@@ -64,6 +68,9 @@ const MIN_CHARS_LOCAL = 2;
 const MIN_CHARS_GOOGLE = 4;
 const ENOUGH_LOCAL_HITS = 4;
 const DEBOUNCE_MS = 500;
+// „User jest w tej samej okolicy, co planowany zasieg". Hojnie, bo metropolia potrafi miec
+// 40 km w poprzek (Trojmiasto), a przy planowaniu innego kraju i tak nie ma to znaczenia.
+const SAME_AREA_KM = 75;
 
 export function usePlaceSearch(
   query: string,
@@ -76,6 +83,20 @@ export function usePlaceSearch(
   const scopeKm = opts?.scopeKm ?? 20;
   const enabled = opts?.enabled ?? true;
   const searchMode = query.trim().length >= MIN_CHARS_LOCAL;
+  // PUNKT ODNIESIENIA dla „najblizej najpierw".
+  //
+  // ⚠️ To NIE zawsze jest lokalizacja usera. Kto siedzi w Warszawie i planuje wyjazd do Paryza,
+  // ten chce paryskich wynikow poukladanych wzgledem PARYZA - sortowanie od Warszawy daloby
+  // kolejnosc przypadkowa (wszystko ~1500 km). Dlatego GPS usera wygrywa tylko wtedy, gdy user
+  // jest w okolicy tego, co planuje, albo gdy zasiegu w ogole nie znamy. W praktyce to
+  // najczestszy przypadek - miejsca dodaje sie bedac na miejscu.
+  // ⚠️ HOOK, nie `getReference()`: punkt GPS potrafi dojechac PO pierwszym renderze
+  // (cichy odczyt pozycji przy starcie), a czyste wywolanie nie zamawia przerysowania -
+  // wyszukiwarka zostalaby wtedy na starym punkcie odniesienia do konca zycia ekranu.
+  const gpsRef = useDistanceReference();
+  const gpsCoords = gpsRef?.source === "gps" ? gpsRef.coords : null;
+  const originRef = gpsCoords && (!center || distKm(gpsCoords, center) <= SAME_AREA_KM) ? gpsCoords : center;
+  const originKey = originRef ? `${originRef.lat.toFixed(3)},${originRef.lng.toFixed(3)}` : "";
   const [results, setResults] = useState<PlaceSearchItem[]>([]);
   const [searching, setSearching] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -141,6 +162,8 @@ export function usePlaceSearch(
               action: "autocomplete", query: input, sessionToken: session.current,
               ...(iso && scopeCountries.length <= 1 ? { country: iso } : {}),
               ...(center ? { latitude: center.lat, longitude: center.lng, radius: Math.round(scopeKm * 1000) } : {}),
+              // Google policzy dystans od TEGO punktu i odda go przy kazdej podpowiedzi.
+              ...(originRef ? { originLat: originRef.lat, originLng: originRef.lng } : {}),
             },
           });
           if (!alive) return;
@@ -154,6 +177,7 @@ export function usePlaceSearch(
             category: categoryFromGoogleTypes(r.types), photo_url: null,
             place_id: null, google_place_id: r.place_id ?? null, rating: null,
             source: "google" as const,
+            distance_m: typeof r.distance_m === "number" ? r.distance_m : null,
           }));
         } else {
           setBlocked(false);
@@ -168,16 +192,31 @@ export function usePlaceSearch(
           seen.add(k);
           merged.push(r);
         }
-        // Blisko srodka najpierw - KOLEJNOSC, nie odsiew (twardy filtr konczyl sie pusta lista,
-        // gdy srodek byl zly albo nieznany). Wyniki bez wspolrzednych (Google) nie spadaja na dol.
+        // NAJBLIZSZE NAJPIERW - realny dystans rosnaco (zgloszenie Nat 2026-09-24:
+        // „przy tej samej nazwie apka pokazuje najdalsze zamiast najblizszych").
+        // ⛔ Do 24.09 bylo tu tylko przelozenie na dwa kubelki: „w promieniu 20 km" i „reszta",
+        // a WEWNATRZ kubelka zostawala kolejnosc zrodel. Dwa lokale tej samej sieci w tym samym
+        // miescie trafialy do jednego kubelka i wygrywal ten, ktorego Google oddal pierwszy.
+        // Teraz sortujemy calosc po odleglosci: podpowiedzi Google maja ja od Google (`origin`),
+        // nasze zrodla liczymy haversinem. Bez dystansu = na koniec, bo o takim wyniku nie wiemy
+        // nic (a nie dlatego, ze jest daleko).
+        const km = (r: PlaceSearchItem): number => {
+          if (typeof r.distance_m === "number") return r.distance_m / 1000;
+          if (!originRef || r.latitude == null || r.longitude == null) return Number.POSITIVE_INFINITY;
+          return distKm(originRef, { lat: r.latitude, lng: r.longitude });
+        };
+        // Bez punktu odniesienia zostaje stara zasada: najpierw to, co w zasiegu.
         const near = (r: PlaceSearchItem) => !center || r.latitude == null || r.longitude == null
           || distKm(center, { lat: r.latitude, lng: r.longitude }) <= scopeKm;
-        setResults([...merged.filter(near), ...merged.filter((r) => !near(r))].slice(0, 8));
+        const sorted = originRef
+          ? [...merged].sort((a, b) => km(a) - km(b))
+          : [...merged.filter(near), ...merged.filter((r) => !near(r))];
+        setResults(sorted.slice(0, 8));
       } catch { if (alive) setResults([]); }
       finally { if (alive) setSearching(false); }
     }, DEBOUNCE_MS);
     return () => { alive = false; clearTimeout(t); };
-  }, [query, searchMode, city, countriesKey, center, scopeKm, enabled]);
+  }, [query, searchMode, city, countriesKey, center, scopeKm, enabled, originKey]);
 
   /** Dociaga adres i wspolrzedne WYBRANEGO miejsca (jedno platne zapytanie) i zamyka sesje.
    *  Wynik z naszego katalogu wraca bez zadnego zapytania. */

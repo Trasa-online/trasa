@@ -235,6 +235,15 @@ Deno.serve(async (req) => {
           payload.locationBias = { circle: { center: { latitude: body.latitude, longitude: body.longitude },
             radius: Math.max(1000, Math.min(50000, Number(body.radius) || 20000)) } };
         }
+        // `origin` = punkt, OD KTOREGO Google liczy dystans do kazdej podpowiedzi
+        // (`distanceMeters`). Nic nie kosztuje, a bez niego klient nie ma czym posortowac
+        // podpowiedzi o tej samej nazwie i pokazywal oddzial na drugim koncu kraju przed tym
+        // za rogiem (zgloszenie Nat 2026-09-24). Domyslnie = srodek nakierowania.
+        if (typeof body.originLat === "number" && typeof body.originLng === "number") {
+          payload.origin = { latitude: body.originLat, longitude: body.originLng };
+        } else if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+          payload.origin = { latitude: body.latitude, longitude: body.longitude };
+        }
         const r = await fetch(`${NEW_BASE}/places:autocomplete`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, Referer: REFERER },
@@ -252,6 +261,8 @@ Deno.serve(async (req) => {
               secondary: pp.structuredFormat?.secondaryText?.text ?? "",
               place_id: pp.placeId ?? null,
               types: pp.types ?? [],
+              // Dystans od `origin` - klient sortuje po nim podpowiedzi (patrz wyzej).
+              distance_m: typeof pp.distanceMeters === "number" ? pp.distanceMeters : null,
             }))
             .filter((x: any) => x.place_id);
           return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Api": "new" } });
@@ -274,6 +285,10 @@ Deno.serve(async (req) => {
         params.set("location", `${body.latitude},${body.longitude}`);
         params.set("radius", String(Math.max(1000, Math.min(50000, Number(body.radius) || 20000))));
       }
+      // To samo co w nowym API: `origin` daje `distance_meters` przy kazdej podpowiedzi.
+      const oLat = typeof body.originLat === "number" ? body.originLat : (typeof body.latitude === "number" ? body.latitude : null);
+      const oLng = typeof body.originLng === "number" ? body.originLng : (typeof body.longitude === "number" ? body.longitude : null);
+      if (oLat !== null && oLng !== null) params.set("origin", `${oLat},${oLng}`);
       const res = await fetch(`${BASE}/place/autocomplete/json?${params.toString()}`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.predictions ?? []) as any[]).slice(0, 8).map((p: any) => ({
@@ -283,6 +298,7 @@ Deno.serve(async (req) => {
         secondary: p.structured_formatting?.secondary_text ?? "",
         place_id: p.place_id ?? null,
         types: p.types ?? [],
+        distance_m: typeof p.distance_meters === "number" ? p.distance_meters : null,
       })).filter((r: any) => r.place_id);
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }

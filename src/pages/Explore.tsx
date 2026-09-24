@@ -43,6 +43,7 @@ import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteWithUndo } from "@/lib/trash";
+import { reshuffleFeed } from "@/lib/feedShuffle";
 import { toast } from "sonner";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
@@ -795,6 +796,9 @@ const Explore = () => {
   useScrollRestore("/eksploruj", feedScrollRef, { enabled: !searchOpen });
 
   const handleRefresh = async () => {
+    // Nowy szyk feedu przy KAZDYM odswiezeniu (prosba Nat 2026-09-24) - inaczej pociagniecie
+    // listy oddawalo doslownie te sama kolejnosc i wygladalo, jakby nic sie nie stalo.
+    reshuffleFeed();
     await queryClient.invalidateQueries();
   };
 

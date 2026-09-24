@@ -213,8 +213,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         <GoogleGlyph className="h-[18px] w-[18px]" />
       </button>
       <button onClick={opts.onToggle} aria-label={opts.selected ? t("aria.remove_from_list") : t("aria.add_to_list")}
-        className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-        {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+        /* Pomaranczowe „dodaj" - ten sam wiersz co w AddPlaceSheet (prosba Nat 2026-09-24). */
+        className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "bg-primary text-white"}`}>
+        {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-4 w-4" strokeWidth={2.75} />}
       </button>
     </div>
   );
@@ -322,8 +323,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       <button onClick={onBack} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 transition-opacity shrink-0">{backLabel ?? t("common:buttons.cancel")}</button>
       <h2 className="text-[20px] font-semibold text-foreground truncate">{title}</h2>
       {onNext ? (
+        /* Akcja „dalej / dodaj" na pomaranczu marki (prosba Nat 2026-09-24) - ten sam wzor,
+           co w arkuszu dodawania miejsca. Nieaktywna zostaje przygaszona. */
         <button onClick={onNext} disabled={!nextEnabled}
-          className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 transition-opacity ${nextEnabled ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
+          className={`text-sm font-bold rounded-full px-3.5 py-1.5 shrink-0 transition-colors ${nextEnabled ? "bg-primary text-white active:scale-95" : "border border-black/[0.07] bg-white text-[#bcbcbc]"}`}>
           {nextLabel ?? t("common:buttons.next")}
         </button>
       ) : <span className="w-[68px] shrink-0" />}

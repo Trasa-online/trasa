@@ -271,5 +271,9 @@
     "empty_desc": "Widen the radius or clear the filter to see the other places.",
     "show_all": "Show all",
     "need_location": "Turn on location to filter places by distance."
+  },
+  "refresh": {
+    "release": "Release to refresh",
+    "doing": "Refreshing…"
   }
 }

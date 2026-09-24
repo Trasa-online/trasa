@@ -51,6 +51,7 @@ import { createWyjazdFromPlaces } from "@/lib/createWyjazd";
 import { setGpsReference } from "@/lib/distanceReference";
 import { askPermission } from "@/lib/permissionPrompts";
 import { track } from "@/lib/analytics";
+import { shuffleWindows, useFeedSeed } from "@/lib/feedShuffle";
 
 type DiscoveryItem = {
   id: string;
@@ -1608,6 +1609,8 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
   searchCity?: string } = {}) {
   const { t } = useTranslation("homefeed");
   const { user } = useAuth();
+  // Ziarno szyku feedu - zmienia sie przy odswiezeniu gestem (patrz feedShuffle.ts).
+  const feedSeed = useFeedSeed();
   // Zablokowani userzy (App Store 1.2): ich trasy i listy znikaja z feedu i wyszukiwarki.
   const { data: blockedIds } = useQuery({
     queryKey: ["blocked-ids", user?.id],
@@ -2560,7 +2563,14 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             });
             const r = byFollow(routeRows, routeCards, "user_id");
             const l = byFollow(listRows, listCards, "user_id");
-            return [...interleave(r.mine, l.mine), ...interleave(r.rest, l.rest)];
+            // Odswiezenie feedu = inny szyk (prosba Nat 2026-09-24). Tasujemy WEWNATRZ okien
+            // i KAZDY koszyk osobno, wiec „obserwowani nad reszta swiata" i „najnowsze wyzej"
+            // zostaja w mocy - zmienia sie tylko to, ktore kafelki wpadaja pod pierwsze
+            // spojrzenie. Patrz src/lib/feedShuffle.ts.
+            return [
+              ...shuffleWindows(interleave(r.mine, l.mine), feedSeed),
+              ...shuffleWindows(interleave(r.rest, l.rest), feedSeed),
+            ];
           })()}
         </div>
       )}
