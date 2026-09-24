@@ -129,6 +129,14 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
   const pinchStart = useRef<{ dist: number; scale: number } | null>(null);
   const panLast = useRef<{ x: number; y: number } | null>(null);
   const lastTap = useRef(0);
+  // Gest W DOL = zamkniecie (prosba Nat 2026-09-24, jak w pozostalych podgladach zdjec).
+  // Tylko przy scale=1: przybliżone zdjecie 1 palcem sie PRZESUWA, wiec tam gest nalezy do panu.
+  // Kierunek rozstrzygamy raz na gest - ruch w bok zostaje nawigacja miedzy zdjeciami.
+  const [dragY, setDragY] = useState(0);
+  const [closing, setClosing] = useState(false);
+  const dir = useRef<"v" | "h" | null>(null);
+  const dragStartT = useRef(0);
+  const dragged = useRef(false);
 
   // Reset zoomu przy zmianie zdjęcia (nowe zdjęcie = normalny widok).
   useEffect(() => { setZoom({ scale: 1, tx: 0, ty: 0 }); }, [idx]);
@@ -157,6 +165,9 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
       startPos.current = null;
       panLast.current = null;
     } else if (e.touches.length === 1) {
+      dir.current = null;
+      dragged.current = false;
+      dragStartT.current = Date.now();
       startPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       panLast.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
@@ -165,6 +176,7 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
   const handleTouchMove = (e: React.TouchEvent) => {
     // Pinch: 2 palce -> zmiana skali.
     if (e.touches.length === 2 && pinchStart.current) {
+      if (dir.current === "v") { dir.current = null; setDragY(0); }
       const d = dist2(e.touches[0], e.touches[1]);
       const next = Math.max(1, Math.min(MAX_ZOOM, pinchStart.current.scale * (d / pinchStart.current.dist)));
       setGesturing(true);
@@ -184,6 +196,22 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
         const p = clampPan(z.scale, z.tx + dx, z.ty + dy);
         return { ...z, ...p };
       });
+      return;
+    }
+    // Normalny widok: rozstrzygnij kierunek, pion = zdjecie idzie za palcem.
+    if (e.touches.length === 1 && scaleRef.current <= 1.01 && startPos.current && !closing) {
+      const dx = e.touches[0].clientX - startPos.current.x;
+      const dy = e.touches[0].clientY - startPos.current.y;
+      if (dir.current === null) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        dir.current = Math.abs(dy) > Math.abs(dx) ? "v" : "h";
+      }
+      if (dir.current === "v") {
+        dragged.current = true;
+        setGesturing(true);
+        // W gore nie zamykamy, ale zdjecie drga symbolicznie - inaczej ekran wyglada na zawieszony.
+        setDragY(dy > 0 ? dy : dy / 5);
+      }
     }
   };
 
@@ -205,6 +233,22 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
     const dx = e.changedTouches[0].clientX - sp.x;
     const dy = e.changedTouches[0].clientY - sp.y;
     const tap = Math.abs(dx) < 10 && Math.abs(dy) < 10;
+
+    if (dir.current === "v") {
+      dir.current = null;
+      const velocity = dy / Math.max(1, Date.now() - dragStartT.current); // px/ms
+      if (dy > 110 || (velocity > 0.5 && dy > 40)) {
+        // Domykamy wlasna animacja: zdjecie zjezdza poza ekran, dopiero potem unmount.
+        setClosing(true);
+        haptics.light();
+        setDragY(window.innerHeight);
+        window.setTimeout(() => onClose(), 190);
+      } else {
+        setDragY(0);
+      }
+      return;
+    }
+    dir.current = null;
 
     // Gdy przybliżone: tap nie zamyka; double-tap wyzerowuje zoom. Swipe = pan (już obsłużony).
     if (scaleRef.current > 1) {
@@ -240,11 +284,21 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
   return createPortal(
     <div
       className="fixed inset-0 z-[200] bg-black flex items-center justify-center select-none touch-none overflow-hidden"
-      style={{ pointerEvents: "auto" }}
+      style={{
+        pointerEvents: "auto",
+        // Tlo gasnie proporcjonalnie do przesuniecia - to ono mowi "puszczasz i zamykam".
+        backgroundColor: `rgba(0,0,0,${(1 - Math.min(1, Math.abs(dragY) / 264) * 0.85).toFixed(3)})`,
+        transition: gesturing ? "none" : "background-color 220ms",
+      }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onClick={() => { if (scaleRef.current <= 1.01) onClose(); }}
+      onTouchCancel={() => { dir.current = null; startPos.current = null; setGesturing(false); setDragY(0); }}
+      onClick={() => {
+        // Klik po przeciagnieciu nie zamyka (przeciagniecie wrocone na miejsce = "rozmyslilem sie").
+        if (dragged.current) { dragged.current = false; return; }
+        if (scaleRef.current <= 1.01) onClose();
+      }}
     >
       <button
         type="button"
@@ -290,7 +344,7 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
         draggable={false}
         className="max-w-full max-h-full object-contain pointer-events-none"
         style={{
-          transform: `translate3d(${zoom.tx}px, ${zoom.ty}px, 0) scale(${zoom.scale})`,
+          transform: `translate3d(${zoom.tx}px, ${zoom.ty + dragY}px, 0) scale(${zoom.scale})`,
           transition: gesturing ? "none" : "transform 0.2s ease-out",
           willChange: "transform",
         }}
