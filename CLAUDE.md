@@ -558,7 +558,13 @@ Pułapki, na które ten kod już odpowiada (nie usuwaj zabezpieczeń):
 
 ## Architektura — czego NIE ruszać
 
-### Bezpieczeństwo bazy - reguły z audytów (2026-08-21, 2026-09-08, 2026-09-14)
+### Bezpieczeństwo bazy - reguły z audytów (2026-08-21, 2026-09-08, 2026-09-14, 2026-09-24)
+
+**AUDYT nr 4 (2026-09-24, prosba Nat).** Przejrzane: RLS wszystkich tabel, polityki zapisu i odczytu, funkcje SECURITY DEFINER wolywalne przez anon (103 sztuki), granty kolumnowe, polityki Storage, funkcje brzegowe. **Stan ogolny dobry** - RLS wlaczony na KAZDEJ tabeli, zero polityk zapisu dla anon, granty kolumnowe `profiles` trzymaja (anon nie widzi e-maila, telefonu, kodu polecajacego), uploady do Storage zamkniete w folderze `<uid>/`, a wszystkie RPC powiadomien sprawdzaja, czy wola je wlasciciel tresci. Znalezione i naprawione:
+- ⛔ **`translations` czytal KAZDY zalogowany.** Tabela to cache tlumaczen (tekst zrodlowy + wynik), a laduje w niej tresc userow - takze notka z PRYWATNEGO planu, jesli autor poprosil o tlumaczenie. `select * from translations` oddawal wszystko naraz. Polityka zdjeta (migracja `20260924g`); nikt tego nie czytal z klienta - `translate-text` ma klucz service_role. ⚠️ **Regula: cache tresci userow jest tak wrazliwy, jak tresc, ktora cache'uje.** Dokladasz tabele pomocnicza z ich tekstem - nie dawaj jej polityki „czyta zalogowany".
+- **`waitlist` przyjmowal zapisy bez zadnego sufitu** (polityka INSERT `true`, i tak ma byc - to formularz przed logowaniem). Doszedl globalny limit 300/h; w bazie nie ma adresu IP, wiec limit musi byc globalny. ⚠️ Swiadomy koszt: przy zalewie legalne zapisy z tej godziny tez padna - to nadal lepsze niz spam w bazie i w skrzynkach.
+- **`send-waitlist-email` wysylalo maila na DOWOLNY adres** z limitem tylko w pamieci instancji. Doszedl licznik w bazie: 15/h na IP, **3/h na ADRES** (to jest wlasciwa obrona przed bombardowaniem konkretnej skrzynki - limit na IP obchodzi sie zmiana sieci) i 200/h globalnie.
+- **Zostawione swiadomie:** `increment_collection_views` / `increment_route_views` sa wolywalne przez anon i da sie napompowac licznik wyswietlen - ale te same RPC wola strona udostepnionego linku, na ktora wchodzi sie BEZ konta, wiec wymuszenie logowania zabraloby liczenie realnych wejsc. Koszt zerowy, wplyw kosmetyczny. Tak samo `place_events` (4 wiersze, zapis dla zalogowanych) i tabela `pins_tags_backup_20260911` (kopia z migracji, RLS bez polityk = niewidoczna dla wszystkich poza service_role).
 
 Trzy audyty i te same klasy błędów wracają, więc zasady na stałe:
 
