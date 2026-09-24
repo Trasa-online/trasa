@@ -111,8 +111,14 @@ export default function CollectionPeopleSheet({ open, onOpenChange, collectionId
               {members.map((m) => (
                 <div key={m.user_id} className="flex items-center gap-3 py-2.5">
                   <FramedAvatar src={m.avatar_url} frame={m.avatar_frame} color={m.avatar_frame_color} size={36} />
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
-                    {m.username ? `@${m.username}` : (m.first_name || t("people.user_fallback"))}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-foreground">
+                      {m.username ? `@${m.username}` : (m.first_name || t("people.user_fallback"))}
+                    </span>
+                    {/* Zaproszony, ktory jeszcze nie odpowiedzial (2026-09-21) - jak "Czeka" w wyjezdzie. */}
+                    {m.status === "pending" && (
+                      <span className="block truncate text-xs text-muted-foreground">{t("invite.awaiting")}</span>
+                    )}
                   </span>
                   {isOwner && (
                     <button

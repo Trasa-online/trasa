@@ -68,9 +68,9 @@
     "trip": "Plan"
   },
   "country": {
-    "title": "Dokąd jedziecie?",
+    "title": "Jaki kraj?",
     "title_list": "Wybierz kraj",
-    "hint": "Wybierz kraj lub kilka krajów. To ustawia zasięg wyszukiwarki miejsc.",
+    "hint": "Wybierz kraj lub kilka krajów, których dotyczy plan. To ustawia zasięg wyszukiwarki miejsc.",
     "hint_list": "Wybierz kraj lub kilka. Możesz to zmienić później.",
     "search": "Szukaj kraju",
     "no_results": "Brak kraju o tej nazwie",

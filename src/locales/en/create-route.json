@@ -68,9 +68,9 @@
     "trip": "Plan"
   },
   "country": {
-    "title": "Where are you going?",
+    "title": "Which country?",
     "title_list": "Pick a country",
-    "hint": "Pick one country or several. This sets the reach of the place search.",
+    "hint": "Pick one country or several the plan is about. This sets the reach of the place search.",
     "hint_list": "Pick one country or several. You can change this later.",
     "search": "Search for a country",
     "no_results": "No country by that name",

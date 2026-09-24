@@ -9,7 +9,8 @@ import { useShare } from "@/hooks/useShare";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
 import { TESTFLIGHT_URL } from "@/lib/testflight";
-import { REFERRAL_GOAL, fetchReferralStats, referralLink } from "@/lib/referral";
+import { REFERRAL_GOAL, fetchReferralStats, inviteLink } from "@/lib/referral";
+import { fetchRewardGrant, rewardGrantKey } from "@/lib/rewardGrant";
 
 // Zapraszanie znajomych (2026-09-10). Zamiast paywalla - ekran zachety.
 //
@@ -20,12 +21,14 @@ import { REFERRAL_GOAL, fetchReferralStats, referralLink } from "@/lib/referral"
 //
 // Licznik pokazuje REJESTRACJE z linku, nie wyslane linki - stad bierze sie jego wiarygodnosc.
 //
-// DWIE DROGI ZAPROSZENIA, celowo rozne:
-//  - "Wyślij zaproszenie" posyla link z kodem (spontaway.com/?ref=...). Kod jedzie dalej
-//    i zaproszenie moze sie policzyc.
-//  - Kod QR prowadzi WPROST na TestFlight (prosba Nat 2026-09-10): to droga na zywo, przy
-//    stole, gdy druga osoba ma po prostu wejsc do testow. Adres TestFlight nie przyjmuje
-//    parametrow, wiec takie wejscie nie doliczy sie do licznika.
+// DWIE DROGI ZAPROSZENIA, obie NA TESTFLIGHT (zgloszenie Nat 2026-09-24):
+//  - "Wyślij zaproszenie" posyla link zdalnie (wiadomosc, komunikator),
+//  - kod QR to ta sama droga przy stole, gdy druga osoba jest obok.
+// Do 24.09 guzik posylal link na landing z kodem (`?ref=...`), zeby zaproszenie sie policzylo -
+// ale landing przed premiera nie ma zadnej drogi do apki (plakietki sklepowe wygaszone, tylko
+// zapis na powiadomienie), wiec zapraszany ladowal w slepym zaulku. ⚠️ Adres TestFlight nie
+// przyjmuje parametrow, wiec takie wejscie NIE DOLICZY SIE do licznika nizej - patrz
+// `inviteLink` w src/lib/referral.ts.
 
 // Zamkniecie karty trzymamy w sessionStorage, NIE w localStorage (prosba Nat 2026-09-10):
 // baner ma znikac na czas biezacego uzycia, a wracac przy kolejnym odpaleniu aplikacji.
@@ -47,11 +50,26 @@ export default function ReferralCard({ userId }: { userId: string }) {
     staleTime: 60_000,
   });
 
+  // Nagroda przyznana RECZNIE (frame_grants) - ten sam klucz czyta `RewardThanksBanner`,
+  // wiec to jedno zapytanie na dwoch czytelnikow.
+  const { data: reward } = useQuery({
+    queryKey: rewardGrantKey(userId),
+    enabled: !!userId,
+    staleTime: Infinity,
+    queryFn: fetchRewardGrant,
+  });
+
   const code = data?.code ?? null;
   const invited = data?.invited ?? 0;
-  const done = invited >= REFERRAL_GOAL;
+  // ⚠️ „Masz komplet" takze przy grancie recznym: od 24.09 zaproszenia ida prosto na TestFlight
+  // i licznik ich NIE ZLICZA, wiec bez tego osoba z przyznana nagroda czytalaby „zaproś 3 osoby
+  // i odblokuj nakładkę", majac ja juz na awatarze.
+  const done = invited >= REFERRAL_GOAL || !!reward;
+  // Nieodebrane podziekowanie ma pierwszenstwo - dwie zolte karty jedna nad druga, w tym jedna
+  // mowiaca „zapraszaj", a druga „dziekujemy", czytaja sie jak blad.
+  if (reward && !reward.seen) return null;
   if (!code || dismissed) return null;
-  const link = referralLink(code);
+  const link = inviteLink();
 
   const onShare = async () => {
     haptics.light();

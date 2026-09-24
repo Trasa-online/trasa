@@ -27,9 +27,13 @@
  * Dla domyślnych 5x5 = 25 photos = ~$0.08.
  */
 
+import { requirePaidGoogleOps } from "./_paidGoogleGuard";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+
+requirePaidGoogleOps("poc-menu-classifier (Place Details + Places Photo)");
+
 
 // ─── env loading (bez zewnętrznej zależności) ───────────────────────────────
 

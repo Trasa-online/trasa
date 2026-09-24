@@ -2,9 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 // ILE OSOB WYROZNILO LOKAL gwiazdka "topki" (prosba Nat 2026-09-16, wizytowki premium).
 //
-// Gwiazdka zyje w `pins.is_top` (wyjazdy) i `discovery_items.is_top` (kolekcje), a RLS nie
-// pozwoliloby zwyklemu userowi policzyc cudzych wierszy - stad waski SECDEF RPC
-// `place_star_count` (migracja 20260916i), ktory oddaje SAMA LICZBE, bez tozsamosci.
+// Gwiazdki zyja w `pin_stars` (plany, per uczestnik od 2026-09-21) i `discovery_item_stars`
+// (kolekcje, per uczestnik od 2026-09-20), a RLS nie pozwoliloby zwyklemu userowi policzyc
+// cudzych wierszy - stad waski SECDEF RPC `place_star_count` (migracja 20260916i, przepisany
+// na tabele gwiazdek w 20260921), ktory oddaje SAMA LICZBE, bez tozsamosci.
 //
 // ⛔ Licznik obejmuje WYLACZNIE tresc publiczna (wyjazdy opublikowane, kolekcje publiczne).
 // Bywa przez to MNIEJSZY niz suma gwiazdek, ktora wlasciciel widzi u siebie na profilu -

@@ -111,6 +111,19 @@ async function rest(path: string): Promise<any[]> {
   } catch { return []; }
 }
 
+// RPC anon (POST /rest/v1/rpc/<fn>) - do `resolve_qr_code` przy stronie kodu QR.
+async function rpc(fn: string, args: Record<string, unknown>): Promise<any> {
+  try {
+    const r = await fetch(`${SUPA}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
 const first = (v: any): string | null => (Array.isArray(v) ? (v.find((x) => typeof x === "string" && x) ?? null) : null);
 
 // Zdjecia musza byc bezwzglednymi adresami https (robot nie ma kontekstu strony).
@@ -452,24 +465,10 @@ ${o.photo ? `<img class="thumb" src="${esc(o.photo)}" alt="" loading="lazy">`
 ${o.note ? `<p class="note">${esc(o.note)}</p>` : ""}</div></li>`;
 }
 
-export default async function handler(req: Request): Promise<Response> {
-  const { searchParams } = new URL(req.url);
-  const isList = searchParams.get("t") === "list";
-  const isPlace = searchParams.get("t") === "place";
-  const id = searchParams.get("id") ?? "";
-  const url = `${SITE}/${isPlace ? "p" : isList ? "l" : "r"}/${id}`;
-
-  const missing = () => new Response(shell({
-    title: "Treść niedostępna", desc: "Ta treść mogła zostać usunięta lub jest prywatna.", image: BRAND_IMG, url,
-    body: `<div class="empty"><img class="mark" src="${BRAND_IMG}" alt=""><h1>Treść niedostępna</h1>
-<p class="meta">Mogła zostać usunięta albo jest prywatna.</p></div>`,
-  }), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } });
-
-  if (!UUID.test(id)) return missing();
-
-  // MIEJSCE (wizytowka) - link z "Udostępnij to miejsce" (Figma, 2026-09-11). Widoczne to, co
-  // przepuszcza RLS dla klucza anonimowego: aktywne miejsce + aktywny profil biznesowy.
-  if (isPlace) {
+// STRONA MIEJSCA - wspolna dla /p/<id> (link z "Udostepnij to miejsce") i /q/<token> (kod QR
+// z wizytowki drukowanej, 2026-09-21). `opts.extra` = dodatkowy blok pod karta (np. "To moj
+// lokal"), `opts.url` = adres kanoniczny do og:url. Oddaje null, gdy miejsca nie ma.
+async function placePage(req: Request, id: string, opts: { url: string; extra?: string; qrToken?: string }): Promise<Response | null> {
     const PLACE_SEL = "place_name,address,city,category,photo_url,gallery_urls,google_place_id,business_profiles(cover_image_url,logo_url,event_title,tags,gallery_urls)";
     // <id> to albo wizytowka (`places`), albo MIGAWKA miejsca spoza bazy (`shared_places`,
     // migracja 20260911e) - miejsca z list i wyjazdow czesto nie maja rekordu w `places`.
@@ -482,7 +481,7 @@ export default async function handler(req: Request): Promise<Response> {
     let chosenPhoto: string | null = null;
     if (!pl) {
       const [snap] = await rest(`shared_places?id=eq.${id}&select=place_id,google_place_id,place_name,address,city,category,latitude,longitude,photo_url&limit=1`);
-      if (!snap) return missing();
+      if (!snap) return null;
       chosenPhoto = typeof snap.photo_url === "string" && snap.photo_url ? snap.photo_url : null;
       if (snap.place_id) [pl] = await rest(`places?id=eq.${snap.place_id}&select=${PLACE_SEL}&limit=1`);
       if (!pl) { fromSnap = true; pl = { place_name: snap.place_name, address: snap.address, city: snap.city, category: snap.category, photo_url: snap.photo_url, gallery_urls: null, google_place_id: snap.google_place_id, business_profiles: null }; }
@@ -526,17 +525,73 @@ ${tags.length ? `<div class="chips">${tags.map((c: string) => `<span>${esc(c)}</
 </div></div>
 <a class="go" id="go" href="${TESTFLIGHT_URL}">Zobacz miejsce</a>
 <p class="tail">To miejsce znajdziesz w spontaway - aplikacji do odkrywania miejsc i planowania wyjazdów ze znajomymi.</p>
+${opts.extra ?? ""}
 </div>
 ${choiceSheet()}`;
     const ogSize = cover && isCrawler(req) ? await imageSize(cover) : null;
     return new Response(shell({
-      title, desc, url, body, noun: "place", variant: "trip",
+      title, desc, url: opts.url, body, noun: "place", variant: "trip",
       image: cover ?? OG_BANNER.url,
       imageW: cover ? ogSize?.w : OG_BANNER.w,
       imageH: cover ? ogSize?.h : OG_BANNER.h,
     }), {
-      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600" },
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": opts.qrToken ? "no-store" : "public, s-maxage=60, stale-while-revalidate=600" },
     });
+}
+
+export default async function handler(req: Request): Promise<Response> {
+  const { searchParams } = new URL(req.url);
+  const isList = searchParams.get("t") === "list";
+  const isPlace = searchParams.get("t") === "place";
+  const isQr = searchParams.get("t") === "qr";
+  const id = searchParams.get("id") ?? "";
+  const url = `${SITE}/${isPlace ? "p" : isList ? "l" : "r"}/${id}`;
+
+  const missing = () => new Response(shell({
+    title: "Treść niedostępna", desc: "Ta treść mogła zostać usunięta lub jest prywatna.", image: BRAND_IMG, url,
+    body: `<div class="empty"><img class="mark" src="${BRAND_IMG}" alt=""><h1>Treść niedostępna</h1>
+<p class="meta">Mogła zostać usunięta albo jest prywatna.</p></div>`,
+  }), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } });
+
+  // KOD QR Z WIZYTOWKI DRUKOWANEJ (2026-09-21): /q/<token>. Token wskazuje na miejsce (albo
+  // jeszcze na nic - Nat przypisuje recznie / przez rejestracje lokalu). Podrozny dostaje strone
+  // miejsca jak /p/<id> (z zainstalowana apka universal link otwiera ja w apce - patrz
+  // public/.well-known/apple-app-site-association), lokal - guzik "To moj lokal" do rejestracji
+  // B2B z tokenem. Sam odczyt zlicza skan (RPC `resolve_qr_code`).
+  if (isQr) {
+    const token = id.toLowerCase();
+    if (!/^[a-z0-9]{4,32}$/.test(token)) return missing();
+    const rows = await rpc("resolve_qr_code", { p_token: token });
+    const q = Array.isArray(rows) ? rows[0] : null;
+    if (!q) return missing();
+    const qrUrl = `${SITE}/q/${token}`;
+    const claimUrl = `${SITE}/#/auth?business=true&qr=${encodeURIComponent(token)}`;
+    // "To moj lokal" - tylko dopoki nikt nie przypisal kodu do swojej wizytowki.
+    const claimBar = q.claimed ? "" : `<p class="tail">Prowadzisz to miejsce? <a href="${claimUrl}" style="color:#EE5307;font-weight:700;text-decoration:none">To mój lokal →</a></p>`;
+    if (q.place_id && UUID.test(q.place_id)) {
+      const page = await placePage(req, q.place_id, { url: qrUrl, extra: claimBar, qrToken: token });
+      if (page) return page;
+    }
+    // Kod przejety przez lokal, ale wizytowka jeszcze niezatwierdzona (place_id dopisze
+    // admin-moderate-business) - podroznemu mowimy, ze to kwestia chwili, bez guzika przejecia.
+    const body = `<div class="page">
+<div class="empty"><img class="mark" src="${BRAND_IMG}" alt=""><h1>${q.claimed ? "Wizytówka w&#160;przygotowaniu" : "Ten kod nie&#160;ma jeszcze lokalu"}</h1>
+<p class="meta">${q.claimed ? "Lokal właśnie zakłada swoją wizytówkę w&#160;spontaway. Zajrzyj tu za&#160;chwilę." : "Wizytówka czeka na&#160;przypisanie. Jeśli prowadzisz ten lokal, przejmij ją poniżej."}</p></div>
+${q.claimed ? "" : `<a class="go" href="${claimUrl}">To mój lokal →</a>`}
+<p class="tail">spontaway to aplikacja do&#160;odkrywania miejsc i&#160;planowania wyjazdów ze&#160;znajomymi.</p>
+</div>`;
+    return new Response(shell({ title: q.claimed ? "Wizytówka w przygotowaniu" : "Kod bez lokalu", desc: q.claimed ? "Lokal zakłada swoją wizytówkę w spontaway." : "Wizytówka czeka na przypisanie.", image: BRAND_IMG, url: qrUrl, body, noun: "place", variant: "trip" }), {
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+    });
+  }
+
+  if (!UUID.test(id)) return missing();
+
+  // MIEJSCE (wizytowka) - link z "Udostępnij to miejsce" (Figma, 2026-09-11). Widoczne to, co
+  // przepuszcza RLS dla klucza anonimowego: aktywne miejsce + aktywny profil biznesowy.
+  if (isPlace) {
+    const page = await placePage(req, id, { url });
+    return page ?? missing();
   }
 
   if (isList) {

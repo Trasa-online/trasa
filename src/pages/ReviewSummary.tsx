@@ -9,6 +9,7 @@ import { fetchPinPhotos, deletePinPhotoReturning, restorePinPhotos, photosByPlac
 import PlaceNotes from "@/components/route/PlaceNotes";
 import { haptics } from "@/hooks/useHaptics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { usePhotoViewerGestures } from "@/hooks/usePhotoViewerGestures";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useNavigate, useSearchParams, Navigate } from "react-router-dom";
 import { goBackOr } from "@/hooks/useGoBack";
@@ -47,6 +48,7 @@ import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { renderForUpload, uploadPair } from "@/lib/imageThumbs";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
+import { placeCategoryLabel } from "@/lib/categories";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -205,8 +207,8 @@ const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
 // ukryte, auto-fit. null gdy brak wspolrzednych.
 const ReviewSummary = () => {
   const { t } = useTranslation("review");
-  const catLabel = (cat: string) =>
-    t(`categories.${cat}`, { defaultValue: t("categories.other") });
+  // Wspolna etykieta kategorii - patrz placeCategoryLabel (jedno zrodlo dla calej apki).
+  const catLabel = (cat: string) => placeCategoryLabel(cat);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -277,7 +279,12 @@ const ReviewSummary = () => {
       return urls[(i + dir + urls.length) % urls.length];
     });
   };
-  const swipeViewer = useSwipeNav({ onLeft: () => stepPhoto(1), onRight: () => stepPhoto(-1) });
+  // Podglad zdjecia: w bok = nastepne/poprzednie, w DOL = zamkniecie (prosba Nat 2026-09-24).
+  const viewerGestures = usePhotoViewerGestures({
+    onClose: () => { setViewerUrl(null); setViewerMenuOpen(false); },
+    onNext: () => stepPhoto(1),
+    onPrev: () => stepPhoto(-1),
+  });
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   // Podglad wizytowki miejsca po kliknieciu w pin.
   const [detailPin, setDetailPin] = useState<any | null>(null);
@@ -1832,7 +1839,7 @@ const ReviewSummary = () => {
   const renderPhotoViewer = () => {
     if (!viewerUrl) return null;
     return (
-      <div {...swipeViewer} className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
+      <div {...viewerGestures.bind} className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
         <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
         {/* Strzalki jako alternatywa dla gestu (i licznik) - tylko gdy jest wiecej niz jedno zdjecie. */}
         {galleryUrlsRef.current.length > 1 && (

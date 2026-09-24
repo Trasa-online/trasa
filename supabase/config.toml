@@ -57,6 +57,10 @@ verify_jwt = false
 [functions.google-billing-sync]
 verify_jwt = false
 
+# Przypomnienia dla lokali (aktywacja / dokoncz wizytowke): cron (x-trigger-secret) / service_role / admin - gate w funkcji.
+[functions.business-nudges]
+verify_jwt = false
+
 # Mail o premierze do waitlisty: admin-only (gate w funkcji), JWT wymagany.
 [functions.send-launch-email]
 verify_jwt = true

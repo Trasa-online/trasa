@@ -161,6 +161,9 @@ const Auth = () => {
           place_name: bizPlace.trim(),
           phone: bizPhone.trim() || undefined,
           message: bizMessage.trim() || undefined,
+          // Kod QR z wizytowki drukowanej ("To moj lokal" na /q/<token>, 2026-09-21): funkcja
+          // przypina token do wizytowki i podpina miejsce, na ktore token wskazuje.
+          qr_token: searchParams.get("qr")?.trim().toLowerCase() || undefined,
         },
       });
       if (regError) throw regError;

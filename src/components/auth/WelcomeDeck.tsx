@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { listTheme } from "@/lib/listThemes";
 import { resolveStored } from "@/components/PlacePhoto";
 import { scopeLabel } from "@/lib/tripScope";
-import { buildTripStaticMapUrl } from "@/lib/staticMap";
 import { TripTile, ListTile, LIST_TILES, type GridItem, type GridPlace } from "@/components/home/FeedTiles";
 
 // Talia u gory ekranu powitalnego (propozycja Nat 2026-09-14, przebudowa 2026-09-18): karty
@@ -108,7 +107,7 @@ async function loadCards(): Promise<Card[]> {
         authorFrame: prof?.avatar_frame ?? null, authorFrameColor: prof?.avatar_frame_color ?? null,
         showAuthor: !!prof,
         at: 0, placesCount: pins.length, days,
-        mapUrl: buildTripStaticMapUrl(pins, "200x200"), pins,
+        pins,
         theme: null, places: [],
       };
       return { key: `t-${r.id}`, item };
@@ -132,7 +131,7 @@ async function loadCards(): Promise<Card[]> {
         authorAvatar: prof?.avatar_url ?? null, authorId: prof?.id ?? null,
         authorFrame: prof?.avatar_frame ?? null, authorFrameColor: prof?.avatar_frame_color ?? null,
         showAuthor: !!prof,
-        at: 0, placesCount: its.length, days: null, mapUrl: null,
+        at: 0, placesCount: its.length, days: null,
         theme: listTheme(c.theme, c.id), places,
       };
       return { key: `l-${c.id}`, item };

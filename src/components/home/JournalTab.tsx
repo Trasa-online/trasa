@@ -31,17 +31,10 @@ interface JournalTabProps {
 
 type LatLng = { latitude?: number | null; longitude?: number | null };
 
-// Mini mapka Google (statyczna) w rogu okladki karty wyjazdu - pomaranczowe piny miejsc,
-// POI/transit ukryte. Przez proxy /api/static-map (klucz server-side, 24h CDN). null gdy
-// brak wspolrzednych. Wzorzec 1:1 z DiscoveryFeed.
-function buildMiniMapUrl(pins: LatLng[]): string | null {
-  const pts = pins.filter((p) => p.latitude != null && p.longitude != null).slice(0, 12);
-  if (!pts.length) return null;
-  const markers = pts
-    .map((p) => `markers=size:tiny%7Ccolor:0xf9662b%7C${p.latitude},${p.longitude}`)
-    .join("&");
-  return `${API_BASE}/api/static-map?size=120x120&scale=2&maptype=roadmap&${markers}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
-}
+// ⛔ BEZ MINI-MAPKI NA OKLADCE (decyzja Nat 2026-09-23) - tak samo jak w Eksploracji
+// i na kartach. Byl tu `buildMiniMapUrl` budujacy adres do /api/static-map: kazda karta
+// wyjazdu to osobne, platne wywolanie Maps Static, odswiezane co dobe (Google daje
+// `max-age=86400` i dluzej cache'owac nie wolno).
 
 const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTabProps) => {
   const { t } = useTranslation("homeprofile");
@@ -115,19 +108,12 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
         const u = resolveStored((Array.isArray(p.images) && p.images[0]) || (Array.isArray(p.user_photo_urls) && p.user_photo_urls[0]) || p.photo_url || p.image_url);
         if (u) covers[p.route_id] = u;
       }
-      // Prebuild mini-map URL per route (max 12 pinow, tylko gdy sa wspolrzedne).
-      const maps: Record<string, string> = {};
-      for (const [rid, pts] of Object.entries(coords)) {
-        const u = buildMiniMapUrl(pts);
-        if (u) maps[rid] = u;
-      }
-      return { covers, counts, maps };
+      return { covers, counts };
     },
     enabled: entryIds.length > 0,
   });
   const coverMap = pinData.covers;
   const countMap = pinData.counts as Record<string, number>;
-  const mapMap = pinData.maps as Record<string, string>;
 
   // Awatary uczestnikow dla wyjazdow grupowych (group_session_id) - stack na karcie.
   const groupIds = useMemo(
@@ -338,7 +324,6 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
           : format(_d, "d MMM yyyy", { locale: dateLocale() }))
       : "";
     const count = countMap[entry.id] ?? 0;
-    const miniMap = mapMap[entry.id];
     const isPrivate = entry.is_shared === false;
     const canDelete = entry.is_own || entry.group_session_id;
     const title = entry.title || entry.city || t("journal.trip_fallback");
@@ -365,11 +350,6 @@ const JournalTab = ({ userId, city: cityFilter, draftsOnly = false }: JournalTab
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
           />
-          {miniMap && (
-            <div className="absolute bottom-2 right-2 h-[46px] w-[46px] rounded-xl overflow-hidden border-2 border-white shadow-md bg-white">
-              <img src={miniMap} alt="" className="w-full h-full object-cover" />
-            </div>
-          )}
         </div>
 
         {/* Tresc po prawej */}

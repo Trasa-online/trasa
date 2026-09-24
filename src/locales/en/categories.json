@@ -35,7 +35,11 @@
     "clothing_store": "Clothing store",
     "book_store": "Bookshop",
     "shop": "Shop",
-    "vintage_store": "Vintage store"
+    "vintage_store": "Vintage store",
+    "nature": "Nature",
+    "walk": "Walk",
+    "nightlife": "Nightclub",
+    "transport": "Transport"
   },
   "other": "Place",
   "plural": {

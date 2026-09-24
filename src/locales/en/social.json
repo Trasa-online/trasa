@@ -32,7 +32,16 @@
     "accept": "Accept",
     "sent": "Sent",
     "request_sent": "Request sent",
-    "add": "Add"
+    "add": "Add friend",
+    "add_long": "Add friend",
+    "request_cancelled": "Request cancelled",
+    "unavailable": "That request cannot be sent",
+    "remove_title": "Remove from friends?",
+    "remove_desc": "They will lose access to your friends-only photos. Following stays as it was.",
+    "remove_confirm": "Remove friend",
+    "cancel": "Cancel",
+    "accept_request": "Accept request",
+    "request_pending": "Request sent"
   },
   "follow": {
     "no_session": "No session",
@@ -132,7 +141,15 @@
     "empty_cta": "See your collections",
     "remove": "Delete notification",
     "list_starred": "{{user}} starred a place in your collection “{{title}}”",
-    "list_starred_place": "{{user}} starred “{{place}}” in your collection “{{title}}”"
+    "list_starred_place": "{{user}} starred “{{place}}” in your collection “{{title}}”",
+    "invite_accept": "Join",
+    "invite_joined": "You joined",
+    "invite_declined": "Invitation declined",
+    "invite_gone": "This invitation is no longer active",
+    "friend_accept_btn": "Accept",
+    "friend_decline_btn": "Decline",
+    "friend_accepted": "You are friends now",
+    "friend_declined": "Request declined"
   },
   "live": {
     "friend_request": "New friend request 👋",
@@ -175,11 +192,6 @@
   },
   "submit": "Report",
   "friends": {
-    "request_title": "New friend request 👋",
-    "request_body": "{{name}} wants to add you as a friend",
-    "accept_title": "You have a new friend 🎉",
-    "accept_body": "{{name}} accepted your request",
-    "link_body": "{{name}} joined you through a link",
     "none_yet": "You have no friends yet"
   },
   "people": {

@@ -2,10 +2,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const BASE = "https://maps.googleapis.com/maps/api";
 const REFERER = "https://spontaway.com/";
-const CACHE_TTL_HOURS = 168; // 7 days
+// 30 dni = DOZWOLONE MAKSIMUM z regulaminu Google ("may temporarily cache latitude and
+// longitude values from the Places API for up to 30 consecutive calendar days, after which
+// Customer must delete"). Bylo 7 dni, czyli placilismy za to samo miejsce 4x czesciej, niz
+// trzeba. ⚠️ Druga polowa tej reguly - KASOWANIE - siedzi w cronie `purge-place-cache`
+// (funkcja `purge_stale_place_cache`, migracja 20260922e). Podnosisz TTL - sprawdz crona.
+const CACHE_TTL_HOURS = 720; // 30 dni
 
-// Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.
-const GOOGLE_DAILY_CALL_LIMIT = Number(Deno.env.get("GOOGLE_DAILY_CALL_LIMIT") ?? "2500");
+// ── TRZY BEZPIECZNIKI, KAZDY O CZYM INNYM (przebudowa 2026-09-22) ────────────
+// Po przejsciu na Autocomplete w sesji wiekszosc zapytan jest DARMOWA, a placimy wylacznie za
+// `resolve` (Place Details w chwili wyboru miejsca). Dlatego limit od liczby zapytan przestal
+// byc limitem kosztu i musi byc DUZO wyzszy - inaczej przy 10 tys. userow odcialby wyszukiwarke
+// wszystkim przy rachunku rzedu kilkuset zlotych.
+//
+// 1. DZIENNY limit zapytan = bezpiecznik DOSTEPNOSCI (petla w kodzie, bot, zly skrypt).
+//    60 000/dobe to z grubsza ruch 15-20 tys. aktywnych userow.
+const GOOGLE_DAILY_CALL_LIMIT = Number(Deno.env.get("GOOGLE_DAILY_CALL_LIMIT") ?? "60000");
+
+// 2. MIESIECZNY budzet PLATNYCH resolve = bezpiecznik KOSZTOWY (twardy sufit rachunku).
+//    30 000 resolve to ~510 $ przy starym Place Details (17 $/1000) albo ~100 $ po wlaczeniu
+//    Places API (New) (5 $/1000, pula 10 000 darmowych). Fail-CLOSED: gdy licznik nie odpowiada,
+//    NIE wolamy Google - przy pieniadzach wolimy brak wyniku niz niespodzianke na rachunku.
+const GOOGLE_RESOLVE_MONTHLY_LIMIT = Number(Deno.env.get("GOOGLE_RESOLVE_MONTHLY_LIMIT") ?? "30000");
 
 // Miesieczny limit BUDZETOWY dla Text Search (wyszukiwarka). 8000/mies ~= $256 @ $32/1000
 // (cel: max ~$260/mies na wyszukiwarce). Env-configurable.
@@ -61,6 +79,48 @@ function callerBucket(req: Request): string {
   return `gplaces:ip:${ip || "unknown"}`;
 }
 
+// ── Miesieczny limit PLATNYCH wywolan na KONTO (2026-09-22) ──────────────────
+// Kwota dzienna chroni rachunek globalnie, limit godzinowy chroni dostepnosc, a ten chroni
+// przed jednym kontem, ktore w tle miele Google przez caly miesiac. Fail-open: chwilowy blad
+// bazy nie moze odciac szukania, bo sufit kosztu i tak trzyma kwota globalna.
+// 3. Miesieczny limit zapytan NA KONTO. ~1000 zapytan to okolo 140 sesji wyszukiwania,
+// czyli kilkanascie razy wiecej, niz robi czlowiek. Chroni przed jednym kontem w petli.
+const PER_USER_MONTHLY_LIMIT = Number(Deno.env.get("GOOGLE_MONTHLY_PER_USER") ?? "1000");
+
+function callerUserId(req: Request): string | null {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const sub = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")))?.sub;
+    return typeof sub === "string" ? sub : null;
+  } catch { return null; }
+}
+
+// Fail-CLOSED: to jest bezpiecznik pieniedzy, nie dostepnosci.
+async function resolveBudgetLeft(sb: ReturnType<typeof createClient>, n: number): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_resolve_month", { p_n: n, p_limit: GOOGLE_RESOLVE_MONTHLY_LIMIT });
+    if (error) { console.error("resolve budget rpc error:", error.message); return false; }
+    return data !== false;
+  } catch (e) {
+    console.error("resolve budget exception:", (e as Error).message);
+    return false;
+  }
+}
+
+async function userWithinMonthlyLimit(sb: ReturnType<typeof createClient>, req: Request, n: number): Promise<boolean> {
+  const uid = callerUserId(req);
+  if (!uid) return true;
+  try {
+    const { data, error } = await sb.rpc("try_consume_user_google_quota", { p_user: uid, p_n: n, p_limit: PER_USER_MONTHLY_LIMIT });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
+}
+
 // Fail-open: gdy RPC padnie, przepuszczamy. To limit uczciwosci, nie brama bezpieczenstwa -
 // zablokowanie legalnego ruchu przez chwilowy blad bazy byloby gorsze niz brak limitu.
 async function callerWithinLimit(sb: ReturnType<typeof createClient>, req: Request): Promise<boolean> {
@@ -73,6 +133,29 @@ async function callerWithinLimit(sb: ReturnType<typeof createClient>, req: Reque
   } catch {
     return true;
   }
+}
+
+
+// ── PLACES API (NEW) Z AUTOMATYCZNYM ODWROTEM DO STAREGO (2026-09-22) ────────
+// Nowe API jest TANSZE za dokladnie te sama robote: Place Details Essentials to 5 $/1000
+// z pula 10 000 darmowych, stare Place Details - 17 $/1000 z pula 5 000. Przy 10 tys. userow
+// to roznica rzedu 6-7 tys. zl miesiecznie.
+//
+// ⚠️ Dzis klucz serwerowy ma je ZABLOKOWANE w ograniczeniach klucza (`API_KEY_SERVICE_BLOCKED`),
+// dlatego kod probuje nowego, a przy odmowie leci starym i ZAPAMIETUJE to na czas zycia
+// instancji (jedno nieudane zapytanie na instancje, bledy nie sa platne). Gdy Nat dopisze
+// "Places API (New)" do ograniczen klucza, oszczednosc wlaczy sie sama, bez wdrozenia.
+//
+// ⛔ Autocomplete i Place Details MUSZA byc z tej samej rodziny w obrebie jednej sesji -
+// inaczej Google nie uzna sesji za zamknieta i policzy kazda podpowiedz osobno. Flaga jest
+// wspolna dla obu akcji wlasnie po to.
+const NEW_BASE = "https://places.googleapis.com/v1";
+let newApiOk: boolean | null = null;   // null = jeszcze nie sprawdzone w tej instancji
+
+function newApiDenied(status: number, payload: unknown): boolean {
+  if (status !== 403) return false;
+  const reason = (payload as { error?: { details?: { reason?: string }[] } })?.error?.details?.[0]?.reason;
+  return reason === "API_KEY_SERVICE_BLOCKED" || reason === "SERVICE_DISABLED" || reason === "API_KEY_HTTP_REFERRER_BLOCKED";
 }
 
 // In-memory caches (live for the duration of the function instance)
@@ -120,12 +203,113 @@ Deno.serve(async (req) => {
 
     // ── Non-detail actions (no cache needed) ─────────────────────────────────
 
+    // ── AUTOCOMPLETE W SESJI (2026-09-22) - to zastepuje Text Search przy pisaniu ──────
+    // Text Search kosztuje 32 $/1000 i platny jest KAZDY nacisniety klawisz (debounce lapie
+    // tylko czesc). Autocomplete z tokenem sesji jest DARMOWY, gdy sesje zamyka Place Details
+    // (SKU "Autocomplete Session Usage"), a bez niego kosztuje 2,83 $/1000 z pula 10 000/mies.
+    // ⚠️ Token sesji MUSI byc ten sam dla calego pisania i dla koncowego `placeid`, inaczej
+    // Google liczy kazde zapytanie osobno. Klient trzyma go w `placeSearchSession.ts`.
+    if (body.action === "autocomplete") {
+      const input = typeof body.query === "string" ? body.query.trim() : "";
+      if (input.length < 2) {
+        return new Response(JSON.stringify({ results: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (!(await userWithinMonthlyLimit(sb, req, 1))) {
+        return new Response(JSON.stringify({ results: [], quota_exceeded: true, period: "user_month" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "USER-MONTH-EXCEEDED" },
+        });
+      }
+      if (!(await consumeGoogleQuota(sb, 1))) {
+        return new Response(JSON.stringify({ results: [], quota_exceeded: true, period: "day" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" },
+        });
+      }
+      const token = typeof body.sessionToken === "string" ? body.sessionToken.slice(0, 64) : "";
+      const iso = typeof body.country === "string" && /^[a-z]{2}$/i.test(body.country) ? body.country.toLowerCase() : null;
+
+      if (newApiOk !== false) {
+        const payload: Record<string, unknown> = { input, languageCode: "pl", includedPrimaryTypes: ["establishment"] };
+        if (token) payload.sessionToken = token;
+        if (iso) payload.includedRegionCodes = [iso];
+        if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+          payload.locationBias = { circle: { center: { latitude: body.latitude, longitude: body.longitude },
+            radius: Math.max(1000, Math.min(50000, Number(body.radius) || 20000)) } };
+        }
+        // `origin` = punkt, OD KTOREGO Google liczy dystans do kazdej podpowiedzi
+        // (`distanceMeters`). Nic nie kosztuje, a bez niego klient nie ma czym posortowac
+        // podpowiedzi o tej samej nazwie i pokazywal oddzial na drugim koncu kraju przed tym
+        // za rogiem (zgloszenie Nat 2026-09-24). Domyslnie = srodek nakierowania.
+        if (typeof body.originLat === "number" && typeof body.originLng === "number") {
+          payload.origin = { latitude: body.originLat, longitude: body.originLng };
+        } else if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+          payload.origin = { latitude: body.latitude, longitude: body.longitude };
+        }
+        const r = await fetch(`${NEW_BASE}/places:autocomplete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, Referer: REFERER },
+          body: JSON.stringify(payload),
+        });
+        const d = await r.json().catch(() => null);
+        if (r.ok) {
+          newApiOk = true;
+          const results = (((d as any)?.suggestions ?? []) as any[])
+            .map((sg) => sg?.placePrediction)
+            .filter(Boolean)
+            .slice(0, 8)
+            .map((pp: any) => ({
+              name: pp.structuredFormat?.mainText?.text ?? pp.text?.text ?? "",
+              secondary: pp.structuredFormat?.secondaryText?.text ?? "",
+              place_id: pp.placeId ?? null,
+              types: pp.types ?? [],
+              // Dystans od `origin` - klient sortuje po nim podpowiedzi (patrz wyzej).
+              distance_m: typeof pp.distanceMeters === "number" ? pp.distanceMeters : null,
+            }))
+            .filter((x: any) => x.place_id);
+          return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Api": "new" } });
+        }
+        // 403 od ograniczen klucza = zapamietaj i nie probuj wiecej w tej instancji.
+        // Kazdy inny blad traktujemy jako jednorazowy i tez schodzimy na stare API.
+        if (newApiDenied(r.status, d)) newApiOk = false;
+        else console.error("places new autocomplete:", r.status, JSON.stringify(d)?.slice(0, 200));
+      }
+
+      const params = new URLSearchParams({ input, key: apiKey, language: "pl" });
+      if (token) params.set("sessiontoken", token);
+      // `types=establishment` odsiewa adresy i dzielnice - do wyjazdu dodaje sie LOKALE.
+      // Wyszukiwarka miast podaje wlasne `(cities)`.
+      params.set("types", typeof body.types === "string" ? body.types : "establishment");
+      // Zasieg krajowy - nakierowanie, ktore nic nie kosztuje, a decyduje o trafnosci
+      // (bez niego plan do Francji dostawal podpowiedzi z Polski).
+      if (iso) params.set("components", `country:${iso}`);
+      if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+        params.set("location", `${body.latitude},${body.longitude}`);
+        params.set("radius", String(Math.max(1000, Math.min(50000, Number(body.radius) || 20000))));
+      }
+      // To samo co w nowym API: `origin` daje `distance_meters` przy kazdej podpowiedzi.
+      const oLat = typeof body.originLat === "number" ? body.originLat : (typeof body.latitude === "number" ? body.latitude : null);
+      const oLng = typeof body.originLng === "number" ? body.originLng : (typeof body.longitude === "number" ? body.longitude : null);
+      if (oLat !== null && oLng !== null) params.set("origin", `${oLat},${oLng}`);
+      const res = await fetch(`${BASE}/place/autocomplete/json?${params.toString()}`, { headers: { Referer: REFERER } });
+      const data = await res.json();
+      const results = ((data.predictions ?? []) as any[]).slice(0, 8).map((p: any) => ({
+        name: p.structured_formatting?.main_text ?? p.description ?? "",
+        // Drugi wiersz podpowiedzi to ulica i miasto - pelnego adresu Autocomplete nie daje,
+        // dociagamy go dopiero przy WYBORZE (akcja `placeid`).
+        secondary: p.structured_formatting?.secondary_text ?? "",
+        place_id: p.place_id ?? null,
+        types: p.types ?? [],
+        distance_m: typeof p.distance_meters === "number" ? p.distance_meters : null,
+      })).filter((r: any) => r.place_id);
+      return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (body.action === "citysearch") {
       const cacheHit = citysearchCache.get(body.query);
       if (cacheHit && Date.now() - cacheHit.ts < CITYSEARCH_TTL_MS) {
         return new Response(JSON.stringify({ results: cacheHit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
       }
-      const res = await fetch(`${BASE}/place/autocomplete/json?input=${encodeURIComponent(body.query)}&types=(cities)&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      const ctok = typeof body.sessionToken === "string" ? `&sessiontoken=${encodeURIComponent(body.sessionToken.slice(0, 64))}` : "";
+      const res = await fetch(`${BASE}/place/autocomplete/json?input=${encodeURIComponent(body.query)}&types=(cities)&key=${apiKey}&language=pl${ctok}`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.predictions ?? []) as any[]).slice(0, 5).map((p: any) => ({
         name: p.structured_formatting?.main_text ?? p.description,
@@ -192,10 +376,57 @@ Deno.serve(async (req) => {
       if (hit && (Date.now() - new Date(hit.cached_at).getTime()) / 3_600_000 < CACHE_TTL_HOURS) {
         return new Response(JSON.stringify(hit.data), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
       }
+      if (!(await userWithinMonthlyLimit(sb, req, 1))) {
+        return new Response(JSON.stringify({ result: null, quota_exceeded: true, period: "user_month" }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "USER-MONTH-EXCEEDED" } });
+      }
+      // ⚠️ TO jest zapytanie, za ktore placimy - i tylko ono liczy sie do budzetu miesiecznego.
+      if (!(await resolveBudgetLeft(sb, 1))) {
+        return new Response(JSON.stringify({ result: null, quota_exceeded: true, period: "resolve_month" }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "RESOLVE-MONTH-EXCEEDED" } });
+      }
       if (!(await consumeGoogleQuota(sb, 1))) {
         return new Response(JSON.stringify({ result: null, quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
       }
-      const res = await fetch(`${BASE}/place/details/json?place_id=${encodeURIComponent(pid)}&fields=place_id,name,formatted_address,geometry,types&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
+      // ⚠️ Token sesji ZAMYKA sesje autocomplete - dzieki temu wszystkie podpowiedzi z pisania
+      // sa darmowe, a placi sie tylko za to jedno zapytanie. Bez tokenu kazda podpowiedz jest
+      // liczona osobno.
+      const sessTok = typeof body.sessionToken === "string" ? body.sessionToken.slice(0, 64) : "";
+
+      // Nowe API: "Place Details Essentials" (5 $/1000, 10 000 darmowych) zamiast starego
+      // Place Details (17 $/1000, 5 000). ⛔ Maska pol MUSI zostac w puli Essentials -
+      // dorzucenie np. `rating` albo `regularOpeningHours` przenosi cale zapytanie do
+      // drozszego SKU (Pro/Enterprise), czyli podnosi cene 3-5x za jedno slowo wiecej.
+      if (newApiOk !== false) {
+        const url = `${NEW_BASE}/places/${encodeURIComponent(pid)}?languageCode=pl${sessTok ? `&sessionToken=${encodeURIComponent(sessTok)}` : ""}`;
+        const r = await fetch(url, {
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "id,displayName,formattedAddress,location,types",
+            Referer: REFERER,
+          },
+        });
+        const d = await r.json().catch(() => null);
+        if (r.ok && (d as any)?.id) {
+          newApiOk = true;
+          const payload = {
+            result: {
+              name: (d as any).displayName?.text ?? "",
+              full_address: (d as any).formattedAddress ?? "",
+              latitude: (d as any).location?.latitude ?? null,
+              longitude: (d as any).location?.longitude ?? null,
+              types: (d as any).types ?? [],
+              place_id: (d as any).id ?? pid,
+            },
+          };
+          sb.from("place_details_cache").upsert({ cache_key: pkey, data: payload, cached_at: new Date().toISOString() }, { onConflict: "cache_key" })
+            .then(() => {}, (e: Error) => console.error("placeid cache write:", e.message));
+          return new Response(JSON.stringify(payload), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Api": "new" } });
+        }
+        if (newApiDenied(r.status, d)) newApiOk = false;
+        else console.error("places new details:", r.status, JSON.stringify(d)?.slice(0, 200));
+      }
+
+      const stok = sessTok ? `&sessiontoken=${encodeURIComponent(sessTok)}` : "";
+      const res = await fetch(`${BASE}/place/details/json?place_id=${encodeURIComponent(pid)}&fields=place_id,name,formatted_address,geometry,types&key=${apiKey}&language=pl${stok}`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const r = data?.result;
       const payload = {

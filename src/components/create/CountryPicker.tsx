@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { haptics } from "@/hooks/useHaptics";
-import { TRIP_COUNTRIES, TRIP_REGIONS, countryLabel } from "@/lib/tripCountries";
+import { TRIP_COUNTRIES, countriesInRegion, compareCountries, TRIP_REGIONS, countryLabel } from "@/lib/tripCountries";
 
 // Wybor KRAJOW wyjazdu/listy (2026-09-10). Zastapil drum-scroll z miastem.
 //
@@ -46,7 +46,7 @@ export default function CountryPicker({ selected, onChange }: {
   const q = norm(query.trim());
   const matches = useMemo(
     // Szukanie po nazwie polskiej I angielskiej - w angielskiej apce user wpisze "Germany".
-    () => (q ? TRIP_COUNTRIES.filter((c) => norm(c.name).includes(q) || norm(countryLabel(c.name)).includes(q)) : []),
+    () => (q ? TRIP_COUNTRIES.filter((c) => norm(c.name).includes(q) || norm(countryLabel(c.name)).includes(q)).sort(compareCountries) : []),
     [q],
   );
 
@@ -112,7 +112,7 @@ export default function CountryPicker({ selected, onChange }: {
             : matches.map((c) => row(c.name))
         ) : (
           TRIP_REGIONS.map((region) => {
-            const inRegion = TRIP_COUNTRIES.filter((c) => c.region === region);
+            const inRegion = countriesInRegion(region);
             if (!inRegion.length) return null;
             return (
               <div key={region}>

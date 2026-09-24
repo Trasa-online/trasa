@@ -6,6 +6,7 @@ import { BrandMap, BrandTrash } from "@/components/BrandIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { GOOGLE_PLACE_DETAILS_DISABLED } from "@/lib/appMode";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
@@ -253,6 +254,13 @@ function LargeCarouselCard({
 
   useEffect(() => {
     if (fetchedPhoto) return;
+    // ⛔ ZERO GOOGLE (2026-09-23). To wywolanie szlo po SAMA REFERENCJE ZDJECIA, a bilo
+    // w najdrozszy wariant Place Details: proxy prosi tam o `reviews`, `opening_hours`,
+    // `rating` i `editorial_summary`, wiec Google dolicza DWA osobne SKU - "Atmosphere Data"
+    // (5 $/1000) i "Contact Data" (3 $/1000) - do kazdego pinu bez zdjecia. To byly te dwie
+    // pozycje na rachunku za wrzesien. Zdjec Google przy zwyklych miejscach i tak nie
+    // pokazujemy (decyzja 2026-09-15).
+    if (GOOGLE_PLACE_DETAILS_DISABLED) return;
     supabase.functions
       .invoke("google-places-proxy", {
         body: { placeName: pin.place_name, latitude: pin.latitude || undefined, longitude: pin.longitude || undefined },
@@ -433,7 +441,9 @@ async function enrichPlanWithPhotos(plan: RoutePlan, sb: typeof supabase): Promi
     // ── Krok 2: Google Photos fallback dla pozostalych pinow bez photo.
     const stillNeedsPhoto = needsPhoto.filter((p: any) => !bizPhotoMap.has(p.place_name) && p.latitude && p.longitude);
     const googlePhotoMap = new Map<string, string>();
-    if (stillNeedsPhoto.length > 0) {
+    // ⛔ ZERO GOOGLE: ta petla robila jedno DROGIE Place Details (Atmosphere + Contact)
+    // na KAZDY pin bez zdjecia, rownolegle. Przy planie z 15 miejscami to 15 wywolan naraz.
+    if (!GOOGLE_PLACE_DETAILS_DISABLED && stillNeedsPhoto.length > 0) {
       const results = await Promise.allSettled(
         stillNeedsPhoto.map((pin: any) =>
           sb.functions.invoke("google-places-proxy", {
@@ -667,7 +677,9 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       // ── 3. Google Places detail (place_id, address, rating, reviews, hours, photos).
       let googleDetail: GoogleDetail | null = null;
       let googlePhotos: string[] = [];
-      if (pin.latitude && pin.longitude) {
+      // ⛔ ZERO GOOGLE: recenzji, godzin i ocen Google nie pokazujemy w apce od 2026-07-29,
+      // a to wywolanie i tak o nie prosilo - i placilo za nie dwoma dodatkowymi SKU.
+      if (!GOOGLE_PLACE_DETAILS_DISABLED && pin.latitude && pin.longitude) {
         try {
           const { data } = await supabase.functions.invoke("google-places-proxy", {
             body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },

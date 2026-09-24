@@ -165,7 +165,7 @@ const RouteSummaryDialog = ({
         if (!firstRouteId) firstRouteId = route.id;
 
         if ((day.pins?.length ?? 0) > 0) {
-          const { data: insertedPins, error: pinsError } = await supabase.from("pins").insert(
+          const { error: pinsError } = await supabase.from("pins").insert(
             (day.pins ?? []).map((pin, idx) => ({
               route_id: route.id,
               place_name: pin.place_name,
@@ -180,28 +180,15 @@ const RouteSummaryDialog = ({
               place_id: pin.place_id ?? null,
               photo_url: (pin as any).photoUrl ?? null,
             }))
-          ).select("id, place_name, latitude, longitude, place_id, photo_url");
+          );
           if (pinsError) throw pinsError;
 
-          // Fire-and-forget: trigger cache-place-photo dla nowo zapisanych pinów
-          // (kolejne wyświetlenia na Home pójdą z Supabase Storage, zero kosztów Google)
-          if (insertedPins && insertedPins.length > 0) {
-            void Promise.allSettled(
-              insertedPins.map((p) =>
-                supabase.functions.invoke("cache-place-photo", {
-                  body: {
-                    place_name: p.place_name,
-                    city: plan.city,
-                    latitude: p.latitude,
-                    longitude: p.longitude,
-                    place_id: p.place_id,
-                    target_table: "pins",
-                    target_id: p.id,
-                  },
-                }),
-              ),
-            );
-          }
+          // ⛔ ZERO GOOGLE (2026-09-22). Stalo tu "fire-and-forget: cache-place-photo dla
+          // nowo zapisanych pinow". Kazdy pin = Place Details Z ATMOSFERA ($25/1000, darmowa
+          // pula 1000/mies) po sama referencje zdjecia + Places Photo ($7/1000, tez 1000
+          // darmowych). Zapisany plan z 15 miejscami kosztowal wiec 30 platnych wywolan,
+          // a zdjec Google i tak NIE pokazujemy (decyzja z 2026-09-15: zwykle miejsce ma
+          // wylacznie zdjecia userow). To byl caly nasz rachunek za wrzesien.
         }
 
         await supabase.from("chat_sessions").insert([{

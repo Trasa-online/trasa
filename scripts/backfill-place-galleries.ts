@@ -34,9 +34,13 @@
  * ⚠️  Service role omija RLS i ma pełen dostęp. Tylko lokalnie. Nigdy nie commituj.
  */
 
+import { requirePaidGoogleOps } from "./_paidGoogleGuard";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+
+requirePaidGoogleOps("backfill-place-galleries (Text Search + Place Details + Places Photo)");
+
 
 // ─── Auto-load .env.local (bez zaleznosci od dotenv) ─────────────────────────
 // Czyta linijka po linijce, ignoruje komentarze, ustawia process.env tylko

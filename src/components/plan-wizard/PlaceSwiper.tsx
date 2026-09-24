@@ -1,4 +1,5 @@
 import { BrandSpinner } from "@/components/BrandSpinner";
+import { PlaceCardSkeletonList, PlaceCardSkeletonStack } from "@/components/plan-wizard/PlaceCardSkeleton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, Plus, Check } from "lucide-react";
@@ -8,7 +9,7 @@ import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { pinCoverKeys, fetchPlaceKeysWithPhotos } from "@/lib/placePhotoSocial";
 import { BrandBookmark } from "@/components/BrandBookmark";
 import { useDistanceReference, getReference, ensureCityContext, tryResolveOnSite, setGpsReference } from "@/lib/distanceReference";
-import { askPermission } from "@/lib/permissionPrompts";
+import { askPermission, getSystemStatus } from "@/lib/permissionPrompts";
 import { rememberItem, recallItem } from "@/hooks/useScrollRestore";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
@@ -26,7 +27,7 @@ import { useOnboarding } from "@/components/OnboardingGuide";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
-import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
+import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel, placeCategoryLabel } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup, removeLikeFromCity } from "@/lib/exploreLikes";
 import { expandCity } from "@/lib/cities";
 import { toast } from "sonner";
@@ -517,7 +518,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           przeniesiony z dolu karty z powrotem na gore, w parze z chipem "X km od Ciebie"). */}
       {(() => {
         const bizMainLabel = place.businessMainCategory ? mainCategoryLabel(place.businessMainCategory) : null;
-        const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
+        // ⛔ Etykieta idzie przez `placeCategoryLabel`, a NIE przez `plan:categories.<id>`:
+        // ta lista zna dwanascie kategorii, a baza ma m.in. church / landmark / bakery.
+        // Brak klucza konczyl sie napisem "categories.church" na karcie (zgloszenie Nat).
+        const subLabel = placeCategoryLabel(place.category);
         const label = bizMainLabel ?? subLabel;
         if (!label) return null;
         return (
@@ -529,8 +533,16 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         );
       })()}
 
-      {/* Chip dystansu - prawy gorny rog, nad paginacja */}
-      {isTop && !shareMode && distanceLabel && (
+      {/* Chip dystansu - prawy gorny rog, nad paginacja.
+          ⚠️ BEZ `isTop` (zgloszenie Nat 2026-09-24: „pigulka z odlegloscia nie zawsze sie
+          pokazuje"). `isTop` w zakladce Miejsca bierze sie z `activeCardId`, ktore ustawia
+          dopiero zdarzenie scrolla - zanim user przewinie, albo gdy kolejnosc kart sie
+          przebuduje (filtr, odswiezenie, przywrocenie pozycji), widoczna karta potrafi miec
+          `isTop=false` i chip znikal bez powodu. Sam dystans to czysta arytmetyka, nic nie
+          doczytuje, wiec moze sie renderowac na kazdej karcie. Guzik „Pokaz dystans" nizej
+          ZOSTAJE pod `isTop` - to cel dotyku i na wystajacym skrawku sasiedniej karty
+          nie ma po co stac. */}
+      {!shareMode && distanceLabel && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm">
           <Navigation className="h-3 w-3 text-white/90" />
           <span className="text-white text-[11px] font-semibold">{distanceLabel}</span>
@@ -892,6 +904,12 @@ interface PlaceSwiperProps {
   dietFilters?: string[];
   // Sortowanie po dystansie od startingLocation (rosnaco). Bez efektu jesli startingLocation nie ma lat/lng.
   sortByNearest?: boolean;
+  /** Filtr "tylko w promieniu N km ode mnie" (zakladka Miejsca). null = bez ograniczenia.
+   *  Wlaczony promien sam w sobie ustawia tez kolejnosc od najblizszego - inaczej "do 1 km"
+   *  oddawaloby miejsca w losowej kolejnosci i user nie wiedzialby, ktore ma najblizej. */
+  maxDistanceKm?: number | null;
+  /** Wywolywane, gdy w promieniu nie ma zadnego miejsca i user chce zdjac filtr. */
+  onClearDistance?: () => void;
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
@@ -1025,6 +1043,14 @@ function hasOwnCover(p: MockPlace): boolean {
 // W obrebie KAZDEGO tieru przeplot kategorii + ranking wazony zamiast czystego shuffle.
 // Biznes rozpoznajemy po `businessPlan`, ktore enrichWithBusinessProfile ustawia tylko gdy
 // nested business_profiles istnieje.
+// Cache wierszy `places` na czas ZYCIA APLIKACJI (5 minut). Zakladka "Miejsca" montuje sie
+// od nowa przy kazdym przejsciu z innej zakladki, a zapytanie o miejsca to ~2 s i ponad
+// megabajt danych - bez tego kazdy powrot placil pelna cene. ⚠️ Swiadomie MODULOWY, nie
+// `sessionStorage`: ma zyc tyle, co uruchomienie apki (ta sama zasada, co przy pamieci
+// pozycji scrolla), i nie zajmowac miejsca na dysku telefonu.
+const PLACES_CACHE_TTL_MS = 5 * 60_000;
+let placesRowsCache: { key: string; at: number; rows: any[] } | null = null;
+
 function partitionBusinessFirst(places: MockPlace[], keysWithUserPhotos?: Set<string>): MockPlace[] {
   const bizPhoto: MockPlace[] = [];
   const bizNoPhoto: MockPlace[] = [];
@@ -1077,8 +1103,15 @@ function pickEventPillTitle(bp: any, refDate?: string): string | undefined {
 
 // Select `places` + zagniezdzony business_profiles (+ business_events) - jedno zrodlo prawdy
 // dla wizytowki (swiper i "Zapisane"). Zmiana tu propaguje do wszystkich call sites.
+// ⛔ NIE `*`. Kolumny wypisane jawnie, bo `places.description_archive` to 182 kB na 1000
+// wierszy (zmierzone na prodzie), ktorych NIKT nie czyta - a caly ten payload leci do telefonu
+// przy kazdym wejsciu w zakladke "Miejsca". ⚠️ Dokladasz kolumne do `places`, ktora ma byc
+// widoczna w karcie - dopisz ja TUTAJ, inaczej bedzie `undefined` bez zadnego bledu.
+const PLACE_COLUMNS =
+  "id, city, place_name, category, address, latitude, longitude, rating, price_level, photo_url, vibe_tags, description, best_time, is_active, created_at, google_place_id, primary_category, subcategory, photo_cached_at, gallery_urls, opening_hours";
+
 export const PLACE_BUSINESS_SELECT =
-  "*, business_profiles(plan, is_premium, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
+  PLACE_COLUMNS + ", business_profiles(plan, is_premium, logo_url, cover_image_url, cover_video_url, event_title, event_title_en, event_description, gallery_urls, phone, website, social_links, main_category, secondary_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address, business_events(id, title, title_en, starts_at, ends_at, start_time, end_time, description, is_draft))";
 
 // Doczytuje pojedyncze miejsce po places.id (UUID) i wzbogaca profilem biznesowym -
 // uzywane przez "Zapisane" zeby tap w kafelek otwieral pelna wizytowke (jak w swiperze).
@@ -1187,7 +1220,7 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, maxDistanceKm = null, onClearDistance, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
   const { t } = useTranslation("plan");
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
@@ -1223,6 +1256,18 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // Bumping refreshNonce trigeruje re-fetch w useEffect (np. po "Zacznij od nowa")
   // - czyscimy DB reactions z dziennej + localStorage exploreLikes i fetchujemy queue na nowo.
   const [refreshNonce, setRefreshNonce] = useState(0);
+  // ── ODSWIEZENIE GESTEM w zakladce Miejsca (prosba Nat 2026-09-24) ──────────────────────
+  // „Swipe w gore na koncu listy ma pokazac nowe pozycje na poczatku". Dziala tez w druga
+  // strone (pociagniecie w dol na samej gorze), bo to ten sam odruch.
+  //
+  // ⛔ NIE przez `PullToRefresh`: ten komponent wstawia do scrollera SPACER o zmiennej
+  // wysokosci, a tutaj scroller ma `snap-y snap-mandatory` i zamrozony rozmiar karty 9:16
+  // (CLAUDE.md) - rosnacy spacer przesuwalby punkty zaczepienia pod palcem. Tu zmienia sie
+  // tylko KOLEJNOSC, bez dokladania czegokolwiek do ukladu.
+  const pullStart = useRef<{ y: number; edge: "top" | "bottom" } | null>(null);
+  const [pullArmed, setPullArmed] = useState(false);
+  const [refreshingCards, setRefreshingCards] = useState(false);
+  const PULL_TRIGGER = 80;
   const [resetting, setResetting] = useState(false);
   // Po powrocie appki na wierzch (event z useAppResume) dociagnij swieze miejsca - zeby edycje
   // profilu lokalu byly widoczne bez remountu. Tylko exploreMode (HomeSwipe): tam polubione sa
@@ -1297,18 +1342,32 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // Lokalizacja: CICHY auto-detect przez GPS (tylko gdy user juz dal zgode - tryResolveOnSite
   // nie promptuje). Jestes w miescie -> chip "od Ciebie" pojawia sie sam. Nie ma zadnego
   // pytania do usera; gdy nie wyjdzie, na karcie zostaje chip "Pokaz dystans".
+  //
+  // ⚠️ `tryResolveOnSite` potrzebuje SRODKA MIASTA, zeby sprawdzic „czy jestes na miejscu",
+  // a zakladka Miejsca jest globalna (`city="all"`) - dla niej srodka nie ma i funkcja
+  // konczyla sie na „no-gps", NIC nie ustawiajac. Efekt: u kogos, kto ma zgode na lokalizacje,
+  // chip z odlegloscia raz byl (bo punkt zostal z innego ekranu), a raz go nie bylo
+  // (zgloszenie Nat 2026-09-24). Gdy zgoda JUZ jest, ustawiamy punkt wprost - bez pytania,
+  // bez dialogu systemowego.
+  const silentGpsTried = useRef(false);
   useEffect(() => {
     if (loading || distanceRef) return;
     let cancelled = false;
     (async () => {
-      await tryResolveOnSite(city);
-      if (cancelled) return;
+      const res = await tryResolveOnSite(city);
+      if (cancelled || res !== "no-gps" || silentGpsTried.current) return;
+      silentGpsTried.current = true;     // jedna proba na zamontowanie - GPS bywa niedostepny
+      if ((await getSystemStatus("location")) !== "granted") return;
+      await setGpsReference();
     })();
     return () => { cancelled = true; };
   }, [loading, distanceRef, city]);
 
   useEffect(() => {
     setLoading(true);
+    // ⚠️ Flaga anulowania: bez niej odpowiedz ze STAREGO miasta potrafila nadpisac kolejke
+    // juz po przelaczeniu, a `setState` po odmontowaniu lecial w konsole.
+    let cancelled = false;
     // Safety net: if the fetch hangs for any reason, drop the loader after 12s
     const safetyTimeout = setTimeout(() => {
       console.warn("[PlaceSwiper] fetch safety timeout fired, forcing loading=false", { city, categoryFilter });
@@ -1321,36 +1380,46 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       // city === "all" (opcja "Wszystkie") -> bez filtra miasta (wszystkie miejsca).
       const scoped = !!city && city !== "all";
+      const cityKeys = scoped ? expandCity(city) : [];
+      const cacheKey = scoped ? cityKeys.join(",") : "all";
+      const fresh = placesRowsCache && placesRowsCache.key === cacheKey
+        && Date.now() - placesRowsCache.at < PLACES_CACHE_TTL_MS;
+
       let placesQuery = (supabase as any)
         .from("places")
         .select(PLACE_BUSINESS_SELECT)
         .eq("is_active", true);
-      if (scoped) placesQuery = placesQuery.in("city", expandCity(city));
-      const { data, error: placesError } = await placesQuery;
+      if (scoped) placesQuery = placesQuery.in("city", cityKeys);
 
-      if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
-      console.log("[PlaceSwiper] fetched places:", { count: data?.length ?? 0, city, categoryFilter });
-      if (!data?.length) { setLoading(false); return; }
-
-      // Fetch already-rated place IDs for this user+city z DZISIAJ. Reset codzienny
-      // = polubienia/odrzuty z wczoraj i wcześniej nie ukrywają miejsc dziś. User
-      // każdy nowy dzień zaczyna z czystą talia. Reactions w DB persyst dla taste profile,
-      // ale UI filter polega tylko na today (gte start of today UTC).
-      let ratedPlaceIds = new Set<string>();
+      // Reakcje z DZISIAJ (reset codzienny: wczorajsze polubienia nie ukrywaja miejsc dzis).
+      // ⚠️ RÓWNOLEGLE z miejscami - te dwa zapytania nic o sobie nie wiedza, a szly jedno
+      // po drugim i dokladaly ~0,7 s do pustego ekranu (zmierzone na prodzie 2026-09-23).
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      let reactionsQuery: any = null;
       if (user) {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        let reactionsQuery = (supabase as any)
+        reactionsQuery = (supabase as any)
           .from("user_place_reactions")
           .select("place_id")
           .eq("user_id", user.id)
           .gte("created_at", todayStart.toISOString());
-        if (scoped) reactionsQuery = reactionsQuery.in("city", expandCity(city));
-        const { data: reactions } = await reactionsQuery;
-        if (reactions?.length) {
-          ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
-        }
+        if (scoped) reactionsQuery = reactionsQuery.in("city", cityKeys);
       }
+
+      const [placesRes, reactionsRes] = await Promise.all([
+        fresh ? Promise.resolve({ data: placesRowsCache!.rows, error: null }) : placesQuery,
+        reactionsQuery ?? Promise.resolve({ data: [] }),
+      ]);
+      if (cancelled) return;
+
+      const { data, error: placesError } = placesRes as { data: any[] | null; error: unknown };
+      if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
+      if (data?.length && !fresh) placesRowsCache = { key: cacheKey, at: Date.now(), rows: data };
+      if (!data?.length) { setLoading(false); return; }
+
+      let ratedPlaceIds = new Set<string>();
+      const reactions = (reactionsRes as { data: { place_id: string }[] | null })?.data;
+      if (reactions?.length) ratedPlaceIds = new Set(reactions.map((r) => r.place_id));
 
       const enriched = (data as any[]).map((pp: any) => enrichWithBusinessProfile(pp, date.toISOString().slice(0, 10)));
       const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
@@ -1375,20 +1444,38 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         ?? (typeof startingLocation === "object" && startingLocation
           ? { lat: startingLocation.latitude, lng: startingLocation.longitude }
           : null);
+      // ⚠️ Dystans nieznany musi byc LICZBA, nie Infinity: `Infinity - Infinity` daje NaN,
+      // a komparator zwracajacy NaN zostawia elementy w kolejnosci nieokreslonej (silnik
+      // nie ma jak ich porownac). Dwadziescia aktywnych miejsc w bazie nie ma wspolrzednych,
+      // wiec trafialo to realnie.
+      const FAR = 1e9;
+      const kmFrom = (p: MockPlace): number =>
+        startCoords && p.latitude && p.longitude
+          ? haversineKm(startCoords, { lat: p.latitude, lng: p.longitude })
+          : FAR;
+      // Pasmo 1 km. W zakladce Miejsca kolejnosc ma sie opierac o lokalizacje usera
+      // (zgloszenie Nat 2026-09-24: "powinno pokazywac miejsca od najblizszego"), ale
+      // ⛔ NIE jako twardy sort co do metra: wtedy feed staje sie lista "wszystkie kawiarnie
+      // z jednej ulicy", bo przeplot kategorii przestaje cokolwiek znaczyc. Sortujemy wiec
+      // po PASMACH, a w pasmie zostaje kolejnosc z `partitionBusinessFirst` (biznesy, zdjecia,
+      // przeplot kategorii) - sort tablicowy jest stabilny, wiec to trzyma sie samo.
+      const BAND_KM = 1;
       const applyNearestSort = (arr: MockPlace[]) => {
-        if (!sortByNearest || !startCoords) return arr;
-        return [...arr].sort((a, b) => {
-          const da = a.latitude && a.longitude ? haversineKm(startCoords, { lat: a.latitude, lng: a.longitude }) : Infinity;
-          const db = b.latitude && b.longitude ? haversineKm(startCoords, { lat: b.latitude, lng: b.longitude }) : Infinity;
-          return da - db;
-        });
+        if (!startCoords) return arr;
+        // Jawne "od najblizszego" (wejscie z "Biezace polozenie") - twardy sort.
+        if (sortByNearest) return [...arr].sort((a, b) => kmFrom(a) - kmFrom(b));
+        // Domyslnie tylko w zakladce Miejsca; kreator planu ma wlasna kolejnosc kroku 3.
+        if (!exploreMode) return arr;
+        return [...arr].sort((a, b) => Math.floor(kmFrom(a) / BAND_KM) - Math.floor(kmFrom(b) / BAND_KM));
       };
 
       // Ktore miejsca maja juz zdjecia od userow - decyduje o tierze 2 kolejki (patrz
-      // partitionBusinessFirst). Best-effort: blad = kolejka jak dawniej, bez wywalania ekranu.
-      const photoKeys = await fetchPlaceKeysWithPhotos(
-        remaining.flatMap((p) => pinCoverKeys(p as any)),
-      ).catch(() => new Set<string>());
+      // partitionBusinessFirst).
+      // ⛔ NIE czekamy na to przed pokazaniem kart. To ~1,4 s (1765 kluczy w 6 paczkach,
+      // zmierzone na prodzie), a wplywa WYLACZNIE na kolejnosc kolejki. Kolejke budujemy od
+      // razu, a gdy odpowiedz przyjdzie, poprawiamy sam OGON - karty, ktore user juz widzi,
+      // zostaja na swoich miejscach (inaczej pierwsza karta podmienialaby sie pod palcem).
+      const photoKeys = new Set<string>();
 
       setAllPlaces(enriched);
       if (liked.length) setLikedPlaces(liked);
@@ -1430,12 +1517,28 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         setQueue(applyNearestSort(partitionBusinessFirst(remaining, photoKeys)));
       }
       setLoading(false);
+
+      // Dopiero teraz (ekran juz stoi) pytamy o zdjecia userow i poprawiamy ogon kolejki.
+      void fetchPlaceKeysWithPhotos(remaining.flatMap((p) => pinCoverKeys(p as any)))
+        .then((keys) => {
+          if (cancelled || !keys.size) return;
+          setQueue((prev) => {
+            if (prev.length < 6) return prev;
+            const HEAD = 4;   // to, co user ma juz przed oczami, nie rusza sie
+            const head = prev.slice(0, HEAD);
+            const headIds = new Set(head.map((p) => p.id));
+            const tail = prev.filter((p) => !headIds.has(p.id));
+            return [...head, ...applyNearestSort(partitionBusinessFirst(tail, keys))];
+          });
+        })
+        .catch(() => { /* best-effort: kolejka zostaje w kolejnosci bez zdjec */ });
       } catch (err) {
         console.error("[PlaceSwiper] fetchPlaces threw:", err);
         setLoading(false);
       }
     };
     fetchPlaces().finally(() => clearTimeout(safetyTimeout));
+    return () => { cancelled = true; clearTimeout(safetyTimeout); };
     // UWAGA: sortByNearest CELOWO nie jest w deps - zmiana sortu nie przebudowuje queue
     // (inaczej ocenione miejsca wracaly = reset swipe). Sort stosowany reaktywnie nizej.
   }, [city, user, categoryFilterKey, dietFilterKey, refreshNonce]);
@@ -1471,8 +1574,48 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const isSearching = searchQuery.trim().length >= 2;
+  // Odswiezenie kart: nowe ziarno kolejnosci (`interleaveByCategory` losuje przy kazdym
+  // przebiegu) + swieza pozycja GPS, jesli zgoda juz jest. Wiersze miejsc ida z 5-minutowego
+  // cache modulu, wiec to jest natychmiastowe i NIC nie kosztuje.
+  const refreshCards = async () => {
+    if (refreshingCards) return;
+    setRefreshingCards(true);
+    haptics.light();
+    try {
+      // ⚠️ Cicho - bez pytania o zgode. Punkt sprzed kilku godzin ustawia zla kolejnosc
+      // „od najblizszego", a user wlasnie poprosil o odswiezenie, nie o dialog systemowy.
+      if ((await getSystemStatus("location")) === "granted") await setGpsReference();
+    } catch { /* brak pozycji - kolejnosc zostaje na starym punkcie */ }
+    setExploreVisible(24);
+    setRefreshNonce((n) => n + 1);
+    if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0;
+    setRefreshingCards(false);
+  };
+
+  const onPullTouchStart = (e: React.TouchEvent) => {
+    const el = scrollWrapRef.current;
+    if (!el || refreshingCards || e.touches.length !== 1) { pullStart.current = null; return; }
+    const atTop = el.scrollTop <= 2;
+    const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight <= 2;
+    pullStart.current = atTop ? { y: e.touches[0].clientY, edge: "top" }
+      : atEnd ? { y: e.touches[0].clientY, edge: "bottom" } : null;
+    if (pullArmed) setPullArmed(false);
+  };
+  const onPullTouchMove = (e: React.TouchEvent) => {
+    const st = pullStart.current;
+    if (!st || e.touches.length !== 1) return;
+    const dy = e.touches[0].clientY - st.y;
+    const ok = st.edge === "top" ? dy > PULL_TRIGGER : dy < -PULL_TRIGGER;
+    if (ok !== pullArmed) { setPullArmed(ok); if (ok) haptics.selection(); }
+  };
+  const onPullTouchEnd = () => {
+    const armed = pullArmed;
+    pullStart.current = null;
+    if (armed) { setPullArmed(false); void refreshCards(); }
+  };
+
   // Reset okna infinite-scrolla przy zmianie miasta / filtrow / wyszukiwania.
-  useEffect(() => { setExploreVisible(24); if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0; }, [city, categoryFilterKey, dietFilterKey, isSearching]);
+  useEffect(() => { setExploreVisible(24); if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0; }, [city, categoryFilterKey, dietFilterKey, isSearching, maxDistanceKm]);
   const baseQueue = isSearching
     ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : queue;
@@ -1480,18 +1623,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // (queue nie zawiera juz ocenionych). Wczesniej sortByNearest byl w deps efektu -> toggle
   // resetowal swipe (ocenione wracaly do kolejki).
   const displayQueue = useMemo(() => {
-    if (!sortByNearest) return baseQueue;
+    if (!sortByNearest && !maxDistanceKm) return baseQueue;
     const ref = getReference();
     const coords = ref?.coords ?? (typeof startingLocation === "object" && startingLocation
       ? { lat: (startingLocation as any).latitude, lng: (startingLocation as any).longitude } : null);
     if (!coords) return baseQueue;
-    return [...baseQueue].sort((a, b) => {
-      const da = a.latitude && a.longitude ? haversineKm(coords, { lat: a.latitude, lng: a.longitude }) : Infinity;
-      const db = b.latitude && b.longitude ? haversineKm(coords, { lat: b.latitude, lng: b.longitude }) : Infinity;
-      return da - db;
-    });
+    // ⚠️ Brak wspolrzednych = DUZA LICZBA, nie Infinity: `Infinity - Infinity` daje NaN,
+    // a komparator z NaN zostawia pary w kolejnosci nieokreslonej.
+    const km = (p: MockPlace) =>
+      p.latitude && p.longitude ? haversineKm(coords, { lat: p.latitude, lng: p.longitude }) : 1e9;
+    // Filtr promienia (zakladka Miejsca). ⚠️ Miejsce BEZ wspolrzednych wypada - nie da sie
+    // powiedziec, czy jest w promieniu, a "moze tak, moze nie" w filtrze odleglosci jest
+    // gorsze niz brak wyniku.
+    const list = maxDistanceKm ? baseQueue.filter((p) => km(p) <= maxDistanceKm) : baseQueue;
+    return [...list].sort((a, b) => km(a) - km(b));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseQueue, sortByNearest]);
+  }, [baseQueue, sortByNearest, maxDistanceKm, distanceRef]);
 
   // ── POWROT NA TA SAMA WIZYTOWKE (prosba Nat 2026-09-15) ────────────────────────────────
   // Wejscie w cos z zakladki Miejsca odmontowuje swiper, wiec po powrocie user ladowal na
@@ -1847,11 +1994,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <BrandSpinner size={34} />
-      </div>
-    );
+    // Szkielet o geometrii prawdziwej karty (prosba Nat 2026-09-23). Samo kolo z kropkami na
+    // pustym ekranie nie mowilo, CO sie laduje, a przy wolnej sieci potrafi wisiec kilka sekund.
+    return exploreMode ? <PlaceCardSkeletonList /> : <PlaceCardSkeletonStack exploreMode={exploreMode} />;
   }
 
   // All cards swiped
@@ -2056,13 +2201,27 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-foreground line-clamp-1">{place.place_name}</p>
                       <p className="text-xs text-muted-foreground line-clamp-1">
-                        {t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] ?? place.category })}{place.address ? ` · ${place.address}` : ""}
+                        {placeCategoryLabel(place.category)}{place.address ? ` · ${place.address}` : ""}
                       </p>
                     </div>
                   </button>
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      ) : exploreMode && maxDistanceKm && displayQueue.length === 0 ? (
+        // Filtr odleglosci odsial wszystko. ⚠️ Pusty scroller wygladalby jak zepsuta zakladka,
+        // a user moze juz nie pamietac, ze ustawil promien - dlatego mowimy o tym wprost
+        // i dajemy wyjscie jednym tapnieciem.
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+          <CategoryIcon category="park" className="w-14 opacity-70" />
+          <p className="text-[15px] font-semibold text-foreground">{t("distance.empty_title", { km: maxDistanceKm })}</p>
+          <p className="text-sm text-muted-foreground">{t("distance.empty_desc")}</p>
+          {onClearDistance && (
+            <button onClick={onClearDistance} className="mt-1 h-11 px-5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-95 transition-transform">
+              {t("distance.show_all")}
+            </button>
           )}
         </div>
       ) : exploreMode ? (
@@ -2087,6 +2246,10 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               setExploreVisible((v) => (v < displayQueue.length ? Math.min(displayQueue.length, v + 12) : v));
             }
           }}
+          onTouchStart={exploreMode ? onPullTouchStart : undefined}
+          onTouchMove={exploreMode ? onPullTouchMove : undefined}
+          onTouchEnd={exploreMode ? onPullTouchEnd : undefined}
+          onTouchCancel={exploreMode ? onPullTouchEnd : undefined}
           // Glowny scroller zakladki Miejsca: stukniecie w pasek statusu wraca na PIERWSZA
           // karte (patrz src/lib/scrollTop.ts). Snap sam dociaga ja do krawedzi.
           data-scroll-main
@@ -2120,6 +2283,16 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             );
           })}
         </div>
+        {/* Wskaznik odswiezenia gestem. ⚠️ `absolute`, wiec NIE dotyka ukladu karty 9:16 -
+            inaczej doszlaby wysokosc do odjecia w liczeniu rozmiaru (zamrozony sizing). */}
+        {(pullArmed || refreshingCards) && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+            style={{ top: "max(0.5rem, env(safe-area-inset-top))" }}>
+            <span className="rounded-full bg-black/55 backdrop-blur px-3 py-1.5 text-[12px] font-semibold text-white">
+              {refreshingCards ? t("refresh.doing") : t("refresh.release")}
+            </span>
+          </div>
+        )}
         {/* Puls "scroll w dol" - afordancja, znika po pierwszym przewinieciu.
             Centrowanie (-translate-x-1/2) MUSI byc na osobnym, zewnetrznym divie - animate-bounce
             nadpisuje transform elementu (translateY), co skasowaloby -translate-x-1/2 i przesunelo

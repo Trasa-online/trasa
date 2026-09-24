@@ -226,6 +226,22 @@ export function countryLabel(name: string): string {
 
 export const TRIP_REGIONS: TripCountry["region"][] = ["Polska", "Europa", "Azja", "Ameryka Północna", "Ameryka Południowa", "Afryka", "Oceania"];
 
+/** Porownanie po NAZWIE WYSWIETLANEJ (PL albo EN) z regulami jezyka: „Łotwa" po „Litwie",
+ *  nie na koncu; po angielsku „Czechia" i „Croatia" stoja obok siebie. */
+export function compareCountries(a: TripCountry | string, b: TripCountry | string): number {
+  const la = countryLabel(typeof a === "string" ? a : a.name);
+  const lb = countryLabel(typeof b === "string" ? b : b.name);
+  const lang = (i18n.language || "pl").toLowerCase().startsWith("en") ? "en" : "pl";
+  return la.localeCompare(lb, lang, { sensitivity: "base" });
+}
+
+/** Kraje regionu ALFABETYCZNIE (prosba Nat 2026-09-21 - w danych sa ulozone „od najczestszych",
+ *  co na liscie czytalo sie jak rozsypanka). Kolejnosc w `TRIP_COUNTRIES` zostaje bez znaczenia
+ *  dla ekranu; kazda lista krajow ma isc przez ten helper, nie przez `filter` po regionie. */
+export function countriesInRegion(region: TripCountry["region"]): TripCountry[] {
+  return TRIP_COUNTRIES.filter((c) => c.region === region).sort(compareCountries);
+}
+
 // Kraj zawierajacy dane miasto (do odtworzenia selektora kraju z zapisanego miasta).
 export function countryForCity(city: string | null | undefined): string {
   if (!city) return "Polska";
@@ -234,4 +250,111 @@ export function countryForCity(city: string | null | undefined): string {
 
 export function citiesForCountry(country: string): string[] {
   return TRIP_COUNTRIES.find((c) => c.name === country)?.cities ?? TRIP_COUNTRIES[0].cities;
+}
+
+// ── Kod ISO kraju (2026-09-22) ───────────────────────────────────────────────
+// Sluzy do NAKIEROWANIA wyszukiwarki miejsc: Google Autocomplete przyjmuje
+// `components=country:xx` i dzieki temu plan do Francji nie dostaje w podpowiedziach
+// Muzeum Powstania Warszawskiego (zlapane renderem w WebKit 2026-09-22). Nakierowanie jest
+// DARMOWE - to ta sama liczba zapytan, tylko trafniejsze wyniki.
+// ⚠️ Dokladasz kraj do TRIP_COUNTRIES - dopisz go TUTAJ, inaczej wyszukiwarka dla tego kraju
+// straci zasieg (nie wywali sie, tylko bedzie szukac po calym swiecie).
+// i18n-ignore-start
+const COUNTRY_ISO: Record<string, string> = {
+  "Polska": "pl",
+  "Niemcy": "de",
+  "Francja": "fr",
+  "Hiszpania": "es",
+  "Włochy": "it",
+  "Wielka Brytania": "gb",
+  "Holandia": "nl",
+  "Czechy": "cz",
+  "Austria": "at",
+  "Portugalia": "pt",
+  "Grecja": "gr",
+  "Chorwacja": "hr",
+  "Węgry": "hu",
+  "Belgia": "be",
+  "Szwajcaria": "ch",
+  "Szwecja": "se",
+  "Norwegia": "no",
+  "Dania": "dk",
+  "Litwa": "lt",
+  "Łotwa": "lv",
+  "Estonia": "ee",
+  "Irlandia": "ie",
+  "Islandia": "is",
+  "Turcja": "tr",
+  "Finlandia": "fi",
+  "Słowacja": "sk",
+  "Słowenia": "si",
+  "Rumunia": "ro",
+  "Bułgaria": "bg",
+  "Serbia": "rs",
+  "Ukraina": "ua",
+  "Cypr": "cy",
+  "Malta": "mt",
+  "Luksemburg": "lu",
+  "Monako": "mc",
+  "Albania": "al",
+  "Czarnogóra": "me",
+  "Bośnia i Hercegowina": "ba",
+  "Macedonia Północna": "mk",
+  "Japonia": "jp",
+  "Tajlandia": "th",
+  "Wietnam": "vn",
+  "Indonezja": "id",
+  "Zjednoczone Emiraty Arabskie": "ae",
+  "Chiny": "cn",
+  "Korea Południowa": "kr",
+  "Indie": "in",
+  "Singapur": "sg",
+  "Malezja": "my",
+  "Filipiny": "ph",
+  "Sri Lanka": "lk",
+  "Gruzja": "ge",
+  "Kambodża": "kh",
+  "Nepal": "np",
+  "Izrael": "il",
+  "Jordania": "jo",
+  "Katar": "qa",
+  "Oman": "om",
+  "Armenia": "am",
+  "Azerbejdżan": "az",
+  "Kazachstan": "kz",
+  "Malediwy": "mv",
+  "Mongolia": "mn",
+  "Stany Zjednoczone": "us",
+  "Kanada": "ca",
+  "Meksyk": "mx",
+  "Kuba": "cu",
+  "Kostaryka": "cr",
+  "Panama": "pa",
+  "Dominikana": "do",
+  "Brazylia": "br",
+  "Argentyna": "ar",
+  "Peru": "pe",
+  "Chile": "cl",
+  "Kolumbia": "co",
+  "Ekwador": "ec",
+  "Boliwia": "bo",
+  "Urugwaj": "uy",
+  "Egipt": "eg",
+  "Maroko": "ma",
+  "Tunezja": "tn",
+  "Republika Południowej Afryki": "za",
+  "Kenia": "ke",
+  "Tanzania": "tz",
+  "Mauritius": "mu",
+  "Seszele": "sc",
+  "Namibia": "na",
+  "Australia": "au",
+  "Nowa Zelandia": "nz",
+  "Fidżi": "fj",
+};
+// i18n-ignore-end
+
+/** Dwuliterowy kod kraju (lowercase) albo null, gdy kraju nie znamy. */
+export function countryIso(name: string | null | undefined): string | null {
+  return name ? COUNTRY_ISO[name] ?? null : null;
 }

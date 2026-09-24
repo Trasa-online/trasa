@@ -9,8 +9,6 @@ import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
 import { subcategoryLabelLocalized } from "@/lib/categories";
 import { useState } from "react";
-import { Minimize2 } from "lucide-react";
-import RouteMap from "@/components/RouteMap";
 import { haptics } from "@/hooks/useHaptics";
 import type { ListTheme } from "@/lib/listThemes";
 
@@ -67,7 +65,6 @@ export type GridItem = {
   placesCount: number;
   /** Wyjazd: liczba dni (start_date..end_date) i mini-mapa trasy. */
   days: number | null;
-  mapUrl: string | null;
   /** Wyjazd: piny z wspolrzednymi - do ROZWINIETEJ mapy po tapnieciu w miniature. */
   pins?: { latitude?: number | null; longitude?: number | null; place_name?: string | null }[];
   /** Lista: tlo z palety i pierwsze miejsca do mini-siatki. */
@@ -294,10 +291,6 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
   const { t } = useTranslation("homefeed");
   const feed = size === "feed";
   // Mini-mapa ROZWIJA sie po tapnieciu (jak na starej karcie TrasaBigCard; przywrocone na
-  // prosbe Nat 2026-09-13): maly kwadrat w rogu -> duzy prostokat z zywa mapa (RouteMap, te
-  // same markery co w wyjezdzie), ponowny tap zwija. Zywa mapa montuje sie DOPIERO po
-  // rozwinieciu - w feedzie sa dziesiatki kafelkow, kazda mapa Google to osobna instancja.
-  const [mapExpanded, setMapExpanded] = useState(false);
   const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); e.preventDefault(); };
   return (
     <div className={`relative w-full overflow-hidden bg-[#fcede3] ${feed ? "rounded-3xl" : "rounded-[20px]"}`}>
@@ -308,39 +301,20 @@ export function TripTile({ it, size = "feed" }: { it: GridItem; size?: TileSize 
       {/* Gradient od dolnej krawedzi CIEMNIEJSZY o ~20% (prosba Nat 2026-09-15): 75 -> 90 u dolu,
           30 -> 40 w srodku. Tytul w Inter Black lezy na nim, a nie na zdjeciu. */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-      {it.showAuthor && !mapExpanded && (
+      {it.showAuthor && (
         <div className={`pointer-events-none absolute z-[2] ${feed ? "left-3 top-3 max-w-[calc(100%-136px)]" : "left-2 top-2 max-w-[calc(100%-76px)]"}`}>
           <AuthorPill it={it} tone="brand" size={size} />
         </div>
       )}
-      {it.mapUrl && (
-        <div
-          data-no-swipe
-          onClick={stop}
-          className={`absolute z-[3] overflow-hidden rounded-xl border-2 border-white bg-muted shadow-md transition-all duration-300 ease-out ${
-            mapExpanded ? "left-3 right-3 top-3 h-[62%]" : feed ? "right-3 top-3 h-[108px] w-[108px] rounded-2xl" : "right-2 top-2 h-14 w-14"
-          }`}
-        >
-          {mapExpanded ? (
-            <>
-              <div className="absolute inset-0 pointer-events-none">
-                <RouteMap pins={(it.pins ?? []) as any} className="h-full w-full" showRoute={false} />
-              </div>
-              <button onClick={(e) => { stop(e); haptics.selection(); setMapExpanded(false); }}
-                aria-label={t("card.collapse_map")} className="absolute inset-0 active:opacity-95 transition-opacity" />
-              <span className="pointer-events-none absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-full bg-card shadow-md">
-                <Minimize2 className="h-4 w-4 text-foreground" strokeWidth={2.2} />
-              </span>
-            </>
-          ) : (
-            <button onClick={(e) => { stop(e); haptics.selection(); setMapExpanded(true); }}
-              aria-label={t("card.show_map")} className="absolute inset-0 active:scale-[0.99] transition-transform">
-              <img src={it.mapUrl} alt="" aria-hidden loading="lazy" draggable={false} className="h-full w-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).parentElement!.parentElement!.style.display = "none"; }} />
-            </button>
-          )}
-        </div>
-      )}
+      {/* ⛔ BEZ MINI-MAPKI NA OKLADCE (decyzja Nat 2026-09-23). Byl tu kwadrat 108 px ze
+          statyczna mapa Google, ktory po tapnieciu rozwijal sie w zywa mape. Powod zdjecia
+          jest kosztowy: Maps Static ma darmowa pule 10 000/mies, a Google w naglowku swojej
+          odpowiedzi daje `max-age=86400`, wiec KAZDA trasa odswieza sie raz na dobe i dluzej
+          cache'owac nie wolno (to instrukcja Google, nie nasza decyzja). Przy 20 tys. tras
+          to ~600 tys. wywolan miesiecznie, czyli ~3 000 zl. Rozwijana zywa mapa dokladala do
+          tego Dynamic Maps (7 $/1000). Mapa zostaje tam, gdzie jest sensem widoku: zakladka
+          "Mapa" w samym planie. ⚠️ Wersja rysowana samodzielnie (RouteSketch) byla zrobiona
+          i odrzucona - Nat wybrala czysta okladke. */}
       <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1] ${feed ? "p-4 pb-5" : "p-3 pb-[18px]"}`}>
         {/* Feed: tytul 36 px i chipy 30 px (makieta Nat 2026-09-13 - wczesniej 24 / 26 px). */}
         <p className={`line-clamp-2 font-black leading-[1.05] text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] ${feed ? "text-[36px] tracking-[-0.015em]" : "text-[19px]"}`}>{it.title}</p>

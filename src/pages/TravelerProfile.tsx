@@ -31,13 +31,14 @@ import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import { ProfileFeedCard } from "@/components/profile/ProfileFeedCard";
 import { GridTile, type GridItem } from "@/components/home/FeedTiles";
-import { useFriendList, excludeFriend, unexcludeFriend, friendIdsKey } from "@/lib/friends";
+import { useFriendList } from "@/lib/friends";
 import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
 import { UserMinus } from "lucide-react";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
 import { listTheme } from "@/lib/listThemes";
 import ReferralCard from "@/components/profile/ReferralCard";
+import RewardThanksBanner from "@/components/profile/RewardThanksBanner";
 import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
@@ -263,10 +264,10 @@ const TravelerProfile = () => {
 
   const { data: followCounts = { followers: 0, following: 0 } } = useFollowCounts(user?.id);
   const { data: starred = [] } = useStarredPlaces(user?.id);
-  // ZNAJOMI = wzajemna obserwacja (patrz src/lib/friends.ts). Liczba jedzie z BAZY, nie
-  // z przeciecia dwoch list w kliencie - to ta sama funkcja, ktora bramkuje zdjecia.
-  // Sama LISTA (i wypisywanie ze znajomych) mieszka w `PeopleSheet`; tutaj potrzebny jest
-  // wylacznie licznik w rzedzie statystyk.
+  // ZNAJOMI = relacja przyjeta przez OBIE strony (patrz src/lib/friends.ts). Liczba jedzie
+  // z BAZY - to ta sama funkcja, ktora bramkuje zdjecia "tylko dla znajomych". Sama LISTA,
+  // zaproszenia czekajace na odpowiedz i usuwanie ze znajomych mieszkaja w `PeopleSheet`;
+  // tutaj potrzebny jest wylacznie licznik w rzedzie statystyk.
   const friendList = useFriendList(user?.id);
 
   // Usuwanie z oknem "Cofnij" (deferDelete): element znika od razu z listy (optymistycznie),
@@ -330,7 +331,9 @@ const TravelerProfile = () => {
       const { data: memberRows } = await (supabase as any)
         .from("discovery_collection_members")
         .select("collection_id")
-        .eq("user_id", user!.id);
+        .eq("user_id", user!.id)
+        // Zaproszenie bez odpowiedzi (pending) to jeszcze nie wspoltworzenie (2026-09-21).
+        .eq("status", "accepted");
       const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
       // ⛔ DWA zapytania zamiast jednego `.or(...)`: lista id w `id.in.(…)` ma przecinki
       // w srodku nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje
@@ -742,7 +745,7 @@ const TravelerProfile = () => {
       authorFrameColor: l.author_frame_color ?? null,
       showAuthor: !!(l.author_username || l.author_name),
       at: new Date(l.updated_at ?? 0).getTime(),
-      placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+      placesCount: (l.tiles ?? []).length, days: null,
       theme: listTheme(l.theme, l.id), places,
       visitedCount: l.visited_count ?? 0,
     };
@@ -791,7 +794,7 @@ const TravelerProfile = () => {
                   showAuthor: true,
                   coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
                   at: new Date(l.updated_at ?? 0).getTime(),
-                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  placesCount: (l.tiles ?? []).length, days: null,
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
                   // Licznik zapisow TYLKO na wlasnych kolekcjach - to informacja zwrotna dla
@@ -966,6 +969,9 @@ const TravelerProfile = () => {
             zakladkami, bo to jedyne miejsce na profilu, ktore user widzi bez przewijania.
             BEZ opakowania z paddingiem: odstep niesie sama karta, wiec po jej zamknieciu
             nie zostaje pusty pas (zgloszenie Nat 2026-09-10). */}
+        {/* Podziekowanie za nakladke przyznana recznie - stoi w tym samym miejscu co karta
+            zaproszen i na czas swojej widocznosci ja zastepuje (patrz ReferralCard). */}
+        <RewardThanksBanner userId={user.id} />
         <ReferralCard userId={user.id} />
         <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={user.id} />
 

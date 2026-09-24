@@ -184,6 +184,7 @@
   },
   "limits": {
     "trip_places": "Plan może mieć najwyżej {{max}} miejsc. Zostało {{left}}.",
-    "collection_places": "Kolekcja może mieć najwyżej {{max}} miejsc. Zostało {{left}}."
+    "collection_places": "Kolekcja może mieć najwyżej {{max}} miejsc. Zostało {{left}}.",
+    "trip_members": "Plan może mieć najwyżej {{max}} współtwórców. Wolne miejsca: {{left}}."
   }
 }

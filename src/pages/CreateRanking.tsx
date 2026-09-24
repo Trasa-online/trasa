@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { invalidateContentLists } from "@/lib/trash";
 import { randomListTheme } from "@/lib/listThemes";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useTranslation } from "react-i18next";
@@ -14,7 +15,7 @@ import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 import CreateHeader from "@/components/create/CreateHeader";
 import { expandCity, cityGenitive } from "@/lib/cities";
-import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
+import { countriesInRegion, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSavedPlaces } from "@/lib/placeLists";
@@ -618,6 +619,7 @@ const CreateRanking = () => {
       if (!editId) track("collection_created", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       track("list_published", { collection_id: collectionId ?? null, city: cityToSave, is_public: isPublic, place_count: items.length, source: "create_ranking" });
       toast.success(editId ? t("toast.updated") : t("toast.sent"));
+      invalidateContentLists();
       // Listy widoczne w profilu (zakładka Listy). Kieruj na profil zamiast na pusty feed -
       // inaczej user ma wrazenie, ze nic sie nie zapisalo. (Osobny widok "Twoje listy" usuniety, IA 2026-08-20.)
       navigate("/moj-profil");
@@ -707,7 +709,7 @@ const CreateRanking = () => {
                     <option value="">{t("city.anywhere")}</option>
                     {TRIP_REGIONS.map((region) => (
                       <optgroup key={region} label={region}>
-                        {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                        {countriesInRegion(region).map((c) => (
                           <option key={c.name} value={c.name}>{countryLabel(c.name)}</option>
                         ))}
                       </optgroup>

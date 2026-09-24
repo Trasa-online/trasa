@@ -43,3 +43,27 @@ export function scrollTopTapProps() {
     },
   };
 }
+
+/**
+ * „Dokument otwiera sie OD POCZATKU" (zgloszenie testerow 2026-09-24).
+ *
+ * Regulamin i Polityka Prywatnosci linkuja do siebie nawzajem, a przejscie miedzy trasami
+ * w React Routerze NIE resetuje pozycji przewijania. Kto wszedl w Regulamin i zjechal do pkt 7,
+ * ten po tapnieciu „Polityka Prywatnosci" ladowal w jej srodku - dokladnie na tej samej
+ * wysokosci w pikselach, co poprzedni dokument.
+ *
+ * ⚠️ Zerujemy KAZDY scroller, bo te strony (min-h-screen wewnatrz powloki h-[100dvh]) raz
+ * przewijaja dokument, a raz `main` - zaleznie od tego, czy stoja w AppLayout. Dwa przebiegi
+ * (teraz + nastepna klatka), bo WebView potrafi przywrocic wlasna pozycje PO zamontowaniu.
+ */
+export function scrollDocumentToTop(): void {
+  const apply = () => {
+    try { window.scrollTo(0, 0); } catch { /* brak window */ }
+    for (const el of [document.scrollingElement, document.documentElement, document.body]) {
+      if (el) el.scrollTop = 0;
+    }
+    document.querySelectorAll<HTMLElement>("main, [data-scroll-main]").forEach((el) => { el.scrollTop = 0; });
+  };
+  apply();
+  requestAnimationFrame(apply);
+}

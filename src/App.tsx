@@ -312,6 +312,16 @@ function NativeDeepLinkHandler() {
     if (!isNative) return;
     const handlerPromise = CapApp.addListener("appUrlOpen", async ({ url }) => {
       console.log("[NativeDeepLink] appUrlOpen", { url });
+      // Universal linki (2026-09-21): kod QR z wizytowki `/q/<token>` oraz linki udostepniania
+      // `/p/<miejsce>`, `/l/<kolekcja>`, `/r/<plan>` (sciezki z AASA) -> trasy w apce. Przez hash,
+      // bo ten handler stoi poza routerem.
+      const ul = /^https?:\/\/(?:www\.)?spontaway\.com\/(q|p|l|r)\/([A-Za-z0-9-]{4,64})/i.exec(url);
+      if (ul) {
+        const kind = ul[1].toLowerCase(), id = ul[2];
+        const target = kind === "q" ? `/q/${id.toLowerCase()}` : kind === "p" ? `/p/${id}` : kind === "l" ? `/lista/${id}` : `/route/${id}`;
+        window.location.hash = `#${target}`;
+        return;
+      }
       if (!url.includes("auth/callback")) return;
       try { await Browser.close(); } catch { /* browser already closed */ }
       // Custom scheme URLs (travel.trasa.app://auth/callback?code=XYZ) - parser
@@ -765,6 +775,8 @@ const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
 const SharedList       = lazy(() => import("./pages/SharedList"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
+const QrPlace          = lazy(() => import("./pages/QrPlace"));
+const SharedPlace      = lazy(() => import("./pages/QrPlace").then((m) => ({ default: m.SharedPlace })));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
 const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
@@ -903,6 +915,9 @@ const App = () => (
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/lista/:id" element={<SharedList />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />
+          {/* Kod QR z wizytowki drukowanej (universal link spontaway.com/q/<token>). */}
+          <Route path="/q/:token" element={<QrPlace />} />
+          <Route path="/p/:id" element={<SharedPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <QuickPlanReview />} />
           <Route path="/biznes/start" element={<BusinessStart />} />

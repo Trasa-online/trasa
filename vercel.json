@@ -13,6 +13,10 @@
       "destination": "/api/share?t=place&id=:id"
     },
     {
+      "source": "/q/:token",
+      "destination": "/api/share?t=qr&id=:token"
+    },
+    {
       "source": "/en",
       "destination": "/en.html"
     },
@@ -26,6 +30,19 @@
     }
   ],
   "headers": [
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

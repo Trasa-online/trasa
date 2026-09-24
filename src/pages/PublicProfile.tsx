@@ -12,17 +12,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { toggleRouteLike } from "@/lib/likes";
 import { saveCollectionDb, unsaveCollectionDb } from "@/lib/savedCollections";
 import { ArrowLeft } from "lucide-react";
-import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
+import { BrandIcon, LIST_ICON, STAR_ICON, BrandUserPlus } from "@/components/BrandIcon";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
 import { haptics } from "@/hooks/useHaptics";
 import { applyTripOrder, fetchTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import FollowButton from "@/components/social/FollowButton";
+import FriendButton from "@/components/social/FriendButton";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
 import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
-import { useFollowCounts } from "@/hooks/useFollow";
+import { useFollowCounts, useIsFollowing, followUser, unfollowUser } from "@/hooks/useFollow";
 import PeopleSheet, { type PeopleTab } from "@/components/profile/PeopleSheet";
 import { useFriendIds } from "@/lib/friends";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
@@ -113,10 +113,13 @@ export default function PublicProfile() {
       // ilike zamiast eq: nazwy w bazie potrafia miec inna wielkosc liter albo (historycznie)
       // spacje na brzegach - a link jest jeden. Dokladne dopasowanie zostaje, bo w ilike nie ma
       // znakow wieloznacznych; escapeLike chroni przed "%" i "_" wpisanym w nazwe.
-      const { data } = await supabase
+      // Konto LOKALU (`is_business`) nie ma profilu publicznego w apce - dla linku
+      // z wyszukiwarki czy powiadomienia wyglada jak nieistniejacy user (2026-09-21).
+      const { data } = await (supabase as any)
         .from("profiles")
         .select("id, username, first_name, avatar_url, bio, avatar_frame, avatar_frame_color")
         .ilike("username", escapeLike((username ?? "").trim()))
+        .eq("is_business", false)
         .maybeSingle();
       // `as unknown`: wygenerowane typy Supabase nie znaja jeszcze avatar_frame (types.ts
       // regenerowany osobno - CLAUDE.md), a kolumna w bazie jest (migracja 20260911f).
@@ -151,7 +154,7 @@ export default function PublicProfile() {
       // 20260915k - wczesniej polityka wpuszczala tylko wlasciciela i czlonkow, wiec ta lista
       // wracala pusta i wspoltworzone kolekcje po cichu znikaly z cudzego profilu.
       const { data: memberRows } = await (supabase as any)
-        .from("discovery_collection_members").select("collection_id").eq("user_id", profile!.id);
+        .from("discovery_collection_members").select("collection_id").eq("user_id", profile!.id).eq("status", "accepted");
       const memberIds = Array.from(new Set(((memberRows ?? []) as any[]).map((m) => m.collection_id)));
       // ⛔ DWA zapytania zamiast `.or(...)`: lista id w `id.in.(…)` ma przecinki w srodku
       // nawiasu, a PostgREST rozbija `or` po przecinkach i po cichu oddaje pustke.
@@ -301,6 +304,23 @@ export default function PublicProfile() {
   const canInteract = !!user && !!profile?.id && user.id !== profile.id;
   // Moderacja (wymog App Store 1.2): menu "..." z blokowaniem i zgloszeniem profilu.
   const [menuOpen, setMenuOpen] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const { data: isFollowing = false } = useIsFollowing(user?.id, profile?.id);
+  const toggleFollow = async () => {
+    if (!profile || followBusy) return;
+    setFollowBusy(true);
+    try {
+      haptics.light();
+      if (isFollowing) await unfollowUser(profile.id); else await followUser(profile.id);
+      queryClient.invalidateQueries({ queryKey: ["is-following", user?.id, profile.id] });
+      queryClient.invalidateQueries({ queryKey: ["follow-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["following-ids", user?.id] });
+      toast(isFollowing ? t("public.unfollowed") : t("public.followed"));
+      setMenuOpen(false);
+    } catch {
+      toast.error(t("people.follow_failed"));
+    } finally { setFollowBusy(false); }
+  };
   const [blocked, setBlocked] = useState(false);
   useEffect(() => {
     if (!user?.id || !profile?.id || user.id === profile.id) return;
@@ -442,7 +462,14 @@ export default function PublicProfile() {
                   {menuOpen && (
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 top-11 z-40 w-56 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
+                      <div className="absolute right-0 top-11 z-40 w-60 rounded-2xl bg-card border border-border/50 shadow-xl overflow-hidden py-1">
+                        {/* Obserwowanie jako pozycja menu, nie drugi guzik w naglowku: przy
+                            zaproszeniu do znajomych zaczyna sie samo, a recznie rusza je
+                            garstka osob. Ten sam uklad, co na Facebooku. */}
+                        <button onClick={toggleFollow} disabled={followBusy} className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-60">
+                          <BrandUserPlus className="h-4 w-4 shrink-0" />
+                          {isFollowing ? t("public.unfollow") : t("public.follow")}
+                        </button>
                         <button onClick={toggleBlock} className="w-full px-4 py-3 text-left text-sm font-medium text-destructive flex items-center gap-2.5 active:bg-muted">
                           <Ban className="h-4 w-4 shrink-0" /> {blocked ? t("public.unblock") : t("public.block")}
                         </button>
@@ -499,8 +526,8 @@ export default function PublicProfile() {
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
           </button>
           {/* ZNAJOMI zamiast obserwowanych - ta sama definicja co na wlasnym profilu
-              (wzajemna obserwacja, liczona przez baze). Obserwowani nie znikaja: maja
-              zakladke w arkuszu. Rzad miesci TRZY pozycje, czwarta sie nie miesci. */}
+              (relacja przyjeta przez obie strony, liczona przez baze). Obserwowani nie
+              znikaja: maja zakladke w arkuszu. Rzad miesci TRZY pozycje, czwarta nie. */}
           <button onClick={() => setFollowSheet("friends")} className="text-left active:opacity-70 transition-opacity">
             <p className="text-xs font-medium text-muted-foreground">{t("profile.friends")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{(friendIds.data ?? []).length}</p>
@@ -513,9 +540,14 @@ export default function PublicProfile() {
             </p>
           </button>
           <div className="flex-1" />
-          {/* Sama ikona zamiast napisu "Obserwuj" (prosba Nat 2026-09-13) - trzy statystyki
-              w rzedzie nie zostawialy miejsca na pigulke z tekstem. */}
-          <FollowButton targetUserId={profile.id} iconOnly className="shrink-0" />
+          {/* ⛔ JEDEN GUZIK RELACJI (decyzja Nat 2026-09-23, model z Facebooka). Przez dobe
+              staly tu DWA kolka - "obserwuj" i "dodaj do znajomych" - i to bylo mylace: oba
+              o relacji, oba z ludzikiem, roznica niewidoczna. Teraz jedna decyzja: wysylam
+              zaproszenie (i przy okazji zaczynam obserwowac), a gdy druga strona nie przyjmie
+              - zostaje samo obserwowanie. "Przestan obserwowac" siedzi w menu "⋮" w belce.
+              ⚠️ Stoi W RZEDZIE STATYSTYK i ma napis, nie sama ikone (prosba Nat): guzik pelnej
+              szerokosci pod rzedem zabieral pasek ekranu, a samo kolko nie mowilo, co robi. */}
+          {canInteract && <FriendButton targetUserId={profile.id} />}
         </div>
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej).
@@ -583,7 +615,7 @@ export default function PublicProfile() {
                   showAuthor: true,
                   coAuthors: (l.co_authors ?? []).map((c: any) => ({ id: c.user_id, username: c.username, avatar_url: c.avatar_url, avatar_frame: c.avatar_frame, avatar_frame_color: c.avatar_frame_color })),
                   at: new Date(l.updated_at ?? 0).getTime(),
-                  placesCount: (l.tiles ?? []).length, days: null, mapUrl: null,
+                  placesCount: (l.tiles ?? []).length, days: null,
                   theme: listTheme(l.theme, l.id), places,
                   visitedCount: l.visited_count ?? 0,
                 };

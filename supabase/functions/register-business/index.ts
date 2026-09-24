@@ -18,6 +18,28 @@ function rateLimited(ip: string, max = 5, windowMs = 60_000): boolean {
   return false;
 }
 
+
+// ⚠️ TRWALY limit w BAZIE obok pamieciowego (audyt naduzyc 2026-09-24). Pamiec funkcji
+// brzegowej zyje tylko w jednej instancji, a Deno Deploy trzyma ich wiele naraz i podnosi
+// nowe pod obciazeniem - czyli dokladnie wtedy, gdy limit jest potrzebny. Licznik w bazie
+// jest wspolny dla wszystkich instancji. Fail-open: blad bazy nie moze zablokowac rejestracji.
+async function dbRateLimited(bucket: string, limit: number, windowMinutes: number): Promise<boolean> {
+  try {
+    const url = Deno.env.get("SUPABASE_URL") ?? "";
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!url || !key) return false;
+    const res = await fetch(`${url}/rest/v1/rpc/try_consume_rate_limit`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: bucket, p_limit: limit, p_window_minutes: windowMinutes }),
+    });
+    if (!res.ok) return false;
+    return (await res.json()) === false;
+  } catch {
+    return false;
+  }
+}
+
 const REDIRECT_TO = "https://spontaway.com/#/set-password-biznes";
 
 Deno.serve(async (req) => {
@@ -27,7 +49,7 @@ Deno.serve(async (req) => {
 
   try {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
-    if (rateLimited(ip)) {
+    if (rateLimited(ip) || await dbRateLimited(`bizreg:ip:${ip}`, 20, 60) || await dbRateLimited("bizreg:all", 300, 60)) {
       return new Response(JSON.stringify({ error: "rate_limited" }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,6 +60,9 @@ Deno.serve(async (req) => {
     const rawEmail = body.email;
     const placeName = (body.place_name ?? "").toString().trim();
     const phone = (body.phone ?? "").toString().trim();
+    // Kod QR z wizytowki drukowanej (2026-09-21) - opcjonalny; nieznany albo juz przejety
+    // token po prostu ignorujemy (rejestracja i tak ma przejsc).
+    const qrToken = /^[a-z0-9]{4,32}$/.test(String(body.qr_token ?? "").toLowerCase()) ? String(body.qr_token).toLowerCase() : null;
 
     if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
     const email = rawEmail.trim().slice(0, 254);
@@ -163,6 +188,21 @@ Deno.serve(async (req) => {
         .single();
       if (created.error) throw new Error(`business_profiles insert: ${created.error.message}`);
       bp = created.data as { id: string; place_id: string | null };
+    }
+
+    // ── Kod QR: przypnij token do wizytowki, a miejsce z tokenu - do wizytowki ──
+    // Token wskazuje na wiersz `places` w stanie zero (albo jeszcze na nic). Podpiecie
+    // `place_id` juz tu (nie dopiero przy zatwierdzeniu) = admin zatwierdza TE wizytowke,
+    // bez dopasowywania po nazwie, a kod od tej chwili nie ma guzika "To moj lokal".
+    if (qrToken && bp) {
+      const { data: qr } = await admin.from("place_qr_codes").select("token, place_id, claimed_by_profile_id").eq("token", qrToken).maybeSingle();
+      if (qr && !qr.claimed_by_profile_id) {
+        await admin.from("place_qr_codes").update({ claimed_by_profile_id: bp.id, claimed_at: new Date().toISOString() }).eq("token", qrToken);
+        if (qr.place_id && !bp.place_id) {
+          const { data: taken } = await admin.from("business_profiles").select("id").eq("place_id", qr.place_id).neq("id", bp.id).limit(1);
+          if (!taken?.length) await admin.from("business_profiles").update({ place_id: qr.place_id }).eq("id", bp.id);
+        }
+      }
     }
 
     // ── Link aktywacyjny do appki ──

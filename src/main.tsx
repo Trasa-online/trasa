@@ -9,6 +9,7 @@ import "./index.css";
 import "./i18n";
 import { initClarityOnBoot } from "@/lib/consent";
 import { captureReferralFromUrl } from "@/lib/referral";
+import { initKeyboardInset } from "@/lib/keyboardInset";
 
 // Clarity dla userow, ktorzy juz wczesniej wyrazili zgode. Przez initClarityOnBoot, bo
 // bezposrednie wywolanie _clarityInit() omijalo DWIE reguly: wykluczenie kont wewnetrznych
@@ -18,6 +19,9 @@ void initClarityOnBoot();
 // Kod zapraszajacego (?ref=) odkladamy PRZED montazem Reacta: HashRouter potrafi przepisac
 // adres, zanim ktorykolwiek ekran zdazy sie zamontowac, i parametr po prostu przepada.
 captureReferralFromUrl();
+
+// Arkusz ma stanac nad klawiatura OD RAZU, a nie po natywnym resize WebView (patrz keyboardInset.ts).
+initKeyboardInset();
 
 // ─── Sentry error tracking (lazy-loaded to keep main bundle slim) ─────────────
 if (import.meta.env.PROD) {

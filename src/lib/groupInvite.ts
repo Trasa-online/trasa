@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { checkPlaceLimit, placeLimitToast, MAX_TRIP_MEMBERS } from "@/lib/placeLimits";
 
 // Kod sesji grupowej (join_code) - kolumna group_sessions.join_code wymaga wartosci.
 // Nie sluzy juz do deep-linku (zaproszony trafia prosto na trase /review-summary).
@@ -34,6 +35,20 @@ export async function inviteUsersToRoute(
     await (supabase as any).rpc("ensure_current_user_profile");
 
     let sessionId = route.group_session_id ?? null;
+
+    // Limit 10 wspoltworcow (decyzja Nat 2026-09-21). Sprawdzenie PRZED wysylka, zeby user
+    // dostal czytelny toast z liczba wolnych miejsc; baza i tak odrzuci nadmiar (trigger
+    // `trg_group_session_member_limit`, blad `member_limit` z `add_member_to_session`).
+    // Liczymy osoby juz w sesji poza hostem - takze te, ktore jeszcze nie potwierdzily.
+    if (sessionId) {
+      const { data: members } = await (supabase as any)
+        .from("group_session_members").select("user_id").eq("session_id", sessionId);
+      const existing = new Set(((members ?? []) as any[]).map((m) => m.user_id).filter((u: string) => u && u !== hostUserId));
+      const adding = ids.filter((u) => !existing.has(u)).length;
+      if (!checkPlaceLimit("trip_members", existing.size, adding)) return { ok: false, error: "member_limit" };
+    } else if (!checkPlaceLimit("trip_members", 0, ids.length)) {
+      return { ok: false, error: "member_limit" };
+    }
 
     if (!sessionId) {
       const code = generateJoinCode();
@@ -78,9 +93,14 @@ export async function inviteUsersToRoute(
       if (linkErr) return { ok: false, error: linkErr.message };
     }
 
-    // Dodaj zaproszonych (host-only RPC).
+    // Dodaj zaproszonych (host-only RPC). `member_limit` = baza odrzucila nadmiar (ktos
+    // rownolegle dosypal osob) - toast z limitem i koniec, bez powiadomien do reszty.
     for (const uid of ids) {
-      await (supabase as any).rpc("add_member_to_session", { p_session_id: sessionId, p_user_id: uid });
+      const { data: res } = await (supabase as any).rpc("add_member_to_session", { p_session_id: sessionId, p_user_id: uid });
+      if (res && res.ok === false && res.reason === "member_limit") {
+        placeLimitToast("trip_members", MAX_TRIP_MEMBERS);
+        return { ok: false, error: "member_limit" };
+      }
     }
 
     // Badge "Nowa trasa" dla zaproszonych (owner update new_for_users).

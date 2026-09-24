@@ -191,32 +191,35 @@ function NativePushRow() {
     try { await askPermission("push", "settings", { explicit: true }); } finally { setBusy(false); refresh(); }
   };
   const label = status === "granted" ? tc("permissions.push.status_on") : status === "denied" ? tc("permissions.push.status_off") : tc("permissions.push.status_ask");
+  // ⚠️ TEN SAM wiersz co "Lokalizacja" obok (SettingsRow): ikona w peachy kolku, stan
+  // w szarosci, chevron. Do 24.09 push mial wlasna karte z plaska ikona i ZIELONYM
+  // "Wlaczone", a lokalizacja - szare "Wlaczona"; dwie zgody tego samego rodzaju, jedna
+  // pod druga, roznily sie kolorem i ksztaltem (zgloszenie Nat). Stan zgody jest
+  // INFORMACJA, nie ostrzezeniem, wiec zostaje w szarosci - tak samo jak w iOS.
   return (
-    <button
-      type="button"
-      onClick={onTap}
-      disabled={busy}
-      className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px] hover:bg-muted transition-colors text-left"
-    >
-      <BrandBell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-      <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
-      <span className={`text-xs font-semibold ${status === "granted" ? "text-emerald-600" : status === "denied" ? "text-muted-foreground" : "text-primary"}`}>{label}</span>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </button>
+    <SettingsRow icon={<BrandBell className="h-4 w-4" />} label={t("push_notifications")} state={label} onClick={onTap} disabled={busy} />
   );
 }
 
+// Wiersz push NA EKRANIE POWIADOMIEN - z wlasna karta i notka, bo bywa jedyna trescia tego
+// ekranu. ⚠️ Karte rysuje ta funkcja, a nie ekran: gdy przegladarka nie wspiera pushy, nie
+// ma sie pojawic pusta szara ramka z samym podpisem.
 function PushToggleSection() {
   const { isSupported, isSubscribed, isLoading, toggle } = usePushNotifications();
   const { t } = useTranslation("settings");
-  if (isNative) return <NativePushRow />;
+  if (isNative) {
+    const row = <NativePushRow />;
+    return <SettingsGroup note={t("push_note")}>{row}</SettingsGroup>;
+  }
   if (!isSupported) return null;
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px]">
-      <BrandBell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-      <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
-      <Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />
-    </div>
+    <SettingsGroup note={t("push_note")}>
+      <SettingsRow
+        icon={<BrandBell className="h-4 w-4" />}
+        label={t("push_notifications")}
+        right={<Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />}
+      />
+    </SettingsGroup>
   );
 }
 
@@ -236,15 +239,15 @@ function CookieConsentSection() {
     }
   };
 
+  // Ten sam wiersz co reszta ustawien (SettingsRow) - ostatnia sekcja z wlasnym ksztaltem
+  // z czasow sprzed hubu (2026-09-24).
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-muted/60 rounded-[20px]">
-      <Cookie className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-      <div className="flex-1">
-        <span className="text-sm font-medium">{t("cookies_analytics")}</span>
-        <p className="text-xs text-muted-foreground">{t("cookies_desc")}</p>
-      </div>
-      <Switch checked={consent === "granted"} onCheckedChange={handleToggle} />
-    </div>
+    <SettingsRow
+      icon={<Cookie className="h-4 w-4" />}
+      label={t("cookies_analytics")}
+      desc={t("cookies_desc")}
+      right={<Switch checked={consent === "granted"} onCheckedChange={handleToggle} />}
+    />
   );
 }
 
@@ -892,10 +895,7 @@ function NotificationsScreen() {
   const { t } = useTranslation("settings");
   return (
     <SettingsScreen title={t("hub.notifications")} back="/settings">
-      <div className="space-y-2">
-        <PushToggleSection />
-        <p className="px-3 pt-1 text-xs leading-relaxed text-muted-foreground">{t("push_note")}</p>
-      </div>
+      <PushToggleSection />
     </SettingsScreen>
   );
 }
@@ -914,10 +914,9 @@ function PrivacyScreen() {
     : tc("permissions.location.status_ask");
   return (
     <SettingsScreen title={t("hub.privacy")} back="/settings">
-      <div className="space-y-2">
-        <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("group.data")}</p>
+      <SettingsGroup label={t("group.data")}>
         <CookieConsentSection />
-      </div>
+      </SettingsGroup>
 
       <SettingsGroup label={t("group.people")}>
         <SettingsRow icon={<BrandBlock className="h-4 w-4" />} label={t("blocked.title")} desc={t("blocked.desc")} onClick={() => navigate("/settings/zablokowani")} />
@@ -925,17 +924,16 @@ function PrivacyScreen() {
 
       {/* ⛔ To NIE jest miejsce pierwszego pytania o zgode - o push i lokalizacje pytamy
           w chwili uzycia (permissionPrompts.ts). Tutaj pokazujemy STAN i droge do Ustawien. */}
+      {/* ⚠️ Obie zgody w JEDNEJ karcie i w jednym wierszu (SettingsRow). Do 24.09 push mial
+          wlasna karte z zielonym "Wlaczone", a lokalizacja szare "Wlaczona" - dwa stany tego
+          samego rodzaju, jeden pod drugim, roznily sie kolorem (zgloszenie Nat). */}
       {isNative && (
-        <div className="space-y-2">
-          <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("group.permissions")}</p>
+        <SettingsGroup label={t("group.permissions")} note={t("permissions_note")}>
           <NativePushRow />
           {locLabel && (
-            <div className="overflow-hidden rounded-[20px] bg-muted/60">
-              <SettingsRow icon={<BrandShield className="h-4 w-4" />} label={t("location")} state={locLabel} onClick={() => openAppSettings()} />
-            </div>
+            <SettingsRow icon={<BrandShield className="h-4 w-4" />} label={t("location")} state={locLabel} onClick={() => openAppSettings()} />
           )}
-          <p className="px-3 pt-1 text-xs leading-relaxed text-muted-foreground">{t("permissions_note")}</p>
-        </div>
+        </SettingsGroup>
       )}
 
       <SettingsGroup label={t("group.documents")}>

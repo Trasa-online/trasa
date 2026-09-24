@@ -47,7 +47,11 @@
     "more": "Więcej",
     "trip_saved": "Zapisano plan",
     "no_following": "{{name}} nikogo jeszcze nie obserwuje.",
-    "no_followers": "Nikt jeszcze nie obserwuje {{name}}."
+    "no_followers": "Nikt jeszcze nie obserwuje {{name}}.",
+    "follow": "Obserwuj",
+    "unfollow": "Przestań obserwować",
+    "followed": "Obserwujesz tę osobę",
+    "unfollowed": "Nie obserwujesz już tej osoby"
   },
   "profile": {
     "header_fallback": "profil",
@@ -93,11 +97,14 @@
     "traveler_fallback": "Podróżnik",
     "starred": "Wyróżnione",
     "starred_aria": "Wyróżnione miejsca",
-    "no_friends": "Nie masz jeszcze znajomych. Znajomym zostaje osoba, którą obserwujesz i która obserwuje Ciebie.",
+    "no_friends": "Nie masz jeszcze znajomych. Wejdź na czyjś profil i wyślij zaproszenie - znajomymi zostajecie, gdy je przyjmie.",
     "people_title": "Ludzie",
     "friend_remove": "Usuń ze znajomych",
-    "friend_removed": "Usunięto ze znajomych. Nadal się obserwujecie.",
-    "friend_remove_failed": "Nie udało się zapisać zmiany"
+    "friend_removed": "Usunięto ze znajomych. Obserwowanie zostaje bez zmian.",
+    "friend_remove_failed": "Nie udało się zapisać zmiany",
+    "friend_remove_title": "Usunąć ze znajomych?",
+    "friend_remove_desc": "{{name}} straci dostęp do Twoich zdjęć tylko dla znajomych. Obserwowanie zostaje bez zmian, a powrót do znajomych wymaga nowego zaproszenia.",
+    "friend_remove_cancel": "Anuluj"
   },
   "guest": {
     "title": "Twój profil podróżnika",
@@ -178,7 +185,7 @@
     "progress": "{{invited}} z {{goal}}",
     "share_cta": "Wyślij zaproszenie",
     "share_title": "Wchodzisz w spontaway?",
-    "share_text": "Zbieram tu miejsca i plany. Wejdź z mojego linku, to zobaczysz, co polecam.",
+    "share_text": "Zbieram tu miejsca i plany. Link otwiera TestFlight - stamtąd zainstalujesz apkę na iOS i wejdziesz do testów.",
     "qr_aria": "Pokaż kod QR do testów",
     "qr_title": "Zeskanuj i dołącz do testów",
     "qr_desc": "Kod prowadzi prosto do TestFlight. Pokaż go osobie, którą chcesz zaprosić.",
@@ -219,7 +226,10 @@
     "filter_clear": "Wyczyść filtry",
     "filter_count_one": "{{count}} miejsce",
     "filter_count_few": "{{count}} miejsca",
-    "filter_count_many": "{{count}} miejsc"
+    "filter_count_many": "{{count}} miejsc",
+    "also_in_one": "· i jeszcze {{count}}",
+    "also_in_few": "· i jeszcze {{count}}",
+    "also_in_many": "· i jeszcze {{count}}"
   },
   "trash": {
     "title": "Kosz",
@@ -253,7 +263,7 @@
     "clear_search": "Wyczyść szukanie",
     "loading": "Wczytuję...",
     "count_followers": "Obserwuje {{count}} osób",
-    "count_friends": "{{count}} znajomych (wzajemna obserwacja)",
+    "count_friends": "Znajomych: {{count}}",
     "count_following": "Obserwuje {{count}} osób",
     "count_filtered": "{{shown}} z {{total}} osób pasuje do szukanej frazy",
     "no_results": "Nikogo takiego tu nie ma.",
@@ -264,7 +274,24 @@
     "following_state": "Obserwujesz",
     "follow_failed": "Nie udało się zapisać zmiany",
     "title_mine": "Ludzie",
-    "title_of": "Ludzie: {{name}}"
+    "title_of": "Ludzie: {{name}}",
+    "requests_title_one": "{{count}} zaproszenie czeka na odpowiedź",
+    "requests_title_few": "{{count}} zaproszenia czekają na odpowiedź",
+    "requests_title_many": "{{count}} zaproszeń czeka na odpowiedź",
+    "request_accept": "Przyjmij",
+    "request_decline": "Odrzuć",
+    "request_gone": "Tego zaproszenia już nie ma",
+    "request_accepted": "Jesteście znajomymi",
+    "request_declined": "Zaproszenie odrzucone"
   },
-  "undo": "Cofnij"
+  "undo": "Cofnij",
+  "reward": {
+    "eyebrow": "Nagroda odblokowana",
+    "title": "Dziękujemy za wsparcie!",
+    "desc": "Ta nakładka na awatar jest naszym podziękowaniem - od teraz jest Twoja. Zawsze znajdziesz ją w Ustawieniach → Customizuj.",
+    "wear_cta": "Załóż nakładkę",
+    "later": "Może później",
+    "wear_done": "Nakładka założona",
+    "wear_failed": "Nie udało się założyć nakładki. Spróbuj z Ustawień → Customizuj."
+  }
 }

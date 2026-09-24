@@ -570,7 +570,7 @@ export default function ForBusinessPage() {
                 </a>
               </div>
               <div className="px-5 pt-0 pb-4">
-                <a href="mailto:trasa.app@gmail.com" className="block w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
+                <a href="mailto:hello@spontaway.com" className="block w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
                   Kontakt →
                 </a>
               </div>
@@ -744,13 +744,13 @@ export default function ForBusinessPage() {
           </div>
           <p className="text-xs text-white/40 text-center">© {new Date().getFullYear()} spontaway · Stworzone z ❤ w Polsce</p>
           <div className="flex items-center gap-4">
-            <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors">
+            <a href="https://instagram.com/spontaway" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                 <circle cx="12" cy="12" r="4" />
                 <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
               </svg>
-              @trasa.travel
+              @spontaway
             </a>
             <a href="/terms" className="text-xs text-white/50 hover:text-white/80 transition-colors">Regulamin</a>
             <a href="/auth?business=true" className="text-xs font-bold text-white hover:text-orange-300 transition-colors">Zaloguj się →</a>

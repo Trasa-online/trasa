@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { checkPlaceLimit } from "@/lib/placeLimits";
 import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { isPortraitCover } from "@/lib/coverFormat";
@@ -17,15 +17,18 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, MoreHorizontal, ChevronLeft, Users } from "lucide-react";
 import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil, BrandUserPlus, BrandNote, BrandPin } from "@/components/BrandIcon";
-import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
+import { MAIN_CATEGORIES, subcategoryPluralLabel, placeCategoryLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { usePhotoViewerGestures } from "@/hooks/usePhotoViewerGestures";
 import { useScreenshot } from "@/hooks/useScreenshot";
 import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
+import { fetchTripStars, tripStarsKey, setTripStar, tripStarKey } from "@/lib/tripStars";
+import { EMPTY_ARRAY } from "@/lib/emptyRef";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { RoutePlaceRow } from "@/components/route/RoutePlaceRow";
@@ -102,6 +105,7 @@ import { isWeb } from "@/lib/platform";
 import { thumbUrl } from "@/lib/imageUrl";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 import { deferDelete } from "@/lib/deferDelete";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -204,6 +208,10 @@ export default function SharedRoute() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Pociagniecie listy = pelne odswiezenie widoku planu (miejsca, zdjecia, notki, sklad
+  // grupy). Uniewazniamy wszystko, bo ten ekran czyta kilkanascie roznych kluczy i lista
+  // wyliczana recznie rozjezdzalaby sie z kazda nowa sekcja.
+  const handlePullRefresh = async () => { await queryClient.invalidateQueries(); };
   const { t, i18n } = useTranslation("sharing");
 
   // Polubienie trasy (heart). Owner powiadamiany przez trigger notify_route_like.
@@ -222,7 +230,10 @@ export default function SharedRoute() {
     try { await toggleRouteLike(id, user.id, cur.liked); }
     finally { queryClient.invalidateQueries({ queryKey: key }); }
   };
-  const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
+  // Etykieta kategorii = wspolne `placeCategoryLabel` (ns `categories`), a nie lokalna lista
+  // w tej przestrzeni: ta znala dwanascie wartosci, a baza ma tez church / landmark / bakery,
+  // ktore wypadaly na "Inne" (zgloszenie Nat 2026-09-24).
+  const categoryLabel = (cat: string) => placeCategoryLabel(cat);
   const { isSaved } = useSavedPlaces();
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const pinToSave = (pin: any): SavePlaceInput => ({
@@ -248,6 +259,15 @@ export default function SharedRoute() {
   const [datesSheetOpen, setDatesSheetOpen] = useState(false);
   const [daysSheetOpen, setDaysSheetOpen] = useState(false);
   const [askRemoveDay, setAskRemoveDay] = useState<number | null>(null);
+  // ⛔ USUNIECIE ZDJECIA PYTA (zgloszenie Nat 2026-09-23: "dla destrukcyjnej akcji usuwania
+  // zdjecia nie ma walidacji"). Do tego dnia kosz w podgladzie i krzyzyk na miniaturze kasowaly
+  // OD RAZU - zostawal toast z "Cofnij", ale on zyje kilka sekund i trzeba go zlapac. Zdjecia
+  // z wyjazdu sa nie do odtworzenia, jesli user nie ma juz oryginalu w telefonie.
+  // ⚠️ Jeden stan na OBIE drogi usuwania (galeria wyjazdu i zdjecie przy miejscu), zeby
+  // pytanie bylo dokladnie takie samo niezaleznie od tego, skad user je wywolal.
+  const [askDeletePhoto, setAskDeletePhoto] = useState<
+    { kind: "gallery"; url: string } | { kind: "pin"; id: string } | null
+  >(null);
   const [askShorten, setAskShorten] = useState<{ to: number; moving: number } | null>(null);
   const [dayDraft, setDayDraft] = useState(1);   // wlasciciel: zakres dat wyjazdu
   const [planMapOpen, setPlanMapOpen] = useState(false);
@@ -268,10 +288,12 @@ export default function SharedRoute() {
     if (next) setPlanTab(next);
   };
   const swipeTabs = useSwipeNav({ onLeft: () => goTab(1), onRight: () => goTab(-1) });
-  // Galeria fullscreen: swipe w bok = poprzednie/nastepne zdjecie (zamiast tylko strzalek).
-  const swipeViewer = useSwipeNav({
-    onLeft: () => setViewerIndex((i) => (i === null ? i : (i + 1) % Math.max(1, galleryPhotosCount.current))),
-    onRight: () => setViewerIndex((i) => (i === null ? i : (i - 1 + galleryPhotosCount.current) % Math.max(1, galleryPhotosCount.current))),
+  // Galeria fullscreen: gest w BOK = poprzednie/nastepne zdjecie, gest w DOL = zamkniecie
+  // (prosba Nat 2026-09-24; zdjecie idzie za palcem, tlo gasnie - jak przy arkuszach).
+  const viewerGestures = usePhotoViewerGestures({
+    onClose: () => setViewerIndex(null),
+    onNext: () => setViewerIndex((i) => (i === null ? i : (i + 1) % Math.max(1, galleryPhotosCount.current))),
+    onPrev: () => setViewerIndex((i) => (i === null ? i : (i - 1 + galleryPhotosCount.current) % Math.max(1, galleryPhotosCount.current))),
   });
   // Usuniecie wyjazdu (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
   const [askDelete, setAskDelete] = useState(false);
@@ -397,19 +419,39 @@ export default function SharedRoute() {
   const share = useShare();
   const unsave = useUnsavePlace();
   // Tap bookmarka: zapisane -> odzapisz (toast+cofnij); niezapisane -> otworz drawer zapisu.
-  // Gwiazdka przy miejscu (2026-09-08): autor wyroznia miejsca warte polecenia. BEZ LIMITU
-  // (decyzja Nat 2026-09-14; wczesniej jedna na wyjazd i gwiazdka sie przenosila) - tak samo,
-  // jak w kolekcjach. Zwykly toggle na pinie.
-  const toggleTopPin = async (pin: any) => {
-    const next = !pin.is_top;
-    haptics.light();
-    queryClient.setQueryData(["shared-route-pins", id], (old: any[] | undefined) =>
-      (old ?? []).map((p) => (p.id === pin.id ? { ...p, is_top: next } : p)));
-    const { error } = await (supabase as any).from("pins").update({ is_top: next }).eq("id", pin.id);
-    if (error) {
-      console.error("[SharedRoute] top toggle:", error.message);
-      queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
+  // Gwiazdka przy miejscu - BEZ LIMITU (decyzja Nat 2026-09-14) i PER UCZESTNIK (2026-09-21,
+  // tabela `pin_stars`): kazdy z planu wyroznia sam, a `pins.is_top` (= gwiazdka wlasciciela)
+  // trzyma trigger w bazie. Do 21.09 uczestnik przelaczal `pins.is_top` wprost, wiec jego
+  // gwiazdka wpadala do licznika „Wyroznione" na profilu AUTORA planu (zgloszenie Nat).
+  // Optymistycznie w cache gwiazdek; is_top w cache pinow NIE ruszamy - liczymy z gwiazdek.
+  const { data: tripStars = EMPTY_ARRAY as any[] } = useQuery({
+    queryKey: tripStarsKey(id),
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: () => fetchTripStars(id!),
+  });
+  const starsByPlace = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const st of tripStars as { user_id: string; place_name: string }[]) {
+      const k = tripStarKey(st.place_name);
+      const arr = m.get(k);
+      if (arr) { if (!arr.includes(st.user_id)) arr.push(st.user_id); } else m.set(k, [st.user_id]);
     }
+    return m;
+  }, [tripStars]);
+  const starsOf = (pin: any) => starsByPlace.get(tripStarKey(pin.place_name)) ?? EMPTY_ARRAY;
+  const toggleTopPin = async (pin: any) => {
+    if (!user || !id) return;
+    const k = tripStarKey(pin.place_name);
+    const next = !(starsByPlace.get(k) ?? []).includes(user.id);
+    haptics.light();
+    queryClient.setQueryData(tripStarsKey(id), (old: any[] | undefined) => next
+      ? [...(old ?? []), { user_id: user.id, place_name: pin.place_name }]
+      : (old ?? []).filter((st) => !(st.user_id === user.id && tripStarKey(st.place_name) === k)));
+    const ok = await setTripStar(id, user.id, pin.place_name, next);
+    if (!ok) toast.error(t("common:errors.generic"));
+    queryClient.invalidateQueries({ queryKey: tripStarsKey(id) });
+    queryClient.invalidateQueries({ queryKey: ["shared-route-pins", id] });
     // Licznik wyroznionych miejsc na profilu (StarredPlacesSheet).
     queryClient.invalidateQueries({ queryKey: ["starred-places"] });
   };
@@ -474,6 +516,9 @@ export default function SharedRoute() {
         .map((p: any) => ({ id: p.id, username: p.username ?? null, avatar_url: p.avatar_url ?? null, avatar_frame: p.avatar_frame ?? null, avatar_frame_color: p.avatar_frame_color ?? null }));
     },
   });
+
+  // Wlasciciel + potwierdzeni uczestnicy: gdy wyroznili WSZYSCY, przy gwiazdce nie stoi liczba.
+  const participantsCount = 1 + (groupParticipants as any[]).length;
 
   // Czy zalogowany user jest UCZESTNIKIEM wspolnego wyjazdu (czlonek sesji, nie host).
   // Uczestnik moze dodawac zdjecia do galerii i NIE widzi CTA "Zapisz/Zaplanuj" (trasa juz jego).
@@ -2025,7 +2070,7 @@ export default function SharedRoute() {
                     className="w-full h-full object-cover active:opacity-90 transition-opacity"
                   />
                   <img src={avatarSrc(ph.avatar_url)} alt="" title={ph.username ?? undefined} className="absolute bottom-1 left-1 h-7 w-7 rounded-full object-cover border-2 border-white shadow-sm bg-secondary" />
-                  {(ph.user_id === user?.id || isOwner) && <button onClick={() => removePlacePhoto(ph.id)} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
+                  {(ph.user_id === user?.id || isOwner) && <button onClick={() => setAskDeletePhoto({ kind: "pin", id: ph.id })} aria-label={t("aria.delete_photo")} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/55 text-white flex items-center justify-center active:scale-90"><X className="h-3 w-3" /></button>}
                 </div>
               ))}
             </div>
@@ -2163,7 +2208,8 @@ export default function SharedRoute() {
                 onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
                 onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
                 onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top}
+                isTop={starsOf(pin).length > 0} topByMe={!!user && starsOf(pin).includes(user.id)}
+                topCount={starsOf(pin).length} topAll={starsOf(pin).length >= participantsCount && participantsCount > 1}
                 /* Gwiazdka ("topka") dla KAZDEGO uczestnika, na kazdym etapie (Nat 2026-09-20:
                    "jako uczestnik nie moge dodawac gwiazdek"). Do tego dnia stala za `isPublished`
                    (10.09: "wyroznienie dla czytajacych"), ale odkad wyjazd jest PLANEM, gwiazdka
@@ -2192,7 +2238,7 @@ export default function SharedRoute() {
           ? [...list]
               .map((pin: any, i: number) => ({ pin, i }))
               .sort((a, b) =>
-                (b.pin.is_top ? 1 : 0) - (a.pin.is_top ? 1 : 0)
+                (starsOf(b.pin).length > 0 ? 1 : 0) - (starsOf(a.pin).length > 0 ? 1 : 0)
                 || a.i - b.i)
               .map((e) => e.pin)
           // Wyjazd JEDNODNIOWY: "Wszystkie" to jedyny widok i zarazem uklad tego dnia, ktory
@@ -2206,7 +2252,9 @@ export default function SharedRoute() {
             onOpen={() => openDetail(pin)} onGoogle={() => openGooglePlace(pin)}
             onDelete={canEdit ? () => handleDeletePin(pin) : undefined}
             onSave={user ? () => toggleSaveBookmark(pin) : undefined} saved={isSaved(pin.place_name)}
-            isTop={!!pin.is_top} onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
+            isTop={starsOf(pin).length > 0} topByMe={!!user && starsOf(pin).includes(user.id)}
+            topCount={starsOf(pin).length} topAll={starsOf(pin).length >= participantsCount && participantsCount > 1}
+            onToggleTop={canEdit ? () => void toggleTopPin(pin) : undefined}
             note={buildNote(pin)} cornerAvatar={addedByAvatar(pin)}
             selection={selectionFor(pin)}
             menuExtras={placeMenuExtras(pin)}
@@ -2522,7 +2570,12 @@ export default function SharedRoute() {
       {/* Zapas na dole = ponad ZWINIETY stos akcji (84px + 56px wysokosci = 140px). Po
           schowaniu czatu i "+" pod jeden guzik (2026-09-10) nie trzeba juz rezerwowac miejsca
           na dwa kolka; rozwiniety stos to nakladka z tlem do zamkniecia, wiec moze zaslaniac. */}
-      <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
+      {/* ⚠️ Scroller planu owiniety w PullToRefresh (prosba Nat 2026-09-24): pociagniecie
+          w dol (albo w gore na koncu listy) dociaga to, co w miedzyczasie dodali wspoltworcy -
+          miejsca, zdjecia, notki. Dotad jedynym sposobem byl powrot i ponowne wejscie.
+          `data-scroll-main` przychodzi z komponentu, wiec tapniecie w gorna belke dalej
+          przewija ten sam element. */}
+      <PullToRefresh onRefresh={handlePullRefresh} className="flex-1 min-h-0 pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -2605,7 +2658,7 @@ export default function SharedRoute() {
           {/* Miasto · liczba miejsc · wyroznione jako KOLOROWE CHIPY (redesign Nat 2026-09-13,
               TripHeaderChips) - wczesniej szara linia z ikonami. */}
           {/* Chip miejsca = MIASTO (jak w makiecie: "Łódź"), kraje tylko gdy wyjazd miasta nie ma. */}
-          <HighlightChips className="mt-3" city={route.city || scopeLabel(route) || null} placesCount={pins.length} starredCount={(pins as any[]).filter((p) => p.is_top).length} />
+          <HighlightChips className="mt-3" city={route.city || scopeLabel(route) || null} placesCount={pins.length} starredCount={(pins as any[]).filter((p) => starsOf(p).length > 0).length} />
           {/* Daty wyjazdu = sama informacja. Ustawianie/zmiana zakresu (wlacza podzial na dni)
               zyje w menu "..." w belce (prosba Nat 2026-09-13; wczesniej olowek przy dacie
               i osobny wiersz "Dodaj daty" pod tytulem). */}
@@ -2896,7 +2949,7 @@ export default function SharedRoute() {
         </div>
 
         {/* Zgloszenie tresci (App Store 1.2) zyje w belce, obok udostepniania - patrz TopBar. */}
-      </div>
+      </PullToRefresh>
 
       {/* Podglad wizytowki miejsca */}
       <PlaceSwiperDetail
@@ -2929,6 +2982,7 @@ export default function SharedRoute() {
           }))}
           onAdd={handleAddPlaces}
           limit={{ kind: "trip_places", current: pins.length }}
+          draftKey={`trip:${id}`}
         />
       )}
 
@@ -3210,7 +3264,7 @@ export default function SharedRoute() {
 
       {/* Fullscreen podglad zdjecia galerii (object-contain, kropki paginacji + polubienie). */}
       {viewerIndex !== null && visiblePhotos[viewerIndex] && (
-        <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
+        <div {...viewerGestures.bind} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
           <img src={visiblePhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain"
             onClick={onPhotoTap(visiblePhotos[viewerIndex])} />
           <button onClick={() => setViewerIndex(null)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
@@ -3220,8 +3274,11 @@ export default function SharedRoute() {
               i dodatkowych ikon), zostaje na niej tylko wybor okladki.
               Kosz widzi wlasciciel wyjazdu (odpowiada za cala galerie) ORAZ uczestnik przy
               WLASNYM zdjeciu - skoro moze je dodac, musi tez moc je zabrac. */}
+          {/* ⚠️ Podglad zamykamy RAZEM z otwarciem pytania: nakladka podgladu stoi na z-[95],
+              a arkusz potwierdzenia na z-50, wiec inaczej pytanie schowaloby sie pod zdjeciem,
+              a tapniecie obok trafialoby w podglad i zamykalo go w trakcie decyzji. */}
           {(isOwner || (isGroupMember && isMyGalleryPhoto(visiblePhotos[viewerIndex]))) && (
-            <button onClick={(e) => { e.stopPropagation(); void handleDeletePhoto(visiblePhotos[viewerIndex]); setViewerIndex(null); }}
+            <button onClick={(e) => { e.stopPropagation(); const u = visiblePhotos[viewerIndex]; setViewerIndex(null); setAskDeletePhoto({ kind: "gallery", url: u }); }}
               aria-label={t("aria.delete_photo")}
               className="absolute left-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
               style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
@@ -3474,6 +3531,33 @@ export default function SharedRoute() {
         </SheetContent>
       </Sheet>
 
+      {/* USUNIECIE ZDJECIA. Czerwony guzik, bo to jest akcja niszczaca - w odroznieniu od
+          skrocenia wyjazdu nizej, gdzie nic nie ginie. Copy mowi WPROST, co sie stanie
+          i komu zniknie, a "Cofnij" w toascie zostaje jako druga siatka bezpieczenstwa. */}
+      <AlertDialog open={askDeletePhoto !== null} onOpenChange={(o) => { if (!o) setAskDeletePhoto(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirm.delete_photo_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("confirm.delete_photo_desc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground"
+              onClick={(e) => {
+                e.preventDefault();
+                const a = askDeletePhoto;
+                setAskDeletePhoto(null);
+                if (a?.kind === "gallery") void handleDeletePhoto(a.url);
+                else if (a?.kind === "pin") void removePlacePhoto(a.id);
+              }}
+            >
+              {t("confirm.delete_photo_confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* SKROCENIE WYJAZDU. To NIE jest akcja destrukcyjna - nic nie ginie, miejsca tylko
           zjezdzaja na ostatni dzien - wiec guzik jest pomaranczowy, nie czerwony. Pytamy
           mimo to, bo z samego krokomierza nie widac, ze cokolwiek sie przesunie. */}
@@ -3486,10 +3570,10 @@ export default function SharedRoute() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); const a = askShorten; setAskShorten(null); if (a) void saveDayCount(a.to); }}>
               {t("day.shorten_confirm")}
             </AlertDialogAction>
-            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -3514,9 +3598,9 @@ export default function SharedRoute() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); const d = askRemoveDay; setAskRemoveDay(null); if (d) void removeDay(d); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("day.remove")}</AlertDialogAction>
-            <AlertDialogCancel>{t("common:buttons.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

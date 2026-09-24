@@ -8,7 +8,14 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { UserAvatar } from "@/components/profile/FramedAvatar";
 import { useFollowList, followUser, unfollowUser, type FollowProfile } from "@/hooks/useFollow";
-import { useFriendIds, useFriendList, excludeFriend, unexcludeFriend, friendIdsKey } from "@/lib/friends";
+import {
+  useFriendIds, useFriendList, useIncomingFriendRequests,
+  respondToFriendRequest, removeFriend as removeFriendship, invalidateFriends, friendIdsKey,
+} from "@/lib/friends";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { haptics } from "@/hooks/useHaptics";
 
 export type PeopleTab = "followers" | "friends" | "following";
@@ -23,8 +30,7 @@ export type PeopleTab = "followers" | "friends" | "following";
 //   2. SZUKANIE. Kolejnosc wierszy to bylo to, co akurat zwrocila baza (`.in(ids)`), wiec przy
 //      200 osobach lista byla ekranem bez wyjscia.
 //   3. STAN RELACJI. Patrzac na swoich obserwujacych nie dalo sie zobaczyc, kogo obserwuje sie
-//      z powrotem - a po zmianie modelu (znajomy = wzajemna obserwacja) to jest GLOWNA
-//      informacja tej listy.
+//      z powrotem ani kto jest znajomym - a to jest GLOWNA informacja tej listy.
 //   4. AKCJA W WIERSZU. Jedyna akcja bylo wyjscie na cudzy profil, czyli opuszczenie listy.
 //   5. NAKLADKI AWATAROW. To byla jedyna lista ludzi w aplikacji bez `FramedAvatar`.
 //
@@ -56,6 +62,12 @@ export default function PeopleSheet({ open, onClose, tab, onTab, ownerId, myId, 
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<FollowProfile | null>(null);
+
+  // ZAPROSZENIA CZEKAJACE NA MOJA ODPOWIEDZ stoja na gorze zakladki "Znajomi". Powiadomienie
+  // jest pierwszym miejscem, gdzie sie odpowiada, ale znika po oznaczeniu jako przeczytane -
+  // a zaproszenie ma miec stale miejsce, do ktorego mozna wrocic.
+  const requests = useIncomingFriendRequests(open && own && tab === "friends" ? myId ?? null : null);
 
   // Listy WLASCICIELA profilu (to jest tresc arkusza).
   const followList = useFollowList(open ? ownerId : null, tab === "following" ? "following" : "followers");
@@ -100,24 +112,33 @@ export default function PeopleSheet({ open, onClose, tab, onTab, ownerId, myId, 
     }
   };
 
-  // WYPISANIE ZE ZNAJOMYCH. Jedyna droga odciecia komus dostepu do zdjec "tylko dla znajomych"
-  // BEZ odobserwowania - a odobserwowanie jest sygnalem publicznym i spolecznie kosztownym.
-  // Dziala od razu, z "Cofnij" w toascie: skoro jest odwracalne, nie zatrzymujemy usera
-  // dialogiem "czy na pewno".
-  const removeFriend = async (p: FollowProfile) => {
+  // ODPOWIEDZ NA ZAPROSZENIE. Odmowa jest cicha (druga strona nie dostaje powiadomienia)
+  // i zostawia jej obserwowanie - patrz `src/lib/friends.ts`.
+  const respond = async (p: FollowProfile, accept: boolean) => {
+    if (busy) return;
+    setBusy(p.id);
     try {
-      await excludeFriend(p.id);
-      queryClient.invalidateQueries({ queryKey: friendIdsKey(myId) });
-      toast(t("profile.friend_removed"), {
-        action: {
-          label: t("undo"),
-          onClick: () => {
-            unexcludeFriend(p.id)
-              .then(() => queryClient.invalidateQueries({ queryKey: friendIdsKey(myId) }))
-              .catch(() => toast.error(t("profile.friend_remove_failed")));
-          },
-        },
-      });
+      haptics.light();
+      const ok = await respondToFriendRequest(p.id, accept);
+      invalidateFriends(queryClient, myId);
+      if (!ok) { toast(t("people.request_gone")); return; }
+      toast(accept ? t("people.request_accepted") : t("people.request_declined"));
+    } catch {
+      toast.error(t("profile.friend_remove_failed"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // USUNIECIE ZE ZNAJOMYCH. ⚠️ Od 22.09 to NIE jest ciche wykluczenie z relacji domyslnej,
+  // tylko zerwanie relacji, na ktora obie strony sie zgodzily - i nie da sie go cofnac jednym
+  // tapnieciem (powrot wymaga nowego zaproszenia i jej akceptacji), wiec zamiast toasta
+  // z "Cofnij" jest pytanie przed.
+  const doRemove = async (p: FollowProfile) => {
+    try {
+      const ok = await removeFriendship(p.id);
+      invalidateFriends(queryClient, myId);
+      toast(ok ? t("profile.friend_removed") : t("profile.friend_remove_failed"));
     } catch {
       toast.error(t("profile.friend_remove_failed"));
     }
@@ -177,6 +198,48 @@ export default function PeopleSheet({ open, onClose, tab, onTab, ownerId, myId, 
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-6">
+          {/* Zaproszenia stoja NAD lista i NAD stanem zero: konto bez ani jednego znajomego
+              ma pokazac to, na co czeka odpowiedz, a nie sam napis "nie masz znajomych". */}
+          {(requests.data ?? []).length > 0 && (
+            <div className="pt-3">
+              <p className="pb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                {t("people.requests_title", { count: (requests.data ?? []).length })}
+              </p>
+              <div className="space-y-2">
+                {(requests.data ?? []).map((p) => (
+                  <div key={p.id} className="rounded-2xl bg-[#FCEDE3] p-3">
+                    <button
+                      onClick={() => { onClose(); if (p.username) navigate(`/profil/${p.username}`); }}
+                      className="flex w-full min-w-0 items-center gap-3 text-left"
+                    >
+                      <UserAvatar userId={p.id} src={p.avatar_url} size={40} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-semibold text-[#5B2C06]">{p.first_name || p.username || ""}</span>
+                        {p.username && <span className="block truncate text-[12px] text-[#9A7B63]">@{p.username}</span>}
+                      </span>
+                    </button>
+                    <div className="mt-2.5 flex gap-2">
+                      <button
+                        onClick={() => void respond(p, true)}
+                        disabled={busy === p.id}
+                        className="h-9 flex-1 rounded-full bg-primary text-[13px] font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+                      >
+                        {t("people.request_accept")}
+                      </button>
+                      <button
+                        onClick={() => void respond(p, false)}
+                        disabled={busy === p.id}
+                        className="h-9 flex-1 rounded-full border border-[#E6D6C8] bg-white text-[13px] font-semibold text-[#5B2C06] transition-transform active:scale-[0.98] disabled:opacity-60"
+                      >
+                        {t("people.request_decline")}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {source.isLoading ? (
             <p className="py-10 text-center text-sm text-muted-foreground">{t("people.loading")}</p>
           ) : rows.length === 0 ? (
@@ -225,7 +288,7 @@ export default function PeopleSheet({ open, onClose, tab, onTab, ownerId, myId, 
                         <span className="shrink-0 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-muted-foreground">{t("people.you")}</span>
                       ) : own && tab === "friends" ? (
                         <button
-                          onClick={() => void removeFriend(p)}
+                          onClick={() => setConfirmRemove(p)}
                           aria-label={t("profile.friend_remove")}
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-transform active:scale-90"
                         >
@@ -248,6 +311,26 @@ export default function PeopleSheet({ open, onClose, tab, onTab, ownerId, myId, 
           )}
         </div>
       </SheetContent>
+
+      {/* Pytanie przed zerwaniem: znajomosc wymaga teraz zgody obu stron, wiec jej powrot
+          kosztuje nowe zaproszenie i czyjas akceptacje - "Cofnij" w toascie by tego nie oddalo. */}
+      <AlertDialog open={!!confirmRemove} onOpenChange={(v) => { if (!v) setConfirmRemove(null); }}>
+        <AlertDialogContent>
+          <AlertDialogTitle>{t("profile.friend_remove_title")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("profile.friend_remove_desc", { name: confirmRemove?.first_name || confirmRemove?.username || "" })}
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("profile.friend_remove_cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground"
+              onClick={() => { const p = confirmRemove; setConfirmRemove(null); if (p) void doRemove(p); }}
+            >
+              {t("profile.friend_remove")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

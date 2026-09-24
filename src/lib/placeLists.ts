@@ -3,6 +3,7 @@ import { MAX_COLLECTION_PLACES, placeLimitToast } from "@/lib/placeLimits";
 import { randomListTheme } from "@/lib/listThemes";
 import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
+import { queryClient } from "@/lib/queryClient";
 import { photoUrlForStorage } from "@/lib/placePhotos";
 
 // Operacje na LISTACH MIEJSC usera (discovery_collections, kind='ranking').
@@ -289,6 +290,9 @@ export async function addPlaceToList(listId: string, place: PlaceForList, opts?:
   // Best-effort: blad powiadomienia nie moze wywrocic dodania miejsca.
   void (supabase as any).rpc("notify_collection_updated", { p_collection_id: listId, p_added: 1 })
     .then(({ error }: any) => { if (error) console.warn("[placeLists] notify_collection_updated:", error.message); });
+  // Feed Eksploracji sortuje kolekcje po `updated_at` i trzyma odpowiedz 5 min - po dodaniu
+  // miejsca ma wskoczyc na gore od razu, nie po odswiezeniu (zgloszenie Nat 2026-09-21).
+  queryClient.invalidateQueries({ queryKey: ["explore-rankings"] });
   return true;
 }
 

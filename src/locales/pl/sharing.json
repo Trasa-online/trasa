@@ -182,7 +182,10 @@
     "photos_many": "{{count}} zdjęć",
     "place_gone_with": "Razem z miejscem znikną {{parts}} dodane przez uczestników. Tego nie da się cofnąć.",
     "and": " i ",
-    "delete_trip_desc": "„{{title}}” zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć."
+    "delete_trip_desc": "„{{title}}” zniknie bezpowrotnie z Twojego profilu. Nie można tego cofnąć.",
+    "delete_photo_title": "Usunąć to zdjęcie?",
+    "delete_photo_desc": "Zniknie z tego planu u wszystkich uczestników. Zaraz po usunięciu możesz to jeszcze cofnąć w powiadomieniu na górze ekranu.",
+    "delete_photo_confirm": "Usuń zdjęcie"
   },
   "choose_places_desc": "Zaznacz miejsca, które wchodzą do planu.",
   "reorder_hint": "Przeciągnij, by zmienić kolejność",
@@ -240,11 +243,28 @@
     "day_n": "Dzień {{n}}",
     "more_in_app_one": "Jeszcze {{count}} miejsce zobaczysz w aplikacji",
     "more_in_app_few": "Jeszcze {{count}} miejsca zobaczysz w aplikacji",
-    "more_in_app_many": "Jeszcze {{count}} miejsc zobaczysz w aplikacji"
+    "more_in_app_many": "Jeszcze {{count}} miejsc zobaczysz w aplikacji",
+    "link_copied": "Skopiowano link",
+    "image_preparing": "Przygotowuję obraz…",
+    "image_failed": "Nie udało się przygotować obrazu",
+    "image_downloaded": "Obraz pobrany",
+    "image_hint_instagram": "Wybierz Instagram w arkuszu. Link jest w schowku - w Stories dodaj naklejkę „Link” i wklej.",
+    "image_hint_save": "Wybierz „Zapisz obraz”, żeby zachować go w Zdjęciach",
+    "stories_primer_title": "Relacja na Instagramie",
+    "stories_primer_step1": "Naklejka jest już na relacji - możesz ją przesunąć i powiększyć.",
+    "stories_primer_step2": "Link jest w schowku: dodaj naklejkę „Link” i wklej.",
+    "stories_primer_step3": "Zmień tekst naklejki na „spontaway” i postaw ją pod nazwą.",
+    "stories_primer_go": "Otwórz Instagram",
+    "stories_primer_skip": "Nie teraz",
+    "stories_link_hint": "Link skopiowany. W Stories dodaj naklejkę „Link” i wklej.",
+    "stories_primer_dismiss": "Nie pokazuj więcej"
   },
   "target": {
     "more_apps": "Więcej aplikacji",
-    "messages": "Wiadomości"
+    "messages": "Wiadomości",
+    "copy_link": "Skopiuj link",
+    "save_png": "Pobierz PNG",
+    "save_jpg": "Pobierz JPG"
   },
   "card": {
     "trip_label": "PLAN",
@@ -360,5 +380,11 @@
     "budget_spent_many": "Masz {{count}} wyróżnień na plan. Zdejmij jedno z innego zdjęcia, żeby przyznać tutaj.",
     "not_allowed": "Nie możesz wyróżniać zdjęć z własnego planu.",
     "failed": "Nie udało się zapisać wyróżnienia"
+  },
+  "sticker": {
+    "variant_full": "Gwiazdki + nazwa",
+    "variant_pill": "Sama nazwa",
+    "variant_alt": "Inny układ",
+    "variant_chalk": "Kredą"
   }
 }

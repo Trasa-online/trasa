@@ -11,7 +11,13 @@ import { subcategoryLabelLocalized } from "@/lib/categories";
 import TrasaBigCard from "@/components/home/TrasaBigCard";
 import { ListTile, LIST_TILES, type GridItem, type GridPlace } from "@/components/home/FeedTiles";
 import { listTheme } from "@/lib/listThemes";
-import { buildShareTargets, ShareTargetButton } from "@/components/share/shareTargets";
+import { buildShareTargets, ShareTargetButton, type ImageChannel } from "@/components/share/shareTargets";
+import { renderShareImage, deliverShareImage, shareImageFilename } from "@/lib/shareImage";
+import { isNative } from "@/lib/platform";
+import { stickerHandle, overlayPng, type StickerVariant } from "@/lib/placeSticker";
+import StoriesSheet, { storiesHintDismissed } from "@/components/share/StoriesSheet";
+import { canShareToStories, shareToInstagramStories, storyBackgroundFromPhoto, copyLinkToClipboard } from "@/lib/instagramStories";
+import { track } from "@/lib/analytics";
 import { SwipeCard, type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { rowOwnPhotos } from "@/lib/placeUserPhotos";
 
@@ -29,10 +35,11 @@ import { rowOwnPhotos } from "@/lib/placeUserPhotos";
 //  - WYJAZD to historia: licza sie TRASA i ludzie -> okladka, ponumerowane przystanki, awatary.
 // Jeden uniwersalny szablon obslugiwalby oba gorzej.
 //
-// Czego tu NIE ma: wyslania karty jako OBRAZKA. iOS nie da podac systemowi zrzutu, ktorego user
-// jeszcze nie zrobil, a renderowanie DOM-u do PNG wymaga biblioteki i CORS-u na wszystkich
-// zdjeciach. Dlatego kanaly nios LINK (otwiera te sama liste/wyjazd w aplikacji), a obrazek
-// powstaje ze zrzutu pelnego ekranu.
+// Kanaly niosa LINK (otwiera te sama kolekcje/plan w aplikacji). Od 2026-09-21 doszla druga
+// droga - karta jako OBRAZ (Instagram, „Pobierz PNG / JPG" pod Pinteresta i Stories): DOM
+// podgladu renderuje `src/lib/shareImage.ts` (modern-screenshot), a plik idzie w systemowy
+// arkusz z plikiem. Wczesniej celowo tego nie bylo (brak biblioteki i CORS-u na zdjeciach z
+// Google) - dzis zdjecia sa wylacznie z naszego Storage, wiec oba warunki odpadly.
 
 // Stopka karty: kto to zrobil + znak marki. Wspolna dla obu szablonow, zeby karta
 // zawsze konczyla sie tak samo i dalo sie ja rozpoznac po jednym elemencie.
@@ -72,8 +79,15 @@ type StripItem = { name: string; photo?: string | null; icon: string; category?:
 /** Autor udostepnianej tresci - awatar z ramka w belce arkusza, po prawej od "udostępnij". */
 type SheetAuthor = { userId?: string | null; avatar?: string | null; frame?: string | null; color?: string | null };
 
-function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, stripDays, stripMore, plainPreview, linkHeading, author }: {
+function ShareSheet({ children, kind, onClose, onShare, shareUrl, shareTitle, stripDays, stripMore, plainPreview, linkHeading, author, storyPhoto, storySticker }: {
   children: React.ReactNode;
+  /** Co udostepniamy - do analityki i nazwy pliku obrazu. */
+  kind: "route" | "list" | "place";
+  /** Instagram Stories na wprost (2026-09-21): zdjecie na TLO relacji (miejsce = jego okladka)... */
+  storyPhoto?: string | null;
+  /** ...i NAKLADKA na wierzch (miejsce = gwiazdki + pigulka z handle, zestaw wybrany w panelu).
+   *  Bez tego naklejka = karta z podgladu. */
+  storySticker?: { handle: string; render: (variant: StickerVariant) => Promise<Blob> };
   author?: SheetAuthor | null;
   onClose: () => void;
   onShare?: () => void;
@@ -92,8 +106,87 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, stripDay
 }) {
   const { t } = useTranslation("sharing");
   const slotRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
   const [full, setFull] = useState(false);
+  const [rendering, setRendering] = useState(false);
+
+  // INSTAGRAM STORIES NA WPROST (prosba Nat 2026-09-21): kafelek „Instagram" otwiera edytor
+  // relacji z NAKLADKA juz nalozona (miejsce: gwiazdki + pigulka @handle na zdjeciu miejsca;
+  // plan / kolekcja: karta z podgladu na gradiencie marki), a LINK do tresci laduje w schowku -
+  // w Stories user tapa naklejke „Link" i wkleja. Instagram nie przyjmuje linku z obrazem, wiec
+  // to jedyna droga do klikalnego linku (patrz instagramStories.ts). Przed przelaczeniem stoi
+  // panel (StoriesSheet): miejsce wybiera zestaw nakladki, a instruktaz „dodaj naklejke Link"
+  // ma „Nie pokazuj wiecej" - po schowaniu plan / kolekcja ida do Instagrama od razu.
+  // Bez App ID / bez Instagrama / na webie -> `false` i dotychczasowa droga (plik w arkuszu).
+  const [panel, setPanel] = useState<((variant: StickerVariant | null) => void) | null>(null);
+  const shareToStories = async (node: HTMLElement): Promise<boolean> => {
+    if (!(await canShareToStories())) return false;
+    let variant: StickerVariant = "full";
+    if (storySticker || !storiesHintDismissed()) {
+      const picked = await new Promise<StickerVariant | null>((resolve) => setPanel(() => resolve));
+      setPanel(null);
+      if (!picked) return true; // user odpuscil - nie otwieramy nic innego
+      variant = picked;
+    }
+    setRendering(true);
+    const toastId = toast.loading(t("share.image_preparing"));
+    try {
+      const [sticker, background] = await Promise.all([
+        storySticker ? storySticker.render(variant) : renderShareImage(node, "png", { background: "transparent", padding: 0 }),
+        storyPhoto ? storyBackgroundFromPhoto(storyPhoto) : Promise.resolve(null),
+      ]);
+      toast.dismiss(toastId);
+      const res = await shareToInstagramStories({ sticker, background, link: shareUrl });
+      if (res === "opened") {
+        track("content_shared_image", { kind, channel: "instagram_stories", format: "stories" });
+        if (shareUrl) toast(t("share.stories_link_hint"), { duration: 6000 });
+        return true;
+      }
+      if (res === "unavailable") return false;
+      toast.error(t("share.image_failed"));
+      return true;
+    } catch (e) {
+      console.warn("[ShareSheet] stories:", (e as any)?.message ?? e);
+      toast.dismiss(toastId);
+      return false;
+    } finally {
+      setRendering(false);
+    }
+  };
+
+  // Karta -> obraz -> Instagram / plik. Renderujemy DOKLADNIE ten DOM, ktory user widzi
+  // w podgladzie (`exportRef`), na zoltym tle marki - PNG i JPG dostaja ten sam kadr.
+  // Instagram = JPG (mniejszy plik, Stories i tak kompresuja), pobranie = wybrany format.
+  const shareAsImage = async (channel: ImageChannel) => {
+    const node = exportRef.current;
+    if (!node || rendering) return;
+    // Link do schowka OD RAZU, w gescie (WKWebView odrzuca `clipboard.writeText` po pierwszym
+    // `await` - tak zginal link przy Instagramie, zgloszenie Nat 2026-09-21); natywka kopiuje
+    // przez plugin, bez ograniczen gestu. Stories na wprost dokladaja link do wpisu ze
+    // naklejka i przywracaja go po otwarciu Instagrama.
+    if (channel === "instagram" && shareUrl) void copyLinkToClipboard(shareUrl);
+    if (channel === "instagram" && (await shareToStories(node))) return;
+    setRendering(true);
+    const toastId = toast.loading(t("share.image_preparing"));
+    try {
+      const format = channel === "png" ? "png" : "jpeg";
+      const blob = await renderShareImage(node, format);
+      toast.dismiss(toastId);
+      // Podpowiedz PRZED systemowym arkuszem - on wjezdza na wierzch i zostaje otwarty dluzej,
+      // niz zyje toast; po zamknieciu nie byloby juz czego czytac.
+      if (isNative) toast(channel === "instagram" ? t("share.image_hint_instagram") : t("share.image_hint_save"), { duration: 6000 });
+      const res = await deliverShareImage(blob, shareImageFilename(shareTitle, format), { title: shareTitle, kind, channel });
+      if (res === "failed") toast.error(t("share.image_failed"));
+      else if (res === "downloaded") toast.success(t("share.image_downloaded"));
+    } catch (e) {
+      console.warn("[ShareSheet] image:", (e as any)?.message ?? e);
+      toast.dismiss(toastId);
+      toast.error(t("share.image_failed"));
+    } finally {
+      setRendering(false);
+    }
+  };
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -130,14 +223,17 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, stripDay
         url: shareUrl,
         title: shareTitle,
         onSystemShare: () => onShare?.(),
-        onCopied: () => toast.success("Skopiowano link"),
+        onCopied: () => toast.success(t("share.link_copied")),
+        onImage: plainPreview ? shareAsImage : undefined,
       })
     : [];
 
   return (
-    // Zolte tlo + naglowek Sigmar wg makiety Nat (Figma "[NEW] Ekrany" -> "Udostępnianie
-    // wyjazdów oraz list" -> "Akcja: Udostępnij - Wyjazdy", 2026-09-08). Ekran ma wygladac jak
-    // czesc marki, a nie jak systemowy arkusz - to on ma zachecac do wyslania.
+    <>
+    {panel && <StoriesSheet handle={storySticker?.handle} photo={storyPhoto} onGo={(v) => panel(v)} onSkip={() => panel(null)} />}
+    {/* Zolte tlo + naglowek Sigmar wg makiety Nat (Figma "[NEW] Ekrany" -> "Udostępnianie
+        wyjazdów oraz list" -> "Akcja: Udostępnij - Wyjazdy", 2026-09-08). Ekran ma wygladac jak
+        czesc marki, a nie jak systemowy arkusz - to on ma zachecac do wyslania. */}
     <div data-vaul-no-drag data-no-drag className="fixed inset-0 z-[95] bg-spontaway-yellow flex flex-col animate-in fade-in duration-200 overflow-y-auto">
       <div className="shrink-0 flex items-center gap-2 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-1">
         <button onClick={onClose} aria-label={t("common:buttons.close")}
@@ -169,7 +265,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, stripDay
           <div className="w-full h-full flex justify-center items-center pb-3">
             {/* Szerokosc dobrana pod WIERSZ AUTORA: przy 250 px "@berd · Gdańsk · 5 miejsc"
                 sciskalo sie do "@ · G · 5 miejsc" (zlapane na zrzucie). */}
-            <div className="w-[min(82vw,330px)] h-full max-h-[520px]">{children}</div>
+            <div ref={exportRef} className="w-[min(82vw,330px)] h-full max-h-[520px]">{children}</div>
           </div>
         ) : scale > 0 && (
           <button onClick={() => setFull(true)} aria-label={t("share.open_fullscreen")}
@@ -245,6 +341,7 @@ function ShareSheet({ children, onClose, onShare, shareUrl, shareTitle, stripDay
         </div>
       )}
     </div>
+    </>
   );
 }
 
@@ -272,9 +369,13 @@ export function ShareCardPlace({ place, city, photos = [], onNextPhoto, onClose,
   const { t } = useTranslation("sharing");
   const noop = () => {};
   const canPick = !!onNextPhoto && photos.length > 1;
+  // Nakladka „★ @handle" na Stories (2026-09-21): handle = instagram lokalu albo nazwa „po instagramowemu".
+  const handle = stickerHandle({ place_name: place.place_name, businessInstagram: (place as any).businessInstagram ?? null, city: place.city || city || null });
   return (
-    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={place.place_name}
-      plainPreview linkHeading={t("share.link_heading_place")}>
+    <>
+    <ShareSheet kind="place" onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={place.place_name}
+      plainPreview linkHeading={t("share.link_heading_place")}
+      storyPhoto={place.photo_url || null} storySticker={{ handle, render: (v) => overlayPng(handle, v) }}>
       <div className="flex h-full w-full items-center justify-center">
         {/* SwipeCard jest `absolute inset-0` - potrzebuje pudelka 9:16 o znanej wysokosci.
             `key` = okladka: SwipeCard trzyma zdjecie w stanie z pierwszego renderu, wiec zmiana
@@ -285,6 +386,7 @@ export function ShareCardPlace({ place, city, photos = [], onNextPhoto, onClose,
         </div>
       </div>
     </ShareSheet>
+    </>
   );
 }
 
@@ -336,13 +438,13 @@ export function ShareCardList({ title, city, items, author, avatar, authorId, au
     authorAvatar: avatar ?? null, authorId: authorId ?? null,
     authorFrame: authorFrame ?? null, authorFrameColor: authorFrameColor ?? null,
     showAuthor: true,
-    at: 0, placesCount: items.length, days: null, mapUrl: null,
+    at: 0, placesCount: items.length, days: null,
     theme: listTheme(theme ?? null, collectionId),
     places,
     visitedCount,
   };
   return (
-    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
+    <ShareSheet kind="list" onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
       plainPreview linkHeading={t("share.link_heading_list")}
       author={{ userId: authorId, avatar, frame: authorFrame, color: authorFrameColor }}>
       {/* ⚠️ Biala oprawa jest KONIECZNA, nie dekoracyjna: arkusz ma tlo `#FDF184`, a dokladnie
@@ -403,7 +505,7 @@ export function ShareCardTrip({ title, city, pins, cover, onClose, onShare, shar
   return (
     // Podglad = karta z EKSPLORACJI, nie osobny plakat (prosba Nat 2026-09-08). Autor ma
     // zobaczyc dokladnie to, co zobaczy odbiorca - okladka w calosci, awatary, tagi i licznik.
-    <ShareSheet onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
+    <ShareSheet kind="route" onClose={onClose} onShare={onShare} shareUrl={shareUrl} shareTitle={title}
       stripDays={stripDays} stripMore={stripMore} plainPreview
       author={{ userId: authorId, avatar: authorAvatar, frame: authorFrame, color: authorFrameColor }}>
       {/* Bez miniaturki mapy: na podgladzie zjadala rog okladki, a to okladka jest tu trescia

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_TRIP_DAYS } from "@/lib/tripDays";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, X, Users, ChevronRight, ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { BrandCalendar, BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { collectionName, tripName, type NamingStrings } from "@/lib/placeNaming";
 import { createWyjazdFromPlaces, createEmptyWyjazd } from "@/lib/createWyjazd";
 import { checkPlaceLimit } from "@/lib/placeLimits";
+import { invalidateContentLists } from "@/lib/trash";
 import { inviteUsersToRoute } from "@/lib/groupInvite";
 import { inviteUsersToCollection } from "@/lib/collectionInvite";
 import { usePlaceSearch } from "@/hooks/usePlaceSearch";
@@ -60,7 +61,6 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     declines: (i18n.language || "pl").toLowerCase().startsWith("pl"),
   };
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("entry");
 
   // Lista
@@ -90,7 +90,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   const pickActive = open && step === "listPick";
   // Zasieg wyszukiwarki to KRAJE listy (2026-09-10). Wczesniej zawezal ja geokod miasta w
   // promieniu 30 km - przy liscie obejmujacej caly kraj wycinal wiekszosc trafien.
-  const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode } =
+  const { results: listResults, searching: listSearching, blocked: listBlocked, searchMode: listSearchMode, resolve: resolvePlace } =
     usePlaceSearch(listQuery, { countries: listCountries, enabled: pickActive });
 
   // Wyjazd
@@ -127,7 +127,13 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
 
   const close = () => onClose();
   const toggleSel = (id: string) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const togglePerson = (p: PersonLite) => setTripPeople((prev) => prev.some((x) => x.id === p.id) ? prev.filter((x) => x.id !== p.id) : [...prev, p]);
+  // Limit 10 wspoltworcow planu (decyzja Nat 2026-09-21) - toast z `placeLimits` zamiast
+  // cichego braku reakcji; kolekcje (`toggleListPerson`) limitu nie maja.
+  const togglePerson = (p: PersonLite) => {
+    const has = tripPeople.some((x) => x.id === p.id);
+    if (!has && !checkPlaceLimit("trip_members", tripPeople.length, 1)) return;
+    setTripPeople((prev) => (has ? prev.filter((x) => x.id !== p.id) : [...prev, p]));
+  };
   const tripPeopleIds = new Set(tripPeople.map((p) => p.id));
   const listPeopleIds = new Set(listPeople.map((p) => p.id));
   const toggleListPerson = (person: PersonLite) =>
@@ -141,11 +147,17 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
   // trzeba bylo wpisac ja od nowa. Zgloszenie testerki: "chcialabym kilka od razu wybrac,
   // a nie moge, bo po wybraniu jednej od razu mnie resetuje i wracam na poczatek".
   // Ponowne tapniecie ODZNACZA (wiersz i tak pokazywal ptaszka, ale klik nic nie robil).
-  const pickResult = (r: PlaceForList) => {
+  const pickResult = async (r: PlaceForList) => {
     haptics.light();
-    setManualPlaces((prev) => prev.some((m) => keyOfPlace(m) === keyOfPlace(r))
-      ? prev.filter((m) => keyOfPlace(m) !== keyOfPlace(r))
-      : [r, ...prev]);
+    // Podpowiedz z Google nie niesie jeszcze adresu ani wspolrzednych - jedno zapytanie
+    // dopiero przy WYBORZE (i ono zamyka darmowa sesje pisania). Wynik z naszego katalogu
+    // ma wszystko od razu i nie kosztuje nic.
+    const full = (r as any).source === "google" && r.latitude == null
+      ? ((await resolvePlace(r as any)) as PlaceForList)
+      : r;
+    setManualPlaces((prev) => prev.some((m) => keyOfPlace(m) === keyOfPlace(full))
+      ? prev.filter((m) => keyOfPlace(m) !== keyOfPlace(full))
+      : [full, ...prev]);
   };
   const removeManual = (p: PlaceForList) => setManualPlaces((prev) => prev.filter((m) => keyOfPlace(m) !== keyOfPlace(p)));
   // Licznik na guziku kroku "miejsca": przy wybieraniu kilku naraz zaznaczone wiersze
@@ -201,8 +213,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
         <GoogleGlyph className="h-[18px] w-[18px]" />
       </button>
       <button onClick={opts.onToggle} aria-label={opts.selected ? t("aria.remove_from_list") : t("aria.add_to_list")}
-        className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "border-2 border-border"}`}>
-        {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground" />}
+        /* Pomaranczowe „dodaj" - ten sam wiersz co w AddPlaceSheet (prosba Nat 2026-09-24). */
+        className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${opts.selected ? "bg-[#f0a583] text-white" : "bg-primary text-white"}`}>
+        {opts.selected ? <BrandCheck className="h-3.5 w-3.5 stroke-[3]" /> : <Plus className="h-4 w-4" strokeWidth={2.75} />}
       </button>
     </div>
   );
@@ -236,8 +249,9 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     }
     haptics.success();
     toast.success(t("toast.list_created"));
-    queryClient.invalidateQueries({ queryKey: ["profile-list-feed", user.id] });
-    queryClient.invalidateQueries({ queryKey: ["save-sheet-lists", user.id] });
+    // Wszystkie listy naraz (takze `explore-rankings` z 5-minutowym staleTime): bez tego
+    // nowa kolekcja pojawiala sie w Eksploracji dopiero po odswiezeniu (zgloszenie Nat 2026-09-21).
+    invalidateContentLists();
     close();
     navigate(`/lista/${id}`);
     // Pierwsza kolekcja = moment, w ktorym powiadomienia zaczynaja miec sens (reakcje innych):
@@ -283,7 +297,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       // Wyjazd zostaje utworzony tak czy siak - komunikat dotyczy wylacznie zaproszen.
       try {
         const res = await inviteUsersToRoute({ id, city: null, title, group_session_id: null }, tripPeople.map((p) => p.id), user.id);
-        if (!res.ok) { console.warn("[CreateFlowSheet] invite failed:", res.error); toast.error(t("social:invite.failed")); }
+        if (!res.ok && res.error !== "member_limit") { console.warn("[CreateFlowSheet] invite failed:", res.error); toast.error(t("social:invite.failed")); }
       } catch (e: any) {
         console.warn("[CreateFlowSheet] invite threw:", e?.message ?? e);
         toast.error(t("social:invite.failed"));
@@ -291,7 +305,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
     }
     setCreating(false);
     haptics.success();
-    queryClient.invalidateQueries({ queryKey: ["profile-trip-feed", user.id] });
+    invalidateContentLists();
     close();
     // Wejscie do WIDOKU WYJAZDU (SharedRoute) - swiezy szkic, miejsca dodaje sie guzikiem "+".
     navigate(`/route/${id}`);
@@ -309,8 +323,10 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
       <button onClick={onBack} className="text-sm font-medium text-[#181818] rounded-full border border-black/15 bg-white px-3.5 py-1.5 active:opacity-60 transition-opacity shrink-0">{backLabel ?? t("common:buttons.cancel")}</button>
       <h2 className="text-[20px] font-semibold text-foreground truncate">{title}</h2>
       {onNext ? (
+        /* Akcja „dalej / dodaj" na pomaranczu marki (prosba Nat 2026-09-24) - ten sam wzor,
+           co w arkuszu dodawania miejsca. Nieaktywna zostaje przygaszona. */
         <button onClick={onNext} disabled={!nextEnabled}
-          className={`text-sm font-medium rounded-full border bg-white px-3.5 py-1.5 shrink-0 transition-opacity ${nextEnabled ? "text-[#181818] border-black/15 active:opacity-60" : "text-[#bcbcbc] border-black/[0.07]"}`}>
+          className={`text-sm font-bold rounded-full px-3.5 py-1.5 shrink-0 transition-colors ${nextEnabled ? "bg-primary text-white active:scale-95" : "border border-black/[0.07] bg-white text-[#bcbcbc]"}`}>
           {nextLabel ?? t("common:buttons.next")}
         </button>
       ) : <span className="w-[68px] shrink-0" />}
@@ -475,7 +491,7 @@ export default function CreateFlowSheet({ open, onClose }: { open: boolean; onCl
                   )}
                   {listResults.map((r, i) => renderListRow({
                     rowKey: `${keyOfPlace(r)}-${i}`, place: r, subtitle: r.address,
-                    onToggle: () => pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
+                    onToggle: () => void pickResult(r), selected: manualPlaces.some((m) => keyOfPlace(m) === keyOfPlace(r)),
                   }))}
                 </div>
               ) : loadingSaved ? (

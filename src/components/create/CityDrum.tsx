@@ -4,7 +4,7 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import { BrandSearch, BrandPin } from "@/components/BrandIcon";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { TRIP_COUNTRIES, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
+import { TRIP_COUNTRIES, countriesInRegion, TRIP_REGIONS, citiesForCountry, countryForCity, countryLabel } from "@/lib/tripCountries";
 
 // Wspolny wybor kraju (dropdown) + miasta (drum-scroll). Wydzielony z CountryCityPicker,
 // reuse w nowym CreateFlowSheet (arkusz "Nowy wyjazd") oraz na pelnoekranowym /utworz.
@@ -92,21 +92,40 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
   const [results, setResults] = useState<{ name: string; full_address: string }[]>([]);
   const [searching, setSearching] = useState(false);
 
-  // Wyszukiwarka miast Google (autocomplete przez google-places-proxy, debounce). Bez płatnego
-  // Text Search - action "citysearch" uzywa Places Autocomplete (tanie, cache 24h w proxy).
+  // Wyszukiwarka miast: NAJPIERW nasze wlasne dane, Google dopiero gdy u nas nic nie ma
+  // (2026-09-22, ciecie kosztow). Miast na swiecie nie przybywa, a my mamy 90 krajow z lista
+  // miast w `TRIP_COUNTRIES` plus wszystkie miasta z naszego katalogu miejsc. Pytanie Google
+  // o "Krakow" bylo czystym marnotrawstwem - teraz idzie tam wylacznie fraza, ktorej u nas nie
+  // ma (np. male miasto za granica). ⚠️ Google zostaje jako furtka: bez niego user nie dodalby
+  // wyjazdu do miejsca, ktorego nie mamy na liscie.
   useEffect(() => {
     if (mode !== "search") return;
     const q = query.trim();
     if (q.length < 2) { setResults([]); setSearching(false); return; }
+    const norm = (v: string) => v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const nq = norm(q);
+    const local: { name: string; full_address: string }[] = [];
+    const seen = new Set<string>();
+    for (const c of TRIP_COUNTRIES) {
+      for (const name of c.cities) {
+        if (!norm(name).includes(nq) || seen.has(name)) continue;
+        seen.add(name);
+        local.push({ name, full_address: `${name}, ${countryLabel(c.name)}` });
+      }
+    }
+    if (local.length >= 3) { setResults(local.slice(0, 6)); setSearching(false); return; }
+
     let alive = true;
     setSearching(true);
     const t = setTimeout(async () => {
       try {
         const { data } = await supabase.functions.invoke("google-places-proxy", { body: { action: "citysearch", query: q } });
-        if (alive) setResults((((data as any)?.results ?? []) as { name: string; full_address: string }[]).slice(0, 6));
-      } catch { if (alive) setResults([]); }
+        const fromGoogle = (((data as any)?.results ?? []) as { name: string; full_address: string }[])
+          .filter((r) => !seen.has(r.name));
+        if (alive) setResults([...local, ...fromGoogle].slice(0, 6));
+      } catch { if (alive) setResults(local.slice(0, 6)); }
       finally { if (alive) setSearching(false); }
-    }, 350);
+    }, 400);
     return () => { alive = false; clearTimeout(t); };
   }, [query, mode]);
 
@@ -131,7 +150,7 @@ export default function CityCountryPicker({ city, onCityChange, compact = false 
                 className="w-full appearance-none rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
                 {TRIP_REGIONS.map((region) => (
                   <optgroup key={region} label={region}>
-                    {TRIP_COUNTRIES.filter((c) => c.region === region).map((c) => (
+                    {countriesInRegion(region).map((c) => (
                       <option key={c.name} value={c.name}>{countryLabel(c.name)}</option>
                     ))}
                   </optgroup>

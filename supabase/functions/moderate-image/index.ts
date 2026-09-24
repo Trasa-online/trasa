@@ -33,6 +33,29 @@ const atLeast = (value: string | undefined, min: string) =>
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+
+// ⚠️ LIMIT KOSZTOWY (audyt naduzyc 2026-09-24). Ta funkcja bije w Google Vision
+// (SafeSearch: 1,50 $/1000 po pierwszym tysiacu w miesiacu) i do 24.09 miala tylko jeden
+// warunek: „user jest zalogowany". Zalogowany user moze wolac ja w petli, a kazde wywolanie
+// to pieniadze. Licznik jest w BAZIE, bo pamiec funkcji brzegowej nie przezywa instancji.
+// Fail-open: awaria licznika nie moze zablokowac wgrywania zdjec.
+async function overQuota(bucket: string, limit: number, windowMinutes: number): Promise<boolean> {
+  try {
+    const url = Deno.env.get("SUPABASE_URL") ?? "";
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!url || !key) return false;
+    const res = await fetch(`${url}/rest/v1/rpc/try_consume_rate_limit`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: bucket, p_limit: limit, p_window_minutes: windowMinutes }),
+    });
+    if (!res.ok) return false;
+    return (await res.json()) === false;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -47,6 +70,14 @@ Deno.serve(async (req) => {
     );
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "unauthorized" }, 401);
+
+    // 150 sprawdzen na usera na dobe (normalna sesja to kilka zdjec) i 4000 na cala apke.
+    // Po przekroczeniu NIE wolamy Google i NIE blokujemy zdjecia - oddajemy „skipped", czyli
+    // to samo, co przy braku klucza. Zdjecie i tak mozna zglosic, a moderacja reczna zostaje.
+    if (await overQuota(`vision:user:${user.id}`, 150, 1440) || await overQuota("vision:all", 4000, 1440)) {
+      console.warn("[moderate-image] limit wyczerpany", { user: user.id });
+      return json({ enabled: true, verdict: "skipped", reason: "quota" });
+    }
 
     const { url, context, target, debugForceReject } = await req.json().catch(() => ({ url: null, context: null, target: null, debugForceReject: false }));
     if (!url || typeof url !== "string" || !/^https?:\/\//.test(url)) {

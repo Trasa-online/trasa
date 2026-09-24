@@ -20,7 +20,11 @@
  *   SUPABASE_SERVICE_ROLE_KEY=eyJ...  ← service_role z Supabase Dashboard
  */
 
+import { requirePaidGoogleOps } from "./_paidGoogleGuard";
 import { createClient } from "@supabase/supabase-js";
+
+requirePaidGoogleOps("backfill-photo-cache (cache-place-photo: Place Details + Places Photo)");
+
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 

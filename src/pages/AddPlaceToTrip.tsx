@@ -8,7 +8,7 @@ import { BrandSearch, BrandCheck } from "@/components/BrandIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { expandCity } from "@/lib/cities";
-import { MAIN_CATEGORIES } from "@/lib/categories";
+import { MAIN_CATEGORIES, placeCategoryLabel } from "@/lib/categories";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -282,7 +282,7 @@ const AddPlaceToTripInner = () => {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold leading-tight truncate">{place.place_name}</p>
           <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {t(`categories.${place.category}`, { defaultValue: t("add_place.place_fallback") })}
+            {placeCategoryLabel(place.category)}
             {place.address ? ` · ${place.address}` : ""}
           </p>
         </div>

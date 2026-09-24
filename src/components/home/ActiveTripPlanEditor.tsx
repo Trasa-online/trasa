@@ -26,6 +26,7 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import { uploadWithThumb } from "@/lib/imageThumbs";
 import { mapWithLimit } from "@/lib/imageCompression";
 import { EMPTY_ARRAY } from "@/lib/emptyRef";
+import { placeCategoryLabel } from "@/lib/categories";
 
 // Statyczna mapka pojedynczego miejsca (okladka karty planu). Tania (Maps Static + 24h CDN),
 // pomaranczowy pin, POI/transit ukryte. null gdy brak wspolrzednych.
@@ -89,7 +90,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[11px] text-muted-foreground truncate">{t(`categories.${pin.category}`, { defaultValue: t("categories.other") })}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{placeCategoryLabel(pin.category)}</p>
               {distLabel && (
                 <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-700">
                   <Navigation className="h-2.5 w-2.5" />{distLabel}
@@ -112,7 +113,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
 const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting }: { routeId: string; flush?: boolean; onDelete?: (e: React.MouseEvent) => void; deleting?: boolean }) => {
   const { t } = useTranslation("hometrip");
   // Etykieta kategorii miejsca (fallback -> "Miejsce"/"Place").
-  const catLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
+  const catLabel = (cat: string) => placeCategoryLabel(cat);
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

@@ -13,6 +13,8 @@ import {
   useTextsearchMonthly,
   useDailyGoogleQuota,
   useGoogleBilling,
+  useManualBilling,
+  saveManualBilling,
   syncGoogleBilling,
   TEXTSEARCH_MONTHLY_LIMIT,
   DAILY_CALL_LIMIT,
@@ -61,8 +63,27 @@ function Billing() {
   const due = net(thisMonth);
   const list = thisMonth.reduce((a, r) => a + r.cost, 0);
   const saved = thisMonth.reduce((a, r) => a + r.credits, 0);
-  const lastDay = thisMonth.length ? Math.max(...thisMonth.map((r) => Number(r.day.slice(8, 10)))) : 0;
-  const forecast = lastDay > 0 ? (due / lastDay) * getDaysInMonth(now) : 0;
+  // ⛔ OKRES LICZYMY Z DANYCH, NIE OD PIERWSZEGO DNIA MIESIACA. Eksport rozliczen ruszyl
+  // 20.09 i Google NIE uzupelnia go wstecz, wiec mamy dane z kilku dni, a panel pisal
+  // „za dni 1-23" i dzielil tempo przez 23 - klamal o zakresie i zanizal prognoze.
+  // ⚠️ Ta poprawka byla zrobiona na `main` 2026-09-23, ale panel buduje sie z galezi `admin`
+  // i nigdy tu nie dojechala - stad drugie zgloszenie Nat („caly czas zle kwoty").
+  const dayNums = thisMonth.map((r) => Number(r.day.slice(8, 10)));
+  const lastDay = dayNums.length ? Math.max(...dayNums) : 0;
+  const firstDay = dayNums.length ? Math.min(...dayNums) : 0;
+  const coveredDays = new Set(thisMonth.map((r) => r.day)).size;
+  const partialMonth = firstDay > 1;
+  // Reczne uzupelnienie dni SPRZED eksportu (migracja 20260924f). Bez tego wielka liczba
+  // w panelu nie zgadza sie z konsola Google - a to ona jest punktem odniesienia.
+  const { data: manual } = useManualBilling(monthKey);
+  const manualAmount = manual?.amount ?? 0;
+  const total = due + manualAmount;
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualDraft, setManualDraft] = useState("");
+  const [manualSaving, setManualSaving] = useState(false);
+  // ⚠️ Prognoza idzie z TEMPA dni, ktore realnie mamy - reczna kwota sprzed eksportu to koszt
+  // juz PONIESIONY, wiec dokladamy ja na koncu, a nie mnozymy przez dni miesiaca.
+  const forecast = coveredDays > 0 ? (due / coveredDays) * getDaysInMonth(now) + manualAmount : 0;
   const syncedAt = rows.length ? rows.reduce((a, r) => (r.synced_at > a ? r.synced_at : a), rows[0].synced_at) : null;
 
   // Rozbicie na uslugi (Places API, Maps JavaScript API, Geocoding...), netto, malejaco.
@@ -114,8 +135,62 @@ function Billing() {
         />
       ) : (
         <>
+          {partialMonth && (
+            <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <p className="text-xs font-semibold text-amber-900">
+                Ten miesiąc jest niepełny - eksport rozliczeń rusza od dnia {firstDay}.
+              </p>
+              <p className="mt-0.5 text-[11px] leading-snug text-amber-800">
+                Google nie uzupełnia eksportu wstecz, więc dni {firstDay > 2 ? `1-${firstDay - 1}` : "wcześniejsze"} nie są w nim liczone.
+                {manualAmount > 0
+                  ? " Brakujący kawałek jest wpisany ręcznie, więc kwota wyżej zgadza się z konsolą Google."
+                  : " Dopóki go nie uzupełnisz, w Google Cloud zobaczysz kwotę WYŻSZĄ - to nie jest błąd panelu."}
+              </p>
+              {/* Jedyne uczciwe wyjscie na TEN miesiac: przepisac brakujacy kawalek z konsoli.
+                  Cloud Billing API nie oddaje kosztow, a eksport nie cofa sie. */}
+              {!manualOpen ? (
+                <button
+                  onClick={() => { setManualOpen(true); setManualDraft(manualAmount ? String(manualAmount) : ""); }}
+                  className="mt-2 text-[11px] font-bold text-amber-900 underline underline-offset-2"
+                >
+                  {manualAmount > 0 ? "Zmień kwotę sprzed eksportu" : `Wpisz kwotę z Google za dni 1-${Math.max(1, firstDay - 1)}`}
+                </button>
+              ) : (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number" step="0.01" min="0" inputMode="decimal" autoFocus
+                    value={manualDraft}
+                    onChange={(e) => setManualDraft(e.target.value)}
+                    placeholder="np. 23.03"
+                    className="h-8 w-28 rounded-lg border border-amber-300 bg-white px-2 text-xs tabular-nums outline-none focus:border-amber-500"
+                  />
+                  <button
+                    disabled={manualSaving}
+                    onClick={async () => {
+                      setManualSaving(true);
+                      const v = manualDraft.trim() === "" ? null : Number(manualDraft.replace(",", "."));
+                      const res = await saveManualBilling(monthKey, v, `dni 1-${Math.max(1, firstDay - 1)} z konsoli Google`);
+                      setManualSaving(false);
+                      if (!res.ok) { setSyncMsg(`Błąd zapisu: ${res.error}`); return; }
+                      setManualOpen(false);
+                      qc.invalidateQueries({ queryKey: ["api-costs", "billing-manual", monthKey] });
+                    }}
+                    className="h-8 rounded-lg bg-amber-900 px-3 text-[11px] font-bold text-white disabled:opacity-50"
+                  >
+                    Zapisz
+                  </button>
+                  <button onClick={() => setManualOpen(false)} className="text-[11px] font-semibold text-amber-900/70">Anuluj</button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <Metric label={`Do zapłaty, dni 1-${lastDay}`} value={money(due, cur)} tone="ok" />
+            <Metric
+              label={manualAmount > 0 ? "Do zapłaty w tym miesiącu" : `Do zapłaty, dni ${firstDay}-${lastDay}`}
+              value={money(total, cur)}
+              hint={manualAmount > 0 ? `${money(due, cur)} z eksportu + ${money(manualAmount, cur)} wpisane ręcznie` : `${coveredDays} ${coveredDays === 1 ? "dzień" : "dni"} w eksporcie`}
+              tone="ok"
+            />
             <Metric label="Prognoza na miesiąc" value={`≈ ${money(forecast, cur)}`} hint="z tempa rozliczonych dni" />
             <Metric label="Rabaty i darmowa pula" value={`-${money(saved, cur)}`} hint={`z ${money(list, cur)} wg cennika`} />
             <Metric label="Poprzedni miesiąc" value={lastMonth.length ? money(net(lastMonth), cur) : "-"} />

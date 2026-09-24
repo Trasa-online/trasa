@@ -40,6 +40,39 @@ export function useGoogleBilling() {
   });
 }
 
+
+// ── RECZNE UZUPELNIENIE SPRZED EKSPORTU ─────────────────────────────────────
+// Eksport rozliczen ruszyl 20.09 i Google nie uzupelnia go wstecz, wiec wrzesien ma w naszym
+// zrodle dziure (dni 1-19). Panel pokazywal przez to inna kwote niz konsola Google - obie
+// prawdziwe, ale nie ta sama. Brakujacy kawalek wpisuje sie RAZ, recznie, z konsoli.
+// ⛔ Trzymane OSOBNO od `google_billing_daily`, zeby nikt po miesiacach nie wzial szacunku
+// za dane z eksportu. Od pazdziernika tabela ma byc pusta.
+export interface ManualBilling { month: string; amount: number; note: string | null }
+
+export function useManualBilling(month: string) {
+  return useQuery<ManualBilling | null>({
+    queryKey: ["api-costs", "billing-manual", month],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("google_billing_manual").select("month, amount, note").eq("month", `${month}-01`).maybeSingle();
+      return data ? { ...data, amount: Number(data.amount) } : null;
+    },
+  });
+}
+
+/** Zapis (admin). Pusta/zerowa kwota KASUJE wpis - inaczej zostawalaby zerowa pozycja w panelu. */
+export async function saveManualBilling(month: string, amount: number | null, note?: string): Promise<{ ok: boolean; error?: string }> {
+  const key = `${month}-01`;
+  if (amount === null || !Number.isFinite(amount) || amount <= 0) {
+    const { error } = await (supabase as any).from("google_billing_manual").delete().eq("month", key);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  const { data: me } = await supabase.auth.getUser();
+  const { error } = await (supabase as any).from("google_billing_manual")
+    .upsert({ month: key, amount, note: note ?? null, updated_by: me?.user?.id ?? null, updated_at: new Date().toISOString() }, { onConflict: "month" });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
 /** "Odswiez teraz" - funkcja brzegowa dociaga eksport z BigQuery (gate: admin). */
 export async function syncGoogleBilling(): Promise<{ ok: boolean; rows?: number; error?: string; note?: string }> {
   const { data, error } = await supabase.functions.invoke("google-billing-sync", { body: {} });

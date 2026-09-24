@@ -159,6 +159,10 @@ export default function StarredPlacesSheet({ open, onOpenChange, userId, own = t
                       ? <BrandIcon src="/Ikona_Trasy.svg" className="h-3 w-3 shrink-0" />
                       : <BrandIcon src={LIST_ICON} className="h-3 w-3 shrink-0" />}
                     <span className="truncate">{p.source.title || (p.source.kind === "trip" ? t("starred.trip_fallback") : t("starred.list_fallback"))}</span>
+                    {/* To samo miejsce wyroznione w kilku planach/kolekcjach = jeden wiersz z licznikiem. */}
+                    {p.sources.length > 1 && (
+                      <span className="shrink-0 text-muted-foreground/80">{t("starred.also_in", { count: p.sources.length - 1 })}</span>
+                    )}
                   </span>
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />

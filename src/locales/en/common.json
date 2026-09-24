@@ -184,6 +184,7 @@
   },
   "limits": {
     "trip_places": "A plan can hold up to {{max}} places. {{left}} left.",
-    "collection_places": "A collection can hold up to {{max}} places. {{left}} left."
+    "collection_places": "A collection can hold up to {{max}} places. {{left}} left.",
+    "trip_members": "A plan can have up to {{max}} collaborators. {{left}} spots left."
   }
 }

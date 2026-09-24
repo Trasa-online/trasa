@@ -5,6 +5,11 @@ import { Loader2 } from "lucide-react";
 // iOS, gdzie natywny PTR przegladarki nie obejmuje wewnetrznych scrolli).
 // Uzycie: owija scrollowalny kontener; onRefresh wywolywany po pociagnieciu w dol
 // powyzej progu, gdy scroll jest na samej gorze.
+//
+// OD 2026-09-24 (prosba Nat) dziala TEZ W DRUGA STRONE: pociagniecie W GORE na samym
+// DOLE listy odswieza tak samo. Powod jest praktyczny - w feedzie Eksploracji karta
+// zajmuje caly ekran, wiec zeby odswiezyc "z gory" trzeba bylo najpierw przewinac cala
+// liste z powrotem. Kto doszedl do konca, ten wlasnie chce zobaczyc, czy jest cos nowego.
 const THRESHOLD = 70;
 const MAX = 110;
 
@@ -14,6 +19,7 @@ export function PullToRefresh({
   children,
   onScroll,
   scrollRef,
+  pullUp = true,
 }: {
   onRefresh: () => Promise<void> | void;
   className?: string;
@@ -23,6 +29,8 @@ export function PullToRefresh({
   /** Wystawia scrollowany element na zewnatrz - scroller jest TUTAJ, wiec bez tego
    *  rodzic nie ma czego podac np. do `useScrollRestore`. */
   scrollRef?: React.MutableRefObject<HTMLDivElement | null>;
+  /** Odswiezanie takze pociagnieciem W GORE na koncu listy. Domyslnie wlaczone. */
+  pullUp?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -32,17 +40,33 @@ export function PullToRefresh({
   }, [scrollRef]);
   const startY = useRef<number | null>(null);
   const startX = useRef<number>(0);
+  // Z KTOREGO konca wystartowal gest: "top" = mozliwy pull w dol, "bottom" = pull w gore.
+  // Ustalane na touchstart, bo w trakcie gestu scrollTop juz sie zmienia.
+  const edge = useRef<"top" | "bottom" | null>(null);
   // Kierunek gestu ustalany RAZ na gest: "v" pionowy (pull), "h" poziomy (scroll w
   // bok np. w "Najnowsze trasy" - wtedy NIE odpalamy pull), null = jeszcze nieznany.
   const lockDir = useRef<"v" | "h" | null>(null);
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  // Znak pociagniecia: 1 = od gory (spacer nad trescia), -1 = od dolu (spacer pod trescia).
+  const [dirSign, setDirSign] = useState<1 | -1>(1);
+
+  const atTop = () => (ref.current?.scrollTop ?? 0) <= 0;
+  const atBottom = () => {
+    const el = ref.current;
+    if (!el) return false;
+    // Zapas 2 px na subpiksele; lista krotsza niz ekran NIE liczy sie jako "koniec" -
+    // inaczej na ekranie bez scrolla kazde machniecie w gore odswiezaloby widok.
+    if (el.scrollHeight - el.clientHeight < 24) return false;
+    return el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+  };
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (refreshing) return;
     lockDir.current = null;
     startX.current = e.touches[0].clientX;
-    startY.current = (ref.current?.scrollTop ?? 0) <= 0 ? e.touches[0].clientY : null;
+    edge.current = atTop() ? "top" : pullUp && atBottom() ? "bottom" : null;
+    startY.current = edge.current ? e.touches[0].clientY : null;
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
@@ -58,8 +82,12 @@ export function PullToRefresh({
       }
     }
     if (lockDir.current !== "v") { setPull(0); return; } // gest poziomy -> nie ruszamy
-    if (dy > 0 && (ref.current?.scrollTop ?? 0) <= 0) {
+    if (edge.current === "top" && dy > 0 && atTop()) {
+      setDirSign(1);
       setPull(Math.min(MAX, dy * 0.5)); // opor (resistance)
+    } else if (edge.current === "bottom" && dy < 0 && atBottom()) {
+      setDirSign(-1);
+      setPull(Math.min(MAX, -dy * 0.5));
     } else {
       setPull(0);
     }
@@ -70,6 +98,7 @@ export function PullToRefresh({
     const reached = pull >= THRESHOLD;
     startY.current = null;
     lockDir.current = null;
+    edge.current = null;
     if (reached && !refreshing) {
       setRefreshing(true);
       setPull(THRESHOLD);
@@ -80,6 +109,15 @@ export function PullToRefresh({
   };
 
   const settling = startY.current === null;
+  const spinner = (
+    <Loader2
+      className={`h-5 w-5 text-primary ${dirSign === 1 ? "mb-2" : "mt-2"} ${refreshing ? "animate-spin" : ""}`}
+      style={{
+        opacity: Math.min(1, pull / THRESHOLD),
+        transform: refreshing ? undefined : `rotate(${Math.round(pull * 3)}deg)`,
+      }}
+    />
+  );
 
   return (
     <div
@@ -98,19 +136,20 @@ export function PullToRefresh({
     >
       <div
         className="flex items-end justify-center overflow-hidden shrink-0"
-        style={{ height: pull, transition: settling ? "height 0.2s ease" : "none" }}
+        style={{ height: dirSign === 1 ? pull : 0, transition: settling ? "height 0.2s ease" : "none" }}
       >
-        {pull > 0 && (
-          <Loader2
-            className={`h-5 w-5 text-primary mb-2 ${refreshing ? "animate-spin" : ""}`}
-            style={{
-              opacity: Math.min(1, pull / THRESHOLD),
-              transform: refreshing ? undefined : `rotate(${Math.round(pull * 3)}deg)`,
-            }}
-          />
-        )}
+        {dirSign === 1 && pull > 0 && spinner}
       </div>
       {children}
+      {/* Ten sam wskaznik pod trescia - dla pociagniecia od dolu. ⚠️ Element istnieje ZAWSZE
+          (o zerowej wysokosci), bo dokladany dopiero w trakcie gestu zmienialby wysokosc
+          zawartosci w chwili, gdy scroller stoi na samym koncu - i lista skakalaby pod palcem. */}
+      <div
+        className="flex items-start justify-center overflow-hidden shrink-0"
+        style={{ height: dirSign === -1 ? pull : 0, transition: settling ? "height 0.2s ease" : "none" }}
+      >
+        {dirSign === -1 && pull > 0 && spinner}
+      </div>
     </div>
   );
 }

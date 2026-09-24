@@ -12,6 +12,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
+import { TESTFLIGHT_URL } from "@/lib/testflight";
 
 /** Ile zaproszen "domyka" pasek postepu. Prog, nie brama - nic nie jest odciete. */
 export const REFERRAL_GOAL = 3;
@@ -87,5 +88,27 @@ export async function fetchReferralStats(_userId: string): Promise<ReferralStats
   return { code: row?.code ?? null, invited: Number(row?.invited ?? 0) };
 }
 
-/** Link prowadzi na LANDING, nie w glab apki: zapraszany jeszcze jej nie ma. */
-export const referralLink = (code: string) => `${SHARE_BASE_URL}/?ref=${encodeURIComponent(code)}`;
+/**
+ * Link z zaproszenia prowadzi PROSTO DO TESTFLIGHT (zgloszenie Nat 2026-09-24: „piecioro
+ * testerow chce sie dostac do aplikacji i nie moze").
+ *
+ * Do tej pory szedl na landing (`spontaway.com/?ref=<kod>`) - a landing przed premiera
+ * (`APP_LIVE = false` w [SpontawayLanding.tsx](../pages/SpontawayLanding.tsx)) NIE MA zadnej
+ * drogi do apki: plakietki sklepowe sa wygaszone, a jedyne dzialajace pole to zapis na
+ * powiadomienie o premierze. Zapraszany ladowal wiec w slepym zaulku, mimo ze apka dziala
+ * i czeka na niego w testach. Tego samego adresu uzywa kod QR z tej samej karty - i to on
+ * jako jedyny dzialal.
+ *
+ * ⚠️ KOSZT, swiadomy: adres TestFlight nie przyjmuje parametrow, wiec rejestracja z takiego
+ * zaproszenia NIE DOLICZY SIE do licznika (`profiles.referred_by` ustawia sie z kodu w URL
+ * albo z e-maila zapisanego na waitliscie). Dopoki apka nie jest w App Store, wejscie
+ * testera jest warte wiecej niz slupek postepu. Cala maszyneria kodow zostaje nietknieta:
+ * `captureReferralFromUrl` dalej lapie `?ref=` u kazdego, kto wejdzie na landing.
+ *
+ * ⛔ PO PREMIERZE wroc na `referralLandingLink` - wtedy landing prowadzi do App Store,
+ * a atrybucja zaproszen znowu dziala.
+ */
+export const inviteLink = () => TESTFLIGHT_URL;
+
+/** Link na landing z kodem - do wykorzystania po premierze (patrz `inviteLink`). */
+export const referralLandingLink = (code: string) => `${SHARE_BASE_URL}/?ref=${encodeURIComponent(code)}`;
