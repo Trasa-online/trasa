@@ -17,6 +17,16 @@
 // gasic zdjecia przy kazdym drgnieciu infrastruktury; realna obrona to licznik na IP, ktory
 // przy awarii i tak nie zniknie na dlugo.
 //
+// DWIE DROGI DO LICZNIKA, w kolejnosci sily:
+//  1. KLUCZ SERWISOWY (`SUPABASE_SERVICE_ROLE_KEY` w zmiennych Vercela) - wtedy wolamy
+//     `try_consume_rate_limit`, ktory jest WYLACZNIE dla service_role. Z zewnatrz nie da sie
+//     go tknac, wiec nie da sie ani ominac limitu, ani nabic go nam na zlosc.
+//  2. Zapasowo: klucz ANON + TOKEN (nizej). Dziala tak samo dla kosztow, ale token zyje
+//     w kodzie serwerowym - kto by go wydobyl, moglby podbic nasz licznik i zgasic obrazki.
+// ⛔ Klucza serwisowego NIE WOLNO uzyc nigdzie, gdzie odpowiedz wraca do przegladarki -
+// tutaj sluzy wylacznie do policzenia zadania i nigdy nie opuszcza funkcji brzegowej.
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
 // ⛔ TOKEN zyje w kodzie SERWEROWYM (katalog api/ nie trafia do paczki przegladarki). Chroni
 // wylacznie przed nabijaniem NASZEGO licznika z zewnatrz - gdyby ktos mogl wolac RPC bez tokenu,
 // zablokowalby nam obrazki jednym skryptem.
@@ -50,12 +60,18 @@ function callerIp(req: Request): string {
 }
 
 async function consume(bucket: string, limit: number, windowMinutes: number): Promise<boolean> {
-  if (!ANON) return true;                         // brak konfiguracji - nie blokujemy
+  const key = SERVICE_KEY || ANON;
+  if (!key) return true;                          // brak konfiguracji - nie blokujemy
+  // Z kluczem serwisowym idziemy do funkcji zamknietej dla swiata; bez niego do tej z tokenem.
+  const fn = SERVICE_KEY ? "try_consume_rate_limit" : "try_consume_edge_quota";
+  const payload = SERVICE_KEY
+    ? { p_bucket: `edge:${bucket}`, p_limit: limit, p_window_minutes: windowMinutes }
+    : { p_token: QUOTA_TOKEN, p_bucket: bucket, p_limit: limit, p_window_minutes: windowMinutes };
   try {
-    const res = await fetch(`${SUPA}/rest/v1/rpc/try_consume_edge_quota`, {
+    const res = await fetch(`${SUPA}/rest/v1/rpc/${fn}`, {
       method: "POST",
-      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_token: QUOTA_TOKEN, p_bucket: bucket, p_limit: limit, p_window_minutes: windowMinutes }),
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
     if (!res.ok) return true;                     // fail-open, patrz naglowek pliku
     return (await res.json()) !== false;
