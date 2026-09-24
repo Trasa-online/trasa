@@ -18,6 +18,28 @@ function rateLimited(ip: string, max = 5, windowMs = 60_000): boolean {
   return false;
 }
 
+
+// ⚠️ TRWALY limit w BAZIE obok pamieciowego (audyt naduzyc 2026-09-24). Pamiec funkcji
+// brzegowej zyje tylko w jednej instancji, a Deno Deploy trzyma ich wiele naraz i podnosi
+// nowe pod obciazeniem - czyli dokladnie wtedy, gdy limit jest potrzebny. Licznik w bazie
+// jest wspolny dla wszystkich instancji. Fail-open: blad bazy nie moze zablokowac rejestracji.
+async function dbRateLimited(bucket: string, limit: number, windowMinutes: number): Promise<boolean> {
+  try {
+    const url = Deno.env.get("SUPABASE_URL") ?? "";
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!url || !key) return false;
+    const res = await fetch(`${url}/rest/v1/rpc/try_consume_rate_limit`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: bucket, p_limit: limit, p_window_minutes: windowMinutes }),
+    });
+    if (!res.ok) return false;
+    return (await res.json()) === false;
+  } catch {
+    return false;
+  }
+}
+
 const REDIRECT_TO = "https://spontaway.com/#/set-password-biznes";
 
 Deno.serve(async (req) => {
@@ -27,7 +49,7 @@ Deno.serve(async (req) => {
 
   try {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
-    if (rateLimited(ip)) {
+    if (rateLimited(ip) || await dbRateLimited(`bizreg:ip:${ip}`, 20, 60) || await dbRateLimited("bizreg:all", 300, 60)) {
       return new Response(JSON.stringify({ error: "rate_limited" }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

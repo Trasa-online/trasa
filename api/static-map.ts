@@ -1,7 +1,14 @@
+import { allowEdgeCall, quotaExceeded } from "./_quota";
+
 export const config = { runtime: "edge" };
 
 export default async function handler(req: Request): Promise<Response> {
   const { searchParams } = new URL(req.url);
+
+  // Limit NA IP (godzina) + globalny (doba) - audyt naduzyc 2026-09-24. Zaokraglanie
+  // wspolrzedne nizej sklejalo tylko PRZYPADKOWA roznorodnosc adresow; celowej petli
+  // (inny zoom, inny rozmiar, inne wspolrzedne) nie zatrzymywalo nic.
+  if (!(await allowEdgeCall("map", req))) return quotaExceeded();
 
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
