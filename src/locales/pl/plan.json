@@ -263,5 +263,17 @@
   },
   "templates": {
     "none_for_city": "Brak gotowych plannerów dla {{city}} - pracujemy nad tym!"
+  },
+  "distance": {
+    "title": "Odległość ode mnie",
+    "desc": "Pokazujemy tylko miejsca w wybranym promieniu. Liczymy go od Twojej lokalizacji.",
+    "any": "Dowolna",
+    "up_to_km": "do {{km}} km",
+    "chip_km": "{{km}} km",
+    "filter_aria": "Filtr odległości",
+    "empty_title": "Nic w promieniu {{km}} km",
+    "empty_desc": "Rozszerz promień albo zdejmij filtr, żeby zobaczyć pozostałe miejsca.",
+    "show_all": "Pokaż wszystkie",
+    "need_location": "Włącz lokalizację, żeby filtrować miejsca po odległości."
   }
 }

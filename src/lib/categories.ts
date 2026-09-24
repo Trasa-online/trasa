@@ -268,3 +268,80 @@ const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
 export const getDbCategoriesFor = (subcategoryId: string): string[] => {
   return SUBCATEGORY_DB_ALIASES[subcategoryId] ?? [subcategoryId];
 };
+
+// ── Etykieta kategorii MIEJSCA (jedno wejscie dla calej apki) ────────────────
+// Zgloszenie Nat 2026-09-24: na karcie w zakladce Miejsca zamiast nazwy kategorii
+// staly surowe klucze ("categories.church"). Przyczyna byla wszedzie ta sama: kazdy
+// ekran tlumaczyl kategorie WLASNYM kluczem we WLASNEJ przestrzeni (`plan:categories.*`,
+// `myplan:categories.*`, `home:categories.*`), a te listy powstaly przy roznych okazjach
+// i zadna nie zna wszystkich wartosci, ktore realnie siedza w bazie. `places.category` ma
+// dzis m.in. church, landmark, nature, bakery, book_store, clothing_store, boutique i
+// "other" - a `plan:categories` zna dwanascie. Brak klucza + brak fallbacku = i18next
+// oddaje sam klucz, czyli user widzi kod.
+//
+// Dlatego etykieta ma JEDNO zrodlo: przestrzen `categories` (`sub.*` / `main.*`), ta sama,
+// z ktorej korzysta panel lokalu. ⛔ Nie dopisuj kategorii do `plan`/`home`/`myplan` -
+// dopisz `sub.<id>` w `src/locales/{pl,en}/categories.json`.
+//
+// ⚠️ Fallback NIGDY nie jest kluczem ani surowa wartoscia z bazy: nieznana kategoria
+// czyta sie jako "Miejsce" / "Place". Lepiej powiedziec mniej niz pokazac kod.
+
+// Wartosci, ktore w bazie znacza to samo, co nasza podkategoria. Wpisy PO POLSKU sa
+// historyczne (stare importy zapisywaly ETYKIETE zamiast identyfikatora) - zostaja, bo
+// takich wierszy nie da sie poprawic wstecz w 100 %.
+const PLACE_CATEGORY_ALIASES: Record<string, string> = {
+  // i18n-ignore-start: klucze dopasowania wartosci z bazy, nie copy
+  shop: "store",
+  shopping: "store",
+  nightlife: "nightclub",
+  night_club: "nightclub",
+  // ⛔ `walk` i `nature` NIE sa tu aliasowane na "park" - maja wlasne etykiety ("Spacer",
+  // "Natura"). Alias zmienialby to, co user czyta, a nie tylko to, co filtrujemy.
+  garden: "park",
+  beach: "park",
+  library: "bookshop",
+  tourist_attraction: "experience",
+  amusement_park: "experience",
+  zoo: "experience",
+  aquarium: "experience",
+  movie_theater: "cinema",
+  performing_arts_theater: "theater",
+  concert_hall: "live_music",
+  pastry: "bakery",
+  patisserie: "bakery",
+  dessert: "bakery",
+  liquor_store: "wine_shop",
+  antique_store: "vintage_store",
+  thrift_store: "vintage_store",
+  second_hand_store: "vintage_store",
+  kawiarnia: "cafe",
+  restauracja: "restaurant",
+  piekarnia: "bakery",
+  muzeum: "museum",
+  zabytek: "monument",
+  galeria: "gallery",
+  park: "park",
+  targ: "market",
+  sklep: "store",
+  klub: "nightclub",
+  bar: "bar",
+  // i18n-ignore-end
+};
+
+/** Etykieta kategorii miejsca wg aktywnego jezyka. Nieznana wartosc -> "Miejsce"/"Place". */
+export const placeCategoryLabel = (value: string | null | undefined): string => {
+  const fallback = () => i18n.t("other", { ns: "categories" });
+  if (!value) return fallback();
+  const raw = String(value).trim().toLowerCase();
+  if (!raw || raw === "other" || raw === "place") return fallback();
+  const id = PLACE_CATEGORY_ALIASES[raw] ?? raw;
+  // ⚠️ NAJPIERW podkategoria, potem kategoria glowna. `nature` i `shopping` sa jednym
+  // i drugim naraz, a na karcie miejsca chcemy waskiej etykiety ("Natura", "Sklep"),
+  // nie nazwy calej polki ("Natura & Widoki", "Zakupy").
+  const canon = getSubcategoryLabel(id);
+  const label = i18n.t(`sub.${id}`, { ns: "categories", defaultValue: canon ?? "" });
+  if (label) return label;
+  // Kategoria GLOWNA (food / culture / ...) tez bywa zapisana w `category`.
+  if (MAIN_CATEGORIES.some((m) => m.id === id)) return mainCategoryLabel(id);
+  return fallback();
+};

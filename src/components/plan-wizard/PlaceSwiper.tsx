@@ -27,7 +27,7 @@ import { useOnboarding } from "@/components/OnboardingGuide";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useDragToDismiss } from "@/hooks/useDragToDismiss";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
-import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel } from "@/lib/categories";
+import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES, mainCategoryLabel, placeCategoryLabel } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup, removeLikeFromCity } from "@/lib/exploreLikes";
 import { expandCity } from "@/lib/cities";
 import { toast } from "sonner";
@@ -518,7 +518,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           przeniesiony z dolu karty z powrotem na gore, w parze z chipem "X km od Ciebie"). */}
       {(() => {
         const bizMainLabel = place.businessMainCategory ? mainCategoryLabel(place.businessMainCategory) : null;
-        const subLabel = t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] });
+        // ⛔ Etykieta idzie przez `placeCategoryLabel`, a NIE przez `plan:categories.<id>`:
+        // ta lista zna dwanascie kategorii, a baza ma m.in. church / landmark / bakery.
+        // Brak klucza konczyl sie napisem "categories.church" na karcie (zgloszenie Nat).
+        const subLabel = placeCategoryLabel(place.category);
         const label = bizMainLabel ?? subLabel;
         if (!label) return null;
         return (
@@ -893,6 +896,12 @@ interface PlaceSwiperProps {
   dietFilters?: string[];
   // Sortowanie po dystansie od startingLocation (rosnaco). Bez efektu jesli startingLocation nie ma lat/lng.
   sortByNearest?: boolean;
+  /** Filtr "tylko w promieniu N km ode mnie" (zakladka Miejsca). null = bez ograniczenia.
+   *  Wlaczony promien sam w sobie ustawia tez kolejnosc od najblizszego - inaczej "do 1 km"
+   *  oddawaloby miejsca w losowej kolejnosci i user nie wiedzialby, ktore ma najblizej. */
+  maxDistanceKm?: number | null;
+  /** Wywolywane, gdy w promieniu nie ma zadnego miejsca i user chce zdjac filtr. */
+  onClearDistance?: () => void;
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
@@ -1203,7 +1212,7 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, maxDistanceKm = null, onClearDistance, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
   const { t } = useTranslation("plan");
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
@@ -1519,7 +1528,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
   const isSearching = searchQuery.trim().length >= 2;
   // Reset okna infinite-scrolla przy zmianie miasta / filtrow / wyszukiwania.
-  useEffect(() => { setExploreVisible(24); if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0; }, [city, categoryFilterKey, dietFilterKey, isSearching]);
+  useEffect(() => { setExploreVisible(24); if (scrollWrapRef.current) scrollWrapRef.current.scrollTop = 0; }, [city, categoryFilterKey, dietFilterKey, isSearching, maxDistanceKm]);
   const baseQueue = isSearching
     ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : queue;
@@ -1527,18 +1536,20 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   // (queue nie zawiera juz ocenionych). Wczesniej sortByNearest byl w deps efektu -> toggle
   // resetowal swipe (ocenione wracaly do kolejki).
   const displayQueue = useMemo(() => {
-    if (!sortByNearest) return baseQueue;
+    if (!sortByNearest && !maxDistanceKm) return baseQueue;
     const ref = getReference();
     const coords = ref?.coords ?? (typeof startingLocation === "object" && startingLocation
       ? { lat: (startingLocation as any).latitude, lng: (startingLocation as any).longitude } : null);
     if (!coords) return baseQueue;
-    return [...baseQueue].sort((a, b) => {
-      const da = a.latitude && a.longitude ? haversineKm(coords, { lat: a.latitude, lng: a.longitude }) : Infinity;
-      const db = b.latitude && b.longitude ? haversineKm(coords, { lat: b.latitude, lng: b.longitude }) : Infinity;
-      return da - db;
-    });
+    const km = (p: MockPlace) =>
+      p.latitude && p.longitude ? haversineKm(coords, { lat: p.latitude, lng: p.longitude }) : Infinity;
+    // Filtr promienia (zakladka Miejsca). ⚠️ Miejsce BEZ wspolrzednych wypada - nie da sie
+    // powiedziec, czy jest w promieniu, a "moze tak, moze nie" w filtrze odleglosci jest
+    // gorsze niz brak wyniku.
+    const list = maxDistanceKm ? baseQueue.filter((p) => km(p) <= maxDistanceKm) : baseQueue;
+    return [...list].sort((a, b) => km(a) - km(b));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseQueue, sortByNearest]);
+  }, [baseQueue, sortByNearest, maxDistanceKm, distanceRef]);
 
   // ── POWROT NA TA SAMA WIZYTOWKE (prosba Nat 2026-09-15) ────────────────────────────────
   // Wejscie w cos z zakladki Miejsca odmontowuje swiper, wiec po powrocie user ladowal na
@@ -2101,13 +2112,27 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-foreground line-clamp-1">{place.place_name}</p>
                       <p className="text-xs text-muted-foreground line-clamp-1">
-                        {t(`categories.${place.category}`, { defaultValue: CATEGORY_LABELS[place.category] ?? place.category })}{place.address ? ` · ${place.address}` : ""}
+                        {placeCategoryLabel(place.category)}{place.address ? ` · ${place.address}` : ""}
                       </p>
                     </div>
                   </button>
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      ) : exploreMode && maxDistanceKm && displayQueue.length === 0 ? (
+        // Filtr odleglosci odsial wszystko. ⚠️ Pusty scroller wygladalby jak zepsuta zakladka,
+        // a user moze juz nie pamietac, ze ustawil promien - dlatego mowimy o tym wprost
+        // i dajemy wyjscie jednym tapnieciem.
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+          <CategoryIcon category="park" className="w-14 opacity-70" />
+          <p className="text-[15px] font-semibold text-foreground">{t("distance.empty_title", { km: maxDistanceKm })}</p>
+          <p className="text-sm text-muted-foreground">{t("distance.empty_desc")}</p>
+          {onClearDistance && (
+            <button onClick={onClearDistance} className="mt-1 h-11 px-5 rounded-2xl bg-primary text-white text-sm font-bold active:scale-95 transition-transform">
+              {t("distance.show_all")}
+            </button>
           )}
         </div>
       ) : exploreMode ? (

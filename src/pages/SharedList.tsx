@@ -30,6 +30,7 @@ import PlaceNoteSheet from "@/components/route/PlaceNoteSheet";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import ScreenSkeleton from "@/components/layout/ScreenSkeleton";
 import PhotoViewer from "@/components/route/PhotoViewer";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { saveCollectionDb, unsaveCollectionDb, markCollectionSeenDb } from "@/lib/savedCollections";
 import { EmptyPlacesState } from "@/components/route/EmptyPlacesState";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
@@ -81,6 +82,7 @@ export default function SharedList() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const handlePullRefresh = async () => { await queryClient.invalidateQueries(); };
   const { isSaved } = useSavedPlaces();
   const unsave = useUnsavePlace();
 
@@ -1144,7 +1146,9 @@ export default function SharedList() {
       </div>
 
       {/* Obszar scrolla - #3: BEZ okladki tla listy (spojne z widokiem trasy). */}
-      <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-44">
+      {/* Pociagniecie listy odswieza kolekcje (miejsca, notki i zdjecia wspoltworcow) -
+         ta sama zasada, co w widoku planu (prosba Nat 2026-09-24). */}
+      <PullToRefresh onRefresh={handlePullRefresh} className="flex-1 min-h-0 pb-44">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -1269,7 +1273,7 @@ export default function SharedList() {
 
       {/* Zgloszenie tresci (App Store 1.2) zyje w belce, obok udostepniania. */}
         </div>
-      </div>
+      </PullToRefresh>
 
       {/* Wizytowka miejsca z listy - z guzikiem zapisu (bookmark na hero + CTA na dole). */}
       {photoViewer && (

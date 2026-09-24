@@ -17,12 +17,13 @@ import { format } from "date-fns";
 import { dateLocale } from "@/lib/dateLocale";
 import { ArrowLeft, Sparkles, ChevronDown, Bookmark, Maximize2, X, Building2, Plus, Loader2, GripVertical, Camera, ThumbsUp, MoreHorizontal, ChevronLeft, Users } from "lucide-react";
 import { BrandCalendar, BrandChat, BrandFlag, BrandGallery, BrandMap, BrandShare, BrandTrash, BrandCheck, BrandGlobe, BrandPencil, BrandUserPlus, BrandNote, BrandPin } from "@/components/BrandIcon";
-import { MAIN_CATEGORIES, subcategoryPluralLabel } from "@/lib/categories";
+import { MAIN_CATEGORIES, subcategoryPluralLabel, placeCategoryLabel } from "@/lib/categories";
 import { publishTrip } from "@/lib/publishTrip";
 import { askPermissionSoon } from "@/lib/permissionPrompts";
 import { haptics } from "@/hooks/useHaptics";
 import { track } from "@/lib/analytics";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { usePhotoViewerGestures } from "@/hooks/usePhotoViewerGestures";
 import { useScreenshot } from "@/hooks/useScreenshot";
 import { Reorder, useDragControls, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -104,6 +105,7 @@ import { isWeb } from "@/lib/platform";
 import { thumbUrl } from "@/lib/imageUrl";
 import { rowOwnPhotos, mergeRowPhotosIntoDetail } from "@/lib/placeUserPhotos";
 import { deferDelete } from "@/lib/deferDelete";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 // Oficjalne logo Google (4-kolorowe "G") - guzik "Zobacz w Google".
 const GoogleGlyph = ({ className }: { className?: string }) => (
@@ -206,6 +208,10 @@ export default function SharedRoute() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Pociagniecie listy = pelne odswiezenie widoku planu (miejsca, zdjecia, notki, sklad
+  // grupy). Uniewazniamy wszystko, bo ten ekran czyta kilkanascie roznych kluczy i lista
+  // wyliczana recznie rozjezdzalaby sie z kazda nowa sekcja.
+  const handlePullRefresh = async () => { await queryClient.invalidateQueries(); };
   const { t, i18n } = useTranslation("sharing");
 
   // Polubienie trasy (heart). Owner powiadamiany przez trigger notify_route_like.
@@ -224,7 +230,10 @@ export default function SharedRoute() {
     try { await toggleRouteLike(id, user.id, cur.liked); }
     finally { queryClient.invalidateQueries({ queryKey: key }); }
   };
-  const categoryLabel = (cat: string) => t(`categories.${cat}`, { defaultValue: t("categories.other") });
+  // Etykieta kategorii = wspolne `placeCategoryLabel` (ns `categories`), a nie lokalna lista
+  // w tej przestrzeni: ta znala dwanascie wartosci, a baza ma tez church / landmark / bakery,
+  // ktore wypadaly na "Inne" (zgloszenie Nat 2026-09-24).
+  const categoryLabel = (cat: string) => placeCategoryLabel(cat);
   const { isSaved } = useSavedPlaces();
   const [savePlace, setSavePlace] = useState<SavePlaceInput | null>(null);
   const pinToSave = (pin: any): SavePlaceInput => ({
@@ -279,10 +288,12 @@ export default function SharedRoute() {
     if (next) setPlanTab(next);
   };
   const swipeTabs = useSwipeNav({ onLeft: () => goTab(1), onRight: () => goTab(-1) });
-  // Galeria fullscreen: swipe w bok = poprzednie/nastepne zdjecie (zamiast tylko strzalek).
-  const swipeViewer = useSwipeNav({
-    onLeft: () => setViewerIndex((i) => (i === null ? i : (i + 1) % Math.max(1, galleryPhotosCount.current))),
-    onRight: () => setViewerIndex((i) => (i === null ? i : (i - 1 + galleryPhotosCount.current) % Math.max(1, galleryPhotosCount.current))),
+  // Galeria fullscreen: gest w BOK = poprzednie/nastepne zdjecie, gest w DOL = zamkniecie
+  // (prosba Nat 2026-09-24; zdjecie idzie za palcem, tlo gasnie - jak przy arkuszach).
+  const viewerGestures = usePhotoViewerGestures({
+    onClose: () => setViewerIndex(null),
+    onNext: () => setViewerIndex((i) => (i === null ? i : (i + 1) % Math.max(1, galleryPhotosCount.current))),
+    onPrev: () => setViewerIndex((i) => (i === null ? i : (i - 1 + galleryPhotosCount.current) % Math.max(1, galleryPhotosCount.current))),
   });
   // Usuniecie wyjazdu (wlasciciel) - nieodwracalne, walidacja "czy na pewno?".
   const [askDelete, setAskDelete] = useState(false);
@@ -2559,7 +2570,12 @@ export default function SharedRoute() {
       {/* Zapas na dole = ponad ZWINIETY stos akcji (84px + 56px wysokosci = 140px). Po
           schowaniu czatu i "+" pod jeden guzik (2026-09-10) nie trzeba juz rezerwowac miejsca
           na dwa kolka; rozwiniety stos to nakladka z tlem do zamkniecia, wiec moze zaslaniac. */}
-      <div data-scroll-main className="flex-1 min-h-0 overflow-y-auto pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
+      {/* ⚠️ Scroller planu owiniety w PullToRefresh (prosba Nat 2026-09-24): pociagniecie
+          w dol (albo w gore na koncu listy) dociaga to, co w miedzyczasie dodali wspoltworcy -
+          miejsca, zdjecia, notki. Dotad jedynym sposobem byl powrot i ponowne wejscie.
+          `data-scroll-main` przychodzi z komponentu, wiec tapniecie w gorna belke dalej
+          przewija ten sam element. */}
+      <PullToRefresh onRefresh={handlePullRefresh} className="flex-1 min-h-0 pb-[calc(10rem+env(safe-area-inset-bottom,0px))]">
         {/* Naglowek: tytul + opis, spacing 35px pod TopBarem */}
         <div className="px-5 pt-[35px]">
           <div className="flex items-start gap-3">
@@ -2933,7 +2949,7 @@ export default function SharedRoute() {
         </div>
 
         {/* Zgloszenie tresci (App Store 1.2) zyje w belce, obok udostepniania - patrz TopBar. */}
-      </div>
+      </PullToRefresh>
 
       {/* Podglad wizytowki miejsca */}
       <PlaceSwiperDetail
@@ -3247,7 +3263,7 @@ export default function SharedRoute() {
 
       {/* Fullscreen podglad zdjecia galerii (object-contain, kropki paginacji + polubienie). */}
       {viewerIndex !== null && visiblePhotos[viewerIndex] && (
-        <div {...swipeViewer} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
+        <div {...viewerGestures.bind} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
           <img src={visiblePhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain"
             onClick={onPhotoTap(visiblePhotos[viewerIndex])} />
           <button onClick={() => setViewerIndex(null)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>

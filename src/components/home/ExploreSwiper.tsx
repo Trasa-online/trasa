@@ -8,7 +8,7 @@ import { getTodayLikes } from "@/lib/exploreLikes";
 // FILTRY USUNIETE 2026-09-10 (decyzja Nat): drawer kategorii / sortowania / miasta zniknal
 // razem z guzikiem filtrow w gornej belce. Zostaje sam strumien miejsc; jedyne sterowanie
 // to "biezace polozenie" (sortNearestNonce) podawane z zewnatrz.
-export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { city: string; active?: boolean; sortNearestNonce?: number }) {
+export default function ExploreSwiper({ city, active, sortNearestNonce = 0, maxDistanceKm = null, onClearDistance }: { city: string; active?: boolean; sortNearestNonce?: number; maxDistanceKm?: number | null; onClearDistance?: () => void }) {
   const today = useMemo(() => new Date(), []);
   const [sortMode, setSortMode] = useState<"default" | "nearest">("default");
 
@@ -28,6 +28,8 @@ export default function ExploreSwiper({ city, active, sortNearestNonce = 0 }: { 
         date={today}
         numDays={1}
         sortByNearest={sortMode === "nearest"}
+        maxDistanceKm={maxDistanceKm}
+        onClearDistance={onClearDistance}
         initialLikedPlaceNames={initialLiked}
         exploreMode
       />
