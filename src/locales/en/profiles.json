@@ -183,7 +183,7 @@
     "progress": "{{invited}} of {{goal}}",
     "share_cta": "Send an invite",
     "share_title": "Coming to spontaway?",
-    "share_text": "I collect places and plans here. Come in through my link and you'll see what I recommend.",
+    "share_text": "I collect places and plans here. The link opens TestFlight - install the iOS app from there and you are in the test.",
     "qr_aria": "Show the QR code for testing",
     "qr_title": "Scan and join the tests",
     "qr_desc": "The code goes straight to TestFlight. Show it to whoever you want to invite.",

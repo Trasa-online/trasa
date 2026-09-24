@@ -185,7 +185,7 @@
     "progress": "{{invited}} z {{goal}}",
     "share_cta": "Wyślij zaproszenie",
     "share_title": "Wchodzisz w spontaway?",
-    "share_text": "Zbieram tu miejsca i plany. Wejdź z mojego linku, to zobaczysz, co polecam.",
+    "share_text": "Zbieram tu miejsca i plany. Link otwiera TestFlight - stamtąd zainstalujesz apkę na iOS i wejdziesz do testów.",
     "qr_aria": "Pokaż kod QR do testów",
     "qr_title": "Zeskanuj i dołącz do testów",
     "qr_desc": "Kod prowadzi prosto do TestFlight. Pokaż go osobie, którą chcesz zaprosić.",
