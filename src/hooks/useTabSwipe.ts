@@ -16,8 +16,8 @@ import { canStartSwipe } from "@/hooks/useSwipeNav";
  *  - gest lapiemy na <main> AppLayoutu (natywne listenery, `touchmove` NIEpasywny - po
  *    rozpoznaniu ruchu w bok gasimy pionowy scroll, inaczej feed jechalby razem z palcem),
  *  - transform piszemy prosto w styl elementu (bez setState co klatke),
- *  - po przekroczeniu progu ekran wyjezdza, a kierunek wjazdu nastepnego zapisujemy w PAMIECI
- *    MODULU - nowa trasa montuje NOWY AppLayout i dopiero on odgrywa wjazd (`useTabEnter`).
+ *  - po przekroczeniu progu nawigujemy OD RAZU, a kierunek i punkt startu wjazdu zapisujemy
+ *    w PAMIECI MODULU - nowa trasa montuje NOWY AppLayout i to on odgrywa wjazd (`useTabEnter`).
  *
  * Kolizje (nie usuwaj):
  *  - lewa krawedz (24 px) nalezy do cofania gestem (`useEdgeSwipeBack`),
@@ -31,7 +31,9 @@ export const TAB_ORDER = ["/eksploruj", "/miejsca", "/moj-profil"] as const;
 
 // Kierunek, z ktorego ma wjechac NASTEPNY ekran. Zyje miedzy odmontowaniem jednego AppLayoutu
 // a zamontowaniem kolejnego, wiec musi siedziec poza Reactem.
-let pendingEnter: { path: string; from: "left" | "right"; full: boolean } | null = null;
+// `startPct` = skad nowy ekran startuje (w % szerokosci): po gescie to miejsce, w ktorym
+// skonczyl sie ruch palca - nowy ekran "dojezdza" dalej, zamiast startowac zza krawedzi.
+let pendingEnter: { path: string; from: "left" | "right"; full: boolean; startPct?: number } | null = null;
 let lastTabPath: string | null = null;
 
 const EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
@@ -108,18 +110,23 @@ export function useTabSwipe(mainRef: RefObject<HTMLElement>, pathname: string) {
       const next = TAB_ORDER[idx + (dx < 0 ? 1 : -1)];
       const velocity = Math.abs(dx) / Math.max(1, Date.now() - s.t);
       const width = el.getBoundingClientRect().width || window.innerWidth;
-      if (!next || !(Math.abs(dx) > width * 0.28 || (velocity > 0.45 && Math.abs(dx) > 40))) {
+      // Progi niskie (20 % szerokosci albo szybkie machniecie) - gest ma "chwycic" od razu.
+      if (!next || !(Math.abs(dx) > width * 0.2 || (velocity > 0.3 && Math.abs(dx) > 30))) {
         setX(0, true);
         return;
       }
       leaving = true;
       haptics.selection();
-      const out = dx < 0 ? -width : width;
-      if (reducedMotion()) { navigate(next, { replace: true }); return; }
-      setX(out, true);
-      // Nowy ekran wjezdza z przeciwnej strony niz wyjechal stary.
-      pendingEnter = { path: next, from: dx < 0 ? "right" : "left", full: true };
-      window.setTimeout(() => navigate(next, { replace: true }), 190);
+      // ⛔ NIE czekamy na wyjazd starego ekranu. Pierwsza wersja najpierw animowala wyjazd
+      // (220 ms), potem nawigowala, a nowy ekran wjezdzal przez cala szerokosc (280 ms) -
+      // trzy kroki jeden po drugim, prawie pol sekundy przed pierwsza klatka tresci. Teraz
+      // nawigacja rusza w chwili puszczenia palca, a nowy ekran startuje tam, gdzie bylby
+      // w prawdziwym pagerze: tuz za przesunietym starym (szerokosc minus droga palca).
+      if (!reducedMotion()) {
+        const startPct = Math.max(12, Math.min(88, 100 - (Math.abs(dx) / width) * 100));
+        pendingEnter = { path: next, from: dx < 0 ? "right" : "left", full: true, startPct };
+      }
+      navigate(next, { replace: true });
     };
 
     const onCancel = () => { if (lock === "h") setX(0, true); start = null; lock = null; };
@@ -150,8 +157,8 @@ export function useTabSwipe(mainRef: RefObject<HTMLElement>, pathname: string) {
 }
 
 /**
- * Wjazd ekranu zakladki. Po gescie - pelny przejazd z boku (kontynuacja ruchu palca). Po
- * tapnieciu w dolny pasek - ten sam kierunek, ale krotszy (30 % + wygaszenie): stary ekran
+ * Wjazd ekranu zakladki. Po gescie - dojazd z miejsca, gdzie skonczyl sie palec (220 ms). Po
+ * tapnieciu w dolny pasek - ten sam kierunek, ale krotki (12 % + wygaszenie, 170 ms): stary ekran
  * znika wtedy od razu, wiec pelny przejazd przez pusty ekran wygladalby jak mrugniecie.
  * Kierunek wynika z kolejnosci zakladek, wiec pasek i gest opowiadaja te sama geografie.
  */
@@ -171,10 +178,10 @@ export function useTabEnter(mainRef: RefObject<HTMLElement>, pathname: string) {
     if (!el || !enter || reducedMotion() || typeof el.animate !== "function") return;
     const sign = enter.from === "right" ? 1 : -1;
     const frames = enter.full
-      ? [{ transform: `translateX(${sign * 100}%)` }, { transform: "translateX(0)" }]
-      : [{ transform: `translateX(${sign * 30}%)`, opacity: 0.35 }, { transform: "translateX(0)", opacity: 1 }];
+      ? [{ transform: `translateX(${sign * (enter.startPct ?? 100)}%)` }, { transform: "translateX(0)" }]
+      : [{ transform: `translateX(${sign * 12}%)`, opacity: 0.6 }, { transform: "translateX(0)", opacity: 1 }];
     // WAAPI bez `fill` - po animacji transform znika calkiem, wiec elementy `fixed` w ekranie
     // znowu licza sie od viewportu, a nie od przesunietego <main>.
-    el.animate(frames, { duration: enter.full ? 280 : 240, easing: EASE });
+    el.animate(frames, { duration: enter.full ? 220 : 170, easing: EASE });
   }, [mainRef, pathname]);
 }

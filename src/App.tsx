@@ -751,8 +751,20 @@ import NotFound from "./pages/NotFound";
 // Lazy loaded - only fetched when the user navigates to that route
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
-const Explore          = lazy(() => import("./pages/Explore"));
-const Miejsca          = lazy(() => import("./pages/Miejsca"));
+// Zakladki z dolnego paska laduja sie W TLE zaraz po starcie (2026-09-25): przesuniecie
+// palcem miedzy nimi (useTabSwipe) czekalo przy pierwszym przejsciu na pobranie kodu ekranu
+// i w tym czasie wisial szkielet - Nat: „toporne, dlugo sie laduje". Te same funkcje karmia
+// `lazy`, wiec drugi import trafia w gotowy modul.
+const loadExplore = () => import("./pages/Explore");
+const loadMiejsca = () => import("./pages/Miejsca");
+const loadTravelerProfile = () => import("./pages/TravelerProfile");
+if (typeof window !== "undefined") {
+  const warm = () => { void loadExplore(); void loadMiejsca(); void loadTravelerProfile(); };
+  const ric = (window as any).requestIdleCallback as ((cb: () => void, o?: { timeout: number }) => number) | undefined;
+  if (ric) ric(warm, { timeout: 2500 }); else window.setTimeout(warm, 1200);
+}
+const Explore          = lazy(loadExplore);
+const Miejsca          = lazy(loadMiejsca);
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CountryCityPicker = lazy(() => import("./pages/CountryCityPicker"));
@@ -762,7 +774,7 @@ const Settings         = lazy(() => import("./pages/Settings"));
 const Stats            = lazy(() => import("./pages/Stats"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
-const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
+const TravelerProfile  = lazy(loadTravelerProfile);
 const MyTrips          = lazy(() => import("./pages/MyTrips"));
 const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));

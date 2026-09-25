@@ -1050,6 +1050,29 @@ function hasOwnCover(p: MockPlace): boolean {
 // pozycji scrolla), i nie zajmowac miejsca na dysku telefonu.
 const PLACES_CACHE_TTL_MS = 5 * 60_000;
 let placesRowsCache: { key: string; at: number; rows: any[] } | null = null;
+// Zapytanie o WSZYSTKIE miejsca w locie - wspolne dla rozgrzewki i dla samej zakladki, zeby
+// wejscie w Miejsca w trakcie rozgrzewki nie pobieralo megabajta drugi raz.
+let placesAllInflight: Promise<{ data: any[] | null; error: unknown }> | null = null;
+
+function fetchAllPlaceRows(): Promise<{ data: any[] | null; error: unknown }> {
+  if (placesAllInflight) return placesAllInflight;
+  placesAllInflight = (supabase as any).from("places").select(PLACE_BUSINESS_SELECT).eq("is_active", true)
+    .then((res: { data: any[] | null; error: unknown }) => {
+      if (res.data?.length) placesRowsCache = { key: "all", at: Date.now(), rows: res.data };
+      return res;
+    })
+    .finally(() => { placesAllInflight = null; });
+  return placesAllInflight!;
+}
+
+/** Rozgrzewka zakladki Miejsca (2026-09-25): przesuniecie palcem z Eksploracji na Miejsca
+ *  czekalo przy pierwszym wejsciu ~2 s na miejsca. Wolane w tle z sasiednich zakladek -
+ *  gdy cache jest swiezy, nic nie robi. */
+export function prewarmPlaceRows(): void {
+  const fresh = placesRowsCache && placesRowsCache.key === "all" && Date.now() - placesRowsCache.at < PLACES_CACHE_TTL_MS;
+  if (fresh || placesAllInflight) return;
+  void fetchAllPlaceRows();
+}
 
 function partitionBusinessFirst(places: MockPlace[], keysWithUserPhotos?: Set<string>): MockPlace[] {
   const bizPhoto: MockPlace[] = [];
@@ -1407,7 +1430,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       }
 
       const [placesRes, reactionsRes] = await Promise.all([
-        fresh ? Promise.resolve({ data: placesRowsCache!.rows, error: null }) : placesQuery,
+        fresh ? Promise.resolve({ data: placesRowsCache!.rows, error: null })
+          : !scoped ? fetchAllPlaceRows() : placesQuery,
         reactionsQuery ?? Promise.resolve({ data: [] }),
       ]);
       if (cancelled) return;

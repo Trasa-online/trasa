@@ -29,6 +29,16 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   const mainRef = useRef<HTMLElement>(null);
   useTabSwipe(mainRef, pathname);
   useTabEnter(mainRef, pathname);
+  // Sasiednia zakladka Miejsca ma najciezsze dane (~1 MB wizytowek). Rozgrzewamy jej cache
+  // w tle, gdy user stoi na Eksploracji albo Profilu - przesuniecie palcem ma od razu trafic
+  // na gotowe karty. Dynamiczny import: PlaceSwiper nie moze wejsc do paczki layoutu.
+  useEffect(() => {
+    if (pathname !== "/eksploruj" && pathname !== "/moj-profil") return;
+    const id = window.setTimeout(() => {
+      void import("@/components/plan-wizard/PlaceSwiper").then((m) => m.prewarmPlaceRows()).catch(() => {});
+    }, 2500);
+    return () => window.clearTimeout(id);
+  }, [pathname]);
 
   // Global redirect po loginie - dziala dla wszystkich method logowania
   // (AuthDrawer password/OAuth/magic link, Auth.tsx page). User wybral miejsca jako
