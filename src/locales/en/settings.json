@@ -213,9 +213,8 @@
     "none": "No frame",
     "flowers": "Flowers",
     "meadow": "Meadow",
-    "grass": "Grass",
-    "swirls": "Swirls",
-    "hearts": "Hearts",
-    "streak": "Streak"
+    "streak": "Streak",
+    "color": "Frame colour",
+    "color_brand": "Brand colours"
   }
 }

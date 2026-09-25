@@ -213,9 +213,8 @@
     "none": "Bez ramki",
     "flowers": "Kwiatki",
     "meadow": "Łąka",
-    "grass": "Trawa",
-    "swirls": "Zawijasy",
-    "hearts": "Serduszka",
-    "streak": "Smuga"
+    "streak": "Smuga",
+    "color": "Kolor ramki",
+    "color_brand": "Kolory marki"
   }
 }

@@ -13,7 +13,7 @@ import { haptics } from "@/hooks/useHaptics";
 import { AVATAR_FRAMES, DEFAULT_FRAME_COLOR, FRAME_SWATCHES, isAvatarFrame, isFrameColor, type AvatarFrameId, frameHasFixedColor } from "@/lib/avatarFrames";
 import AvatarFrame from "@/components/profile/AvatarFrame";
 import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
-import BioFrame, { BIO_FRAMES, isBioFrame, type BioFrameKind } from "@/components/profile/BioFrame";
+import BioFrame, { BIO_FRAMES, BIO_FRAME_SWATCHES, isBioFrame, isHexColor, type BioFrameKind } from "@/components/profile/BioFrame";
 import { avatarFrameKey } from "@/lib/avatarFrameLoader";
 
 // "Customizuj mój profil" (prosba Nat 2026-09-11): arkusz z ramkami awatara i ich kolorem.
@@ -21,14 +21,14 @@ import { avatarFrameKey } from "@/lib/avatarFrameLoader";
 // nazwa i znacznik wyboru. Kolor: szybkie kolory + pipeta (systemowa paleta - dowolny kolor).
 // Tapniecie zapisuje od razu (profiles.avatar_frame / avatar_frame_color) - bez osobnego
 // "Zapisz", bo to dwie wartosci i da sie je w kazdej chwili zmienic.
-type Me = { avatar_url: string | null; first_name: string | null; avatar_frame: string | null; avatar_frame_color: string | null; bio?: string | null; bio_frame?: string | null };
+type Me = { avatar_url: string | null; first_name: string | null; avatar_frame: string | null; avatar_frame_color: string | null; bio?: string | null; bio_frame?: string | null; bio_frame_color?: string | null };
 
 export function useMyAvatarFrame(userId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: ["avatar-frame-sheet", userId],
     enabled: enabled && !!userId,
     queryFn: async () => {
-      const { data } = await (supabase as any).from("profiles").select("avatar_url, first_name, avatar_frame, avatar_frame_color, bio, bio_frame").eq("id", userId!).maybeSingle();
+      const { data } = await (supabase as any).from("profiles").select("avatar_url, first_name, avatar_frame, avatar_frame_color, bio, bio_frame, bio_frame_color").eq("id", userId!).maybeSingle();
       return (data ?? null) as Me | null;
     },
   });
@@ -93,6 +93,19 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     }
     invalidateAll();
     toast.success(frame ? t("frames.saved") : t("frames.removed"));
+  };
+  // Kolor ramki opisu (2026-09-26). `bioDraft` = podglad na zywo przy przesuwaniu pipety.
+  const [bioDraft, setBioDraft] = useState<string | null>(null);
+  const bioColor = bioDraft ?? (isHexColor(me?.bio_frame_color) ? me!.bio_frame_color! : null);
+  const chooseBioColor = async (hex: string | null, opts: { silent?: boolean } = {}) => {
+    if (hex !== null && !isHexColor(hex)) return;
+    if (!opts.silent) haptics.selection();
+    const value = hex ? hex.toUpperCase() : null;
+    setBioDraft(null);
+    queryClient.setQueryData(["avatar-frame-sheet", userId], (old: any) => ({ ...(old ?? {}), bio_frame_color: value }));
+    const { error } = await (supabase as any).from("profiles").update({ bio_frame_color: value }).eq("id", userId);
+    if (error) { toast.error(t("frames.save_failed")); queryClient.invalidateQueries({ queryKey: ["avatar-frame-sheet", userId] }); return; }
+    invalidateAll();
   };
   // Ramka wokol opisu profilu (2026-09-25). Zapis od razu, jak nakladka.
   const chooseBioFrame = async (frame: BioFrameKind | null) => {
@@ -265,7 +278,7 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
                 className={`relative rounded-2xl bg-[#FEFEFE] border px-3 pt-4 pb-3 text-left active:scale-[0.98] transition-transform ${active ? "border-primary ring-2 ring-primary/30" : "border-border/60"}`}
               >
                 <div className="h-[64px] flex items-center">
-                  <BioFrame kind={k} className="w-full">
+                  <BioFrame kind={k} color={bioColor} className="w-full">
                     <p className="text-[12px] text-muted-foreground leading-snug line-clamp-2">{me?.bio?.trim() || t("bio_frames.sample")}</p>
                   </BioFrame>
                 </div>
@@ -278,11 +291,81 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
           })}
         </div>
 
+        {/* Kolor ramki - tylko gdy jakas ramka jest wybrana (bez ramki nie ma czego kolorowac). */}
+        {isBioFrame(me?.bio_frame) && (
+          <BioColorRow
+            value={bioColor}
+            onPreview={setBioDraft}
+            onPick={(hex, silent) => void chooseBioColor(hex, { silent })}
+            labels={{ title: t("bio_frames.color"), brand: t("bio_frames.color_brand"), custom: t("frames.color_custom") }}
+          />
+        )}
+
         {/* Awatar bazowy z palety - NA DOLE, pod nakladkami i kolorem. */}
         <div className="mt-6">
           <AvatarPresetRow flush value={me?.avatar_url ?? null} onPick={(url) => void choosePreset(url)} title={t("frames.presets_title")} desc={t("frames.presets_desc")} />
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** Kolor ramki opisu: „kolory marki" (NULL) + szybkie kolory + pipeta. Pipeta jak przy nakladce:
+ *  `input` (kazdy ruch palca) = podglad + zapis odlozony o 600 ms, `change` = zapis od razu. */
+function BioColorRow({ value, onPreview, onPick, labels }: {
+  value: string | null;
+  onPreview: (hex: string | null) => void;
+  onPick: (hex: string | null, silent?: boolean) => void;
+  labels: { title: string; brand: string; custom: string };
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const timer = useRef<number | null>(null);
+  const custom = !!value && !BIO_FRAME_SWATCHES.some((h) => h.toUpperCase() === value.toUpperCase());
+  const flush = (hex: string) => { if (timer.current) window.clearTimeout(timer.current); timer.current = null; onPick(hex, true); };
+  useEffect(() => {
+    const el = input.current;
+    if (!el) return;
+    const onChange = () => flush(el.value);
+    el.addEventListener("change", onChange);
+    return () => { el.removeEventListener("change", onChange); if (timer.current) window.clearTimeout(timer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const dot = (active: boolean) => `flex h-9 w-9 items-center justify-center rounded-full border-2 transition-transform active:scale-90 ${active ? "border-foreground" : "border-transparent"}`;
+  return (
+    <>
+      <p className="mt-4 text-sm font-bold text-foreground">{labels.title}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2.5">
+        <button onClick={() => onPick(null)} aria-label={labels.brand} aria-pressed={value === null} className={dot(value === null)}
+          style={{ background: "linear-gradient(135deg,#FDF184 0 50%,#EE5307 50% 100%)" }}>
+          {value === null && <BrandCheck className="h-4 w-4 text-white drop-shadow" strokeWidth={3} />}
+        </button>
+        {BIO_FRAME_SWATCHES.map((hex) => {
+          const active = value?.toUpperCase() === hex.toUpperCase();
+          return (
+            <button key={hex} onClick={() => onPick(hex)} aria-label={hex} aria-pressed={active} className={dot(active)} style={{ backgroundColor: hex }}>
+              {active && <BrandCheck className="h-4 w-4 text-[#5B2C06]" strokeWidth={3} />}
+            </button>
+          );
+        })}
+        <span aria-pressed={custom} className={`relative flex h-9 w-9 items-center justify-center rounded-full border-2 ${custom ? "border-foreground" : "border-border"} bg-[conic-gradient(from_0deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)] active:scale-90 transition-transform`}>
+          <span className="pointer-events-none flex h-6 w-6 items-center justify-center rounded-full bg-white/90">
+            <Pipette className="h-3.5 w-3.5 text-foreground" />
+          </span>
+          <input
+            ref={input}
+            type="color"
+            value={(value ?? "#FDF184").toLowerCase()}
+            onChange={(e) => {
+              const hex = e.target.value;
+              onPreview(hex);
+              if (timer.current) window.clearTimeout(timer.current);
+              timer.current = window.setTimeout(() => flush(hex), 600);
+            }}
+            aria-label={labels.custom}
+            className="absolute inset-0 h-full w-full cursor-pointer rounded-full opacity-0"
+          />
+        </span>
+      </div>
+    </>
   );
 }

@@ -81,7 +81,7 @@ export async function fetchPlaceNotes(placeName: string): Promise<PlaceUserNote[
   if (!name) return [];
   const safe = likeSafe(name);
 
-  const [trips, lists] = await Promise.all([
+  const [trips, lists, members] = await Promise.all([
     (supabase as any)
       .from("pin_ratings")
       .select("note, user_id, created_at, routes!inner(status)")
@@ -99,6 +99,19 @@ export async function fetchPlaceNotes(placeName: string): Promise<PlaceUserNote[
       .not("short_desc", "is", null)
       .limit(30)
       .then(({ data, error }: any) => { if (error) { console.warn("[placeNotes] lists:", error.message); return []; } return (data ?? []) as any[]; }),
+    // ⛔ NOTKI UCZESTNIKOW KOLEKCJI (2026-09-26, zgloszenie Nat: „na wizytowkach premium nie widac
+    // notek, same zdjecia"). Od 2026-09-15 kazdy uczestnik kolekcji pisze notke do
+    // `discovery_item_notes`, a `short_desc` niesie juz tylko notke WLASCICIELA - ta funkcja
+    // czytala wylacznie `short_desc`, wiec notki wspoltworcow nie docieraly na wizytowke w ogole.
+    (supabase as any)
+      .from("discovery_item_notes")
+      .select("note, user_id, discovery_collections!inner(is_public, moderation_status)")
+      .eq("discovery_collections.is_public", true)
+      .neq("discovery_collections.moderation_status", "rejected")
+      .ilike("place_name", safe)
+      .not("note", "is", null)
+      .limit(30)
+      .then(({ data, error }: any) => { if (error) { console.warn("[placeNotes] members:", error.message); return []; } return (data ?? []) as any[]; }),
   ]);
 
   // Jedna notka na osobe: pierwszy napotkany wiersz usera wygrywa (po synchronizacji wszystkie
@@ -106,6 +119,7 @@ export async function fetchPlaceNotes(placeName: string): Promise<PlaceUserNote[
   type Row = { user_id: string; note: string; source: "trip" | "list"; author_name?: string | null; author_avatar?: string | null };
   const rows: Row[] = [
     ...(trips as any[]).map((r) => ({ user_id: String(r.user_id ?? ""), note: String(r.note ?? ""), source: "trip" as const })),
+    ...(members as any[]).map((r) => ({ user_id: String(r.user_id ?? ""), note: String(r.note ?? ""), source: "list" as const })),
     ...(lists as any[]).map((r) => {
       const c = r.discovery_collections ?? {};
       return { user_id: String(c.user_id ?? ""), note: String(r.short_desc ?? ""), source: "list" as const, author_name: c.author_name, author_avatar: c.author_avatar };
