@@ -26,7 +26,8 @@ export default function PlaceNoteEditor({
   onEditingChange,
 }: {
   note: string;
-  onSave: (value: string) => Promise<void> | void;
+  /** `false` = zapis sie nie udal (edytor zostaje otwarty przy „Gotowe"). */
+  onSave: (value: string) => Promise<boolean | void> | boolean | void;
   editable?: boolean;
   showAvatar?: boolean;
   avatarUrl?: string | null;
@@ -74,7 +75,15 @@ export default function PlaceNoteEditor({
   // Rodzic (widok wyjazdu) chowa czat i dolne guziki na czas pisania - nie zaslaniaja klawiatury
   // ani pola notki (zgloszenie Nat 2026-08-30).
   useEffect(() => { onEditingChange?.(editing); }, [editing, onEditingChange]);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  // Odmontowanie (wyjscie z ekranu, przebudowa listy) w trakcie odliczania NIE moze zgubic
+  // ostatnich slow - do 2026-09-25 timer byl tu po prostu kasowany. Dopinamy zapis.
+  const pending = useRef<string | null>(null);
+  const saveRef = useRef(onSave);
+  saveRef.current = onSave;
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+    if (pending.current !== null) void saveRef.current(pending.current.trim());
+  }, []);
 
   const noteText = (note ?? "").trim();
 
@@ -82,11 +91,17 @@ export default function PlaceNoteEditor({
   const scheduleSave = (v: string) => {
     setDraft(v);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(async () => { await onSave(v.trim()); flash(); }, 700);
+    pending.current = v;
+    timer.current = setTimeout(async () => {
+      const ok = await onSave(v.trim());
+      if (ok !== false) { if (pending.current === v) pending.current = null; flash(); }
+    }, 700);
   };
   const finish = async () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
-    await onSave(draft.trim()); // flush ewentualnego niezapisanego stanu
+    const ok = await onSave(draft.trim()); // flush ewentualnego niezapisanego stanu
+    if (ok === false) return; // blad: zostajemy w edycji, tekst zostaje w polu
+    pending.current = null;
     setEditing(false);
   };
   const startEdit = () => { setDraft(noteText); setEditing(true); };

@@ -163,7 +163,9 @@
     "edit": "Edit note",
     "add": "Add note",
     "add_description": "Add description",
-    "edit_description": "Edit description"
+    "edit_description": "Edit description",
+    "draft_restored": "We restored your unsaved note",
+    "save_failed": "We could not save the note. Your text is still here, try again."
   },
   "day_label": "{{city}} - Day {{day}}",
   "map_picker": {

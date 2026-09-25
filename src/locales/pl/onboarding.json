@@ -158,5 +158,24 @@
       "nonbinary": "Inna",
       "undisclosed": "Wolę nie podawać"
     }
+  },
+  "favorites": {
+    "city_title": "W jakim mieście mieszkasz?",
+    "city_desc": "Zaczniemy od miejsc, które znasz najlepiej.",
+    "city_placeholder": "Wpisz miasto",
+    "city_use": "Wybierz: {{city}}",
+    "title": "Twoje dwa ulubione miejsca",
+    "desc": "Takie, które polecasz każdemu, kto przyjeżdża do Twojego miasta. Zrobimy z nich Twoją pierwszą kolekcję.",
+    "change_city": "zmień",
+    "slot_empty": "Miejsce {{n}}",
+    "remove": "Usuń",
+    "search_placeholder": "Szukaj kawiarni, baru, parku…",
+    "no_results": "Nic nie znaleźliśmy. Spróbuj innej nazwy.",
+    "cta": "Utwórz kolekcję",
+    "skip": "Pomiń",
+    "failed": "Nie udało się utworzyć kolekcji. Spróbuj jeszcze raz.",
+    "collection_in": "Moje ulubione miejsca {{place}}",
+    "collection_plain": "Moje ulubione miejsca: {{place}}",
+    "collection_fallback": "Moje ulubione miejsca"
   }
 }

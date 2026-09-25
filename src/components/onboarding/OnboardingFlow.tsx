@@ -15,6 +15,11 @@ import { grantConsent, denyConsent } from "@/lib/consent";
 import TrasaLogo from "@/components/TrasaLogo";
 import { cn } from "@/lib/utils";
 import { uploadThumb } from "@/lib/imageThumbs";
+import OnboardingFavorites, { FAVORITES_COUNT, type FavoritesState } from "@/components/onboarding/OnboardingFavorites";
+import { createListFromSavedPlaces } from "@/lib/placeLists";
+import { collectionName, type NamingStrings } from "@/lib/placeNaming";
+import { countryForCity } from "@/lib/tripCountries";
+import { invalidateContentLists } from "@/lib/trash";
 
 // Limit slow (np. dla pola "Inne").
 const capWords = (v: string, n = 10) => {
@@ -29,6 +34,10 @@ const capWords = (v: string, n = 10) => {
 // laduje w Eksploracji z wyjasnieniem, co robi na kazdej zakladce.
 // Kroki "miasto zamieszkania", "powiadomienia" i "lokalizacja" USUNIETE 2026-09-13 - o zgody
 // systemowe pytamy w chwili, gdy sa potrzebne, nie na powitaniu.
+// 2026-09-25 (prosba Nat) doszedl SZOSTY krok "favorites" miedzy profilem a zgoda: miasto,
+// w ktorym user mieszka, + DWA ulubione miejsca stamtad = jego PIERWSZA kolekcja (publiczna).
+// Uczy, czym jest kolekcja, i daje tresc od pierwszego dnia. Da sie go pominac ("Pomin") -
+// twarda sciana na tym etapie kosztowalaby rejestracje, a kolekcje mozna zalozyc pozniej.
 // Wzorzec pelnoekranowy 1:1 z ProfileSetup (tlo #FEFEFE, solidny CTA, pasek postepu).
 
 // Polskie sieroty: po pojedynczych literach twarda spacja.
@@ -70,14 +79,14 @@ const GENDER_OPTS = [
   { id: "undisclosed", labelKey: "profile.gender.undisclosed" },
 ];
 
-const STEPS = ["welcome", "source", "goals", "profile", "tracking"] as const;
+const STEPS = ["welcome", "source", "goals", "profile", "favorites", "tracking"] as const;
 type Step = typeof STEPS[number];
 type UStatus = "idle" | "checking" | "ok" | "taken" | UsernameProblem;
 
 interface Props { onDone: () => void; }
 
 const OnboardingFlow = ({ onDone }: Props) => {
-  const { t } = useTranslation("onboarding");
+  const { t, i18n } = useTranslation("onboarding");
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const stepName: Step = STEPS[step];
@@ -97,6 +106,11 @@ const OnboardingFlow = ({ onDone }: Props) => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  // Krok "favorites": miasto + dwa miejsca -> pierwsza kolekcja. Id pamietamy, zeby cofniecie
+  // i ponowne "Dalej" nie zakladalo drugiej kolekcji.
+  const [fav, setFav] = useState<FavoritesState>({ city: "", picks: [] });
+  const [favCreating, setFavCreating] = useState(false);
+  const [favListId, setFavListId] = useState<string | null>(null);
   // Gdy pole "Inne" (input) jest w fokusie -> chowamy guzik t("cta.next") (nie zaslania klawiatury).
   // Guzik CTA chowamy, gdy kursor stoi w JAKIMKOLWIEK polu tekstowym - klawiatura podnosi
   // uklad i guzik ladowal na polu, ktore user wlasnie wypelnia (zgloszenie Nat 2026-09-06).
@@ -212,6 +226,45 @@ const OnboardingFlow = ({ onDone }: Props) => {
     await uploadBlob(f, ext, f.type || "image/jpeg");
   };
 
+  // Pierwsza kolekcja z dwoch ulubionych miejsc. Publiczna - tak jak kazda kolekcja `visited`;
+  // autor moze ja schowac pozniej w menu kolekcji.
+  const createFavorites = async () => {
+    if (!user || favCreating) return;
+    if (favListId) { goNext(); return; }
+    setFavCreating(true);
+    try {
+      const city = fav.city.trim();
+      const country = countryForCity(city);
+      const naming: NamingStrings = {
+        collectionIn: t("favorites.collection_in"),
+        collectionPlain: t("favorites.collection_plain"),
+        tripTo: "", tripPlain: "",
+        collectionFallback: t("favorites.collection_fallback"),
+        tripFallback: "",
+        declines: (i18n.language || "pl").toLowerCase().startsWith("pl"),
+      };
+      const id = await createListFromSavedPlaces(user.id, {
+        title: collectionName(city, [], naming),
+        isPublic: true,
+        city,
+        countries: country ? [country] : [],
+        author: (cleanUsername(firstName) || cleanUsername(username)) ? { name: cleanUsername(firstName) || cleanUsername(username), avatar: avatarUrl } : undefined,
+        places: fav.picks.map((p) => ({
+          place_name: p.place_name, category: p.category, address: p.address ?? "", city,
+          latitude: p.latitude, longitude: p.longitude, photo_url: null, place_id: p.place_id,
+          google_place_id: p.google_place_id, rating: p.rating,
+        })),
+      });
+      if (!id) { toast.error(t("favorites.failed")); return; }
+      setFavListId(id);
+      invalidateContentLists();
+      try { (window as any).posthog?.capture?.("onboarding_favorites_created", { city }); } catch { /* ignore */ }
+      goNext();
+    } finally {
+      setFavCreating(false);
+    }
+  };
+
   // Finalizacja: zapis ankiety (best-effort), onboarding_completed, sygnal coach-marków.
   const finish = useCallback(async () => {
     if (!user || finishing) return;
@@ -266,17 +319,20 @@ const OnboardingFlow = ({ onDone }: Props) => {
     stepName === "source" ? (!!source && (source !== "other" || sourceOther.trim().length > 0)) :
     stepName === "goals" ? (goals.length > 0 && (!goals.includes("other") || goalsOther.trim().length > 0)) :
     stepName === "profile" ? (uStatus === "ok" && !firstNameProblem && !!gender && !savingU) :
+    stepName === "favorites" ? (!!fav.city.trim() && fav.picks.length === FAVORITES_COUNT && !favCreating) :
     true;
 
   const onPrimary = () => {
     if (stepName === "welcome" || stepName === "source" || stepName === "goals") goNext();
     else if (stepName === "profile") saveUsername();
+    else if (stepName === "favorites") void createFavorites();
     else if (stepName === "tracking") acceptTracking();
   };
 
   const primaryLabel =
     stepName === "welcome" ? t("cta.start") :
     stepName === "tracking" ? t("cta.agree") :
+    stepName === "favorites" ? (favListId ? t("cta.next") : t("favorites.cta")) :
     t("cta.next");
 
   return (
@@ -524,6 +580,10 @@ const OnboardingFlow = ({ onDone }: Props) => {
           </>
         )}
 
+        {stepName === "favorites" && (
+          <OnboardingFavorites value={fav} onChange={setFav} onFocusChange={setInputFocused} />
+        )}
+
         {stepName === "tracking" && (
           <>
             <div className="pt-6 text-center">
@@ -548,10 +608,13 @@ const OnboardingFlow = ({ onDone }: Props) => {
           disabled={!canNext || (stepName === "tracking" && finishing)}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
         >
-          {(savingU || (stepName === "tracking" && finishing))
+          {(savingU || favCreating || (stepName === "tracking" && finishing))
             ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />
             : primaryLabel}
         </button>
+        {stepName === "favorites" && !favListId && (
+          <button onClick={goNext} disabled={favCreating} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("favorites.skip")}</button>
+        )}
         {stepName === "tracking" && (
           <button onClick={declineTracking} disabled={finishing} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">{t("cta.not_now")}</button>
         )}

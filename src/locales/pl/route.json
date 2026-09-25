@@ -168,7 +168,9 @@
     "edit": "Edytuj notkę",
     "add": "Dodaj notkę",
     "add_description": "Dodaj opis",
-    "edit_description": "Edytuj opis"
+    "edit_description": "Edytuj opis",
+    "draft_restored": "Przywróciliśmy niezapisaną notkę",
+    "save_failed": "Nie udało się zapisać notki. Tekst został, spróbuj jeszcze raz."
   },
   "day_label": "{{city}} - Dzień {{day}}",
   "map_picker": {

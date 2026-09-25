@@ -168,10 +168,11 @@ export default function SharedList() {
   // Zapis MOJEJ notki (2026-09-15). ⛔ NIE piszemy juz w `discovery_items.short_desc` - to
   // pole trzyma notke wlasciciela i aktualizuje je `propagate_place_note` z triggera. Dwa
   // punkty zapisu rozjechalyby notke wlasciciela z jego wierszem w `discovery_item_notes`.
-  const saveItemNote = async (item: any, value: string) => {
-    if (!user) return;
+  const saveItemNote = async (item: any, value: string): Promise<boolean> => {
+    if (!user) return false;
     const ok = await saveCollectionNote(id!, user.id, item.place_name, value);
-    if (!ok) { toast.error(t("toast.note_failed")); return; }
+    // `false` zostawia arkusz notki otwarty z tekstem (miekki zapis, PlaceNoteSheet).
+    if (!ok) { toast.error(t("toast.note_failed")); return false; }
     // ⛔ Uniewazniamy WSZYSTKIE kolekcje, nie tylko biezaca. Notka o miejscu jest JEDNA na
     // (user, miejsce) i baza rozsiewa ja po pozostalych kolekcjach triggerem - sprawdzone na
     // prodzie. Ale cache o tym nie wie: `collectionNotesKey(id)` czysci tylko ten jeden widok,
@@ -182,6 +183,7 @@ export default function SharedList() {
     queryClient.invalidateQueries({ queryKey: ["shared-list-items"] });
     queryClient.invalidateQueries({ queryKey: ["place-notes"] });
     if (value.trim()) void markVisitedAuto(item);
+    return true;
   };
 
   // Notka albo zdjecie przy miejscu = user tam BYL (prosba Nat 2026-09-14): odhaczamy odwiedziny
@@ -1317,7 +1319,8 @@ export default function SharedList() {
         onOpenChange={(o) => { if (!o) setNoteItem(null); }}
         placeName={noteItem?.place_name ?? ""}
         note={(noteItem?.short_desc ?? "").trim()}
-        onSave={async (v) => { if (noteItem) await saveItemNote(noteItem, v); }}
+        onSave={(v) => (noteItem ? saveItemNote(noteItem, v) : false)}
+        draftKey={noteItem ? `list:${id}:${noteItem.place_name}` : undefined}
       />
 
       {/* Wybor zdjecia dla KONKRETNEJ pozycji listy (akcja z menu przy wierszu). Cel w refie,

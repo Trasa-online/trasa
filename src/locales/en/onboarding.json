@@ -158,5 +158,24 @@
       "nonbinary": "Other",
       "undisclosed": "Prefer not to say"
     }
+  },
+  "favorites": {
+    "city_title": "Which city do you live in?",
+    "city_desc": "We will start with the places you know best.",
+    "city_placeholder": "Type your city",
+    "city_use": "Choose: {{city}}",
+    "title": "Your two favourite places",
+    "desc": "The ones you recommend to everyone who visits your city. They will become your first collection.",
+    "change_city": "change",
+    "slot_empty": "Place {{n}}",
+    "remove": "Remove",
+    "search_placeholder": "Search for a café, bar, park…",
+    "no_results": "Nothing found. Try another name.",
+    "cta": "Create collection",
+    "skip": "Skip",
+    "failed": "We could not create the collection. Please try again.",
+    "collection_in": "My favourite places in {{place}}",
+    "collection_plain": "My favourite places: {{place}}",
+    "collection_fallback": "My favourite places"
   }
 }

@@ -1004,10 +1004,18 @@ export default function SharedRoute() {
 
   // Etap W TRAKCIE: zapis wlasnej notki (pin_ratings). PlaceNoteEditor sam debounce'uje -> zapis
   // natychmiastowy. Po zapisie invalidacja notek (inni uczestnicy widza + moj edytor sie synchronizuje).
-  const saveMyNote = async (pin: any, value: string) => {
-    if (!user) return;
-    await (supabase as any).from("pin_ratings").upsert({ route_id: pin.route_id, user_id: user.id, place_name: pin.place_name, note: value || null }, { onConflict: "route_id,user_id,place_name" });
+  // Oddaje `false` przy bledzie - arkusz notki zostaje wtedy otwarty z tekstem (do 2026-09-25
+  // blad zapisu byl ignorowany, arkusz sie zamykal i notka znikala bez sladu).
+  const saveMyNote = async (pin: any, value: string): Promise<boolean> => {
+    if (!user) return false;
+    const { error } = await (supabase as any).from("pin_ratings").upsert({ route_id: pin.route_id, user_id: user.id, place_name: pin.place_name, note: value || null }, { onConflict: "route_id,user_id,place_name" });
+    if (error) {
+      console.warn("[SharedRoute] saveMyNote:", error.message);
+      toast.error(t("route:note.save_failed"));
+      return false;
+    }
     queryClient.invalidateQueries({ queryKey: ["shared-route-notes", id] });
+    return true;
   };
 
   // Zdjecia per-miejsce (pins.images) - wszyscy uczestnicy widza wszystkie, kazdy dodaje/usuwa (member RLS).
@@ -2992,7 +3000,8 @@ export default function SharedRoute() {
         onOpenChange={(o) => { if (!o) setNotePin(null); }}
         placeName={notePin?.place_name ?? ""}
         note={notePin ? ((notesMap.get(placeNoteKey(notePin.place_name)) ?? []).find((n: any) => n.user_id === user?.id)?.note ?? "") : ""}
-        onSave={async (v) => { if (notePin) await saveMyNote(notePin, v); }}
+        onSave={(v) => (notePin ? saveMyNote(notePin, v) : false)}
+        draftKey={notePin ? `trip:${id}:${notePin.place_name}` : undefined}
       />
 
       {/* "Dodaj do wyjazdu" - wybor wlasnego szkicu docelowego. */}

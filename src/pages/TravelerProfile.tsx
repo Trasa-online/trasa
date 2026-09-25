@@ -37,7 +37,7 @@ import { UserMinus } from "lucide-react";
 import { fetchListVisitCounts } from "@/lib/placeVisits";
 import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
 import { listTheme } from "@/lib/listThemes";
-import ReferralCard from "@/components/profile/ReferralCard";
+import ReferralCard, { SHOW_REFERRAL_CARD } from "@/components/profile/ReferralCard";
 import RewardThanksBanner from "@/components/profile/RewardThanksBanner";
 import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
@@ -972,7 +972,7 @@ const TravelerProfile = () => {
         {/* Podziekowanie za nakladke przyznana recznie - stoi w tym samym miejscu co karta
             zaproszen i na czas swojej widocznosci ja zastepuje (patrz ReferralCard). */}
         <RewardThanksBanner userId={user.id} />
-        <ReferralCard userId={user.id} />
+        {SHOW_REFERRAL_CARD && <ReferralCard userId={user.id} />}
         <StarredPlacesSheet open={starredOpen} onOpenChange={setStarredOpen} userId={user.id} />
 
         {/* Zakladki: Listy | Wyjazdy (ikona + labelka obok, underline aktywnej). Zapisane usunięte 2026-08-24. */}

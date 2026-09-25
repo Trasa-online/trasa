@@ -36,6 +36,11 @@ import { fetchRewardGrant, rewardGrantKey } from "@/lib/rewardGrant";
 // dokladnie to zachowanie. localStorage schowalby go raz na zawsze.
 const DISMISS_KEY = "spontaway_referral_card_dismissed";
 
+// Karta schowana na wszystkich profilach do czasu wejscia do App Store (decyzja Nat 2026-09-25):
+// zaproszenie prowadzi dzis na TestFlight i nie liczy sie do nagrody, wiec obiecywalo cos, czego
+// nie dowozimy. Powrot = true (i powrot linku na referralLandingLink w referral.ts).
+export const SHOW_REFERRAL_CARD = false;
+
 export default function ReferralCard({ userId }: { userId: string }) {
   const { t } = useTranslation("profiles");
   const share = useShare();

@@ -59,6 +59,13 @@ const Auth = () => {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  // Web: powrot z ekranu Google/Apple strzalka "wstecz" przywraca strone z bfcache razem
+  // z `loading = true` - guziki bylyby martwe tak samo jak na natywce.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setLoading(false); };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(() => Date.now());
   const [businessMode, setBusinessMode] = useState(searchParams.get("business") === "true");
@@ -371,6 +378,14 @@ const Auth = () => {
       });
       if (error) throw error;
       if (isNative && data?.url) {
+        // User moze zamknac okno logowania bez wyboru konta (np. tapnal Google, a chcial Apple).
+        // Bez tego `loading` zostawal true i OBA guziki byly wyszarzone na stale (zgloszenie
+        // 2026-09-25). Przy udanym logowaniu okno tez sie zamyka (App.tsx: Browser.close), wiec
+        // zdjecie blokady niczego nie psuje - nawigacja i tak idzie z callbacku.
+        const sub = await Browser.addListener("browserFinished", () => {
+          setLoading(false);
+          sub.remove();
+        });
         await Browser.open({ url: data.url, presentationStyle: "popover" });
       }
       // Supabase redirects the browser - no further code runs here on success.
