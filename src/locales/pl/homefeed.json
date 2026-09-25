@@ -156,5 +156,6 @@
     "saves_aria_many": "{{count}} zapisów",
     "privacy_public": "Kolekcja publiczna",
     "privacy_private": "Kolekcja prywatna"
-  }
+  },
+  "draft_badge": "Robocza"
 }

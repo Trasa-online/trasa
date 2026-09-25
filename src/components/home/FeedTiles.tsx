@@ -84,6 +84,9 @@ export type GridItem = {
    *  kazdym kafelku bylby czystym szumem. Pole podaje wylacznie wlasny profil, gdzie stan
    *  jest zmienny i nalezy do ogladajacego. */
   isPublic?: boolean;
+  /** Lista: kolekcja BEZ miejsc - widoczna wylacznie na profilu autora jako robocza
+   *  (prosba Nat 2026-09-25). Eksploracja, wyszukiwarka i profil publiczny ja pomijaja. */
+  isDraft?: boolean;
 };
 
 /** Mini-siatka listy: 3 kolumny, dwa rzedy. Przy wiecej niz 6 miejscach ostatni kafelek to "+N". */
@@ -383,8 +386,16 @@ export function ListTile({ it, size = "feed", people = "pill" }: { it: GridItem;
         {/* PRAWA STRONA rzedu: "Nowe miejsce!" i licznik zapisow. Jedna wspolna grupa z `ml-auto`,
             zeby przy obu naraz dociagnela sie CALOSC - dwa osobne `ml-auto` w jednym rzedzie
             rozjechalyby je na dwie krawedzie. */}
-        {(!!it.newCount || !!it.savesCount || it.isPublic != null) && (
+        {(!!it.newCount || !!it.savesCount || it.isPublic != null || it.isDraft) && (
           <span className={`ml-auto flex items-center ${feed ? "gap-1.5" : "gap-1"}`}>
+            {/* Pusta kolekcja = robocza: nikt poza autorem jej nie widzi, dopoki nie dostanie
+                pierwszego miejsca. Biale tlo jak "Nowe miejsce!", bo to STAN, ktory ma sie rzucac
+                w oczy - inaczej autor nie wie, czemu kolekcji nie ma w eksploracji. */}
+            {it.isDraft && (
+              <span className={`inline-flex items-center rounded-full bg-white font-bold leading-none text-[#5B2C06] shadow-sm ${size === "feed" ? "h-[30px] px-3 text-[14px]" : "h-[22px] px-2 text-[11px]"}`}>
+                {t("draft_badge")}
+              </span>
+            )}
             {!!it.newCount && (
               <span className={`inline-flex items-center gap-1.5 rounded-full bg-white font-bold leading-none text-[#5B2C06] shadow-sm ${size === "feed" ? "h-[30px] px-3 text-[14px]" : "h-[22px] px-2 text-[11px]"}`}>
                 <BrandStar className={`text-primary ${size === "feed" ? "h-[15px] w-[15px]" : "h-3 w-3"}`} />

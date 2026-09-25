@@ -167,7 +167,7 @@
     "title": "Your two favourite places",
     "desc": "The ones you recommend to everyone who visits your city. They will become your first collection.",
     "change_city": "change",
-    "slot_empty": "Place {{n}}",
+    "slot_empty": "Add place {{n}}",
     "remove": "Remove",
     "search_placeholder": "Search for a café, bar, park…",
     "no_results": "Nothing found. Try another name.",
@@ -176,6 +176,7 @@
     "failed": "We could not create the collection. Please try again.",
     "collection_in": "My favourite places in {{place}}",
     "collection_plain": "My favourite places: {{place}}",
-    "collection_fallback": "My favourite places"
+    "collection_fallback": "My favourite places",
+    "examples": "For example - tap to pick:"
   }
 }

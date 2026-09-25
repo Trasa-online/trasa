@@ -60,6 +60,8 @@ const SOURCE_OPTS = [
   { id: "other", labelKey: "sources.other" },
 ];
 
+const DONT_KNOW = "niewiem";
+
 const GOAL_OPTS = [
   { id: "odkrywanie", labelKey: "goals.discover" },
   { id: "wyjazdy", labelKey: "goals.plan_trips" },
@@ -157,8 +159,15 @@ const OnboardingFlow = ({ onDone }: Props) => {
   const goNext = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
   const goBack = () => setStep((s) => Math.max(0, s - 1));
 
+  // "Jeszcze nie wiem" wyklucza reszte (prosba Nat 2026-09-25): zaznaczenie jej czysci pozostale
+  // cele, a zaznaczenie dowolnego celu zdejmuje "nie wiem". Inaczej ankieta mowila jednoczesnie
+  // "chce planowac wyjazdy" i "nie wiem, po co tu jestem".
   const toggleGoal = (id: string) =>
-    setGoals((g) => g.includes(id) ? g.filter((x) => x !== id) : [...g, id]);
+    setGoals((g) => {
+      if (g.includes(id)) return g.filter((x) => x !== id);
+      if (id === DONT_KNOW) return [DONT_KNOW];
+      return [...g.filter((x) => x !== DONT_KNOW), id];
+    });
 
   // Zapis username + imie (krok "username").
   const saveUsername = async () => {

@@ -195,7 +195,8 @@ export default function PublicProfile() {
           .from("profiles").select("id, username, first_name, avatar_url, avatar_frame, avatar_frame_color").in("id", ownerIds);
         for (const pr of (profs ?? []) as any[]) owners.set(pr.id, pr);
       }
-      return rows.map((r) => ({
+      // Pusta kolekcja jest ROBOCZA - widzi ja tylko autor na wlasnym profilu (prosba Nat 2026-09-25).
+      return rows.filter((r) => (byCol[r.id] ?? []).length > 0).map((r) => ({
         ...r, tiles: byCol[r.id] ?? [], visited_count: visits.get(r.id) ?? 0,
         co_authors: mem.get(r.id) ?? [], _owner: owners.get(r.user_id) ?? null,
       }));
@@ -520,26 +521,32 @@ export default function PublicProfile() {
 
         {/* Statystyki inline: Obserwujacy / Obserwowani / Wyroznione (klik -> lista/arkusz) + akcja
             Obserwuj. gap-5 + shrink-0 na kolkach - patrz TravelerProfile (flex sciskal guziki). */}
-        <div className="flex items-end gap-5">
-          <button onClick={() => setFollowSheet("followers")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.followers")}</p>
+        {/* ⚠️ Statystyki siedza we WLASNYM kontenerze `flex-1 min-w-0 justify-between`, a guzik
+            relacji obok jest `shrink-0`. Do 2026-09-25 wszystko stalo w jednym rzedzie z gap-5
+            i rzad byl szerszy niz ekran (3 statystyki + „Znajomi" ~400 px przy 361 px), wiec
+            guzik wyjezdzal poza padding i dotykal krawedzi (zgloszenie Nat). Teraz scisniete
+            zostaja ODSTEPY miedzy statystykami, a na najwezszym ekranie - ich etykiety. */}
+        <div className="flex items-end gap-3">
+          <div className="flex-1 min-w-0 flex items-end justify-between gap-2">
+          <button onClick={() => setFollowSheet("followers")} className="min-w-0 text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground truncate">{t("profile.followers")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{followCounts.followers}</p>
           </button>
           {/* ZNAJOMI zamiast obserwowanych - ta sama definicja co na wlasnym profilu
               (relacja przyjeta przez obie strony, liczona przez baze). Obserwowani nie
               znikaja: maja zakladke w arkuszu. Rzad miesci TRZY pozycje, czwarta nie. */}
-          <button onClick={() => setFollowSheet("friends")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.friends")}</p>
+          <button onClick={() => setFollowSheet("friends")} className="min-w-0 text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground truncate">{t("profile.friends")}</p>
             <p className="text-xl font-bold text-foreground mt-0.5 tabular-nums">{(friendIds.data ?? []).length}</p>
           </button>
           {/* Wyroznione miejsca tej osoby (prosba Nat 2026-09-13) - jak na wlasnym profilu. */}
-          <button onClick={() => { haptics.light(); setStarredOpen(true); }} aria-label={t("profile.starred_aria")} className="text-left active:opacity-70 transition-opacity">
-            <p className="text-xs font-medium text-muted-foreground">{t("profile.starred")}</p>
+          <button onClick={() => { haptics.light(); setStarredOpen(true); }} aria-label={t("profile.starred_aria")} className="min-w-0 text-left active:opacity-70 transition-opacity">
+            <p className="text-xs font-medium text-muted-foreground truncate">{t("profile.starred")}</p>
             <p className="mt-0.5 flex items-center gap-1 text-xl font-bold text-foreground tabular-nums">
               <BrandIcon src={STAR_ICON} className="h-[18px] w-[18px] text-primary" />{starred.length}
             </p>
           </button>
-          <div className="flex-1" />
+          </div>
           {/* ⛔ JEDEN GUZIK RELACJI (decyzja Nat 2026-09-23, model z Facebooka). Przez dobe
               staly tu DWA kolka - "obserwuj" i "dodaj do znajomych" - i to bylo mylace: oba
               o relacji, oba z ludzikiem, roznica niewidoczna. Teraz jedna decyzja: wysylam

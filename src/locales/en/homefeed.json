@@ -151,5 +151,6 @@
     "saves_aria_other": "{{count}} saves",
     "privacy_public": "Public collection",
     "privacy_private": "Private collection"
-  }
+  },
+  "draft_badge": "Draft"
 }

@@ -167,7 +167,7 @@
     "title": "Twoje dwa ulubione miejsca",
     "desc": "Takie, które polecasz każdemu, kto przyjeżdża do Twojego miasta. Zrobimy z nich Twoją pierwszą kolekcję.",
     "change_city": "zmień",
-    "slot_empty": "Miejsce {{n}}",
+    "slot_empty": "Dodaj miejsce {{n}}",
     "remove": "Usuń",
     "search_placeholder": "Szukaj kawiarni, baru, parku…",
     "no_results": "Nic nie znaleźliśmy. Spróbuj innej nazwy.",
@@ -176,6 +176,7 @@
     "failed": "Nie udało się utworzyć kolekcji. Spróbuj jeszcze raz.",
     "collection_in": "Moje ulubione miejsca {{place}}",
     "collection_plain": "Moje ulubione miejsca: {{place}}",
-    "collection_fallback": "Moje ulubione miejsca"
+    "collection_fallback": "Moje ulubione miejsca",
+    "examples": "Na przykład - tapnij, żeby wybrać:"
   }
 }

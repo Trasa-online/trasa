@@ -1289,7 +1289,10 @@ async function hydrateCollections(cols: any[]): Promise<DiscoveryCollection[]> {
       for (const r of (saved ?? []) as any[]) seenMap.set(r.collection_id, r.seen_item_count ?? 0);
     }
   }
-  return cols.map((col: any): DiscoveryCollection => {
+  // ⛔ Kolekcja BEZ miejsc nie trafia ani do Eksploracji, ani do wyszukiwarki (prosba Nat
+  // 2026-09-25: pusta „Kolekcja miejsc w Krakowie" stala w feedzie jak zepsuty kafelek). To
+  // szkic - widzi go wylacznie autor, na wlasnym profilu, z plakietka „Robocza".
+  return cols.filter((col: any) => (byCol.get(col.id) ?? []).length > 0).map((col: any): DiscoveryCollection => {
     const p = profMap.get(col.user_id);
     const all = byCol.get(col.id) ?? [];
     // Nowe = ostatnie `newCount` pozycji (dodawanie dopisuje na koniec - discovery_items nie

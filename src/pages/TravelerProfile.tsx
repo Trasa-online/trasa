@@ -806,6 +806,8 @@ const TravelerProfile = () => {
                   // zobaczy swiat. ⛔ Nie podajemy tego w "Zapisanych" ani w eksploracji -
                   // tam wszystko widoczne jest z definicji publiczne.
                   isPublic: l.is_public !== false,
+                  // Bez miejsc = robocza: tylko tu, u autora (Eksploracja i profil publiczny ja pomijaja).
+                  isDraft: (l.tiles ?? []).length === 0,
                 };
                 return <GridTile key={l.id} it={item} size="feed" people="avatars" className="snap-start snap-always" onOpen={() => navigate(`/lista/${l.id}`)} />;
               })}
