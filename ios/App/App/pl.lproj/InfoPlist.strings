@@ -1,0 +1,6 @@
+/* Teksty zgód systemowych - wersja polska. Angielska: en.lproj/InfoPlist.strings (i domyślna w Info.plist). */
+"NSCameraUsageDescription" = "spontaway potrzebuje dostępu do aparatu, żeby zrobić zdjęcie miejsca i dodać je do planu albo kolekcji.";
+"NSPhotoLibraryUsageDescription" = "spontaway potrzebuje dostępu do zdjęć, żeby ustawić zdjęcie profilowe i dodawać zdjęcia do planów i kolekcji.";
+"NSPhotoLibraryAddUsageDescription" = "spontaway zapisuje w Twojej bibliotece obrazy pobrane z aplikacji, np. kartę planu, kolekcji albo miejsca do udostępnienia.";
+"NSLocationWhenInUseUsageDescription" = "spontaway pokazuje, jak daleko jesteś od miejsc, i układa wyniki wyszukiwania od najbliższych. Lokalizacji używamy tylko wtedy, gdy aplikacja jest otwarta.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "spontaway pokazuje, jak daleko jesteś od miejsc, i układa wyniki wyszukiwania od najbliższych. Lokalizacji używamy tylko wtedy, gdy aplikacja jest otwarta - nie śledzimy Cię w tle.";

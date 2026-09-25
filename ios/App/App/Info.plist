@@ -66,14 +66,14 @@
 		<string>instagram</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>spontaway potrzebuje dostępu do kamery, aby zrobić zdjęcie i zidentyfikować miejsce lub dodać zdjęcie do dziennika podróży.</string>
+	<string>spontaway needs camera access to take a photo of a place and add it to a plan or collection.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>spontaway potrzebuje dostępu do zdjęć, aby ustawić zdjęcie profilowe oraz dodawać zdjęcia do trasy i dziennika podróży.</string>
+	<string>spontaway needs access to your photos to set a profile picture and add photos to your plans and collections.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>spontaway potrzebuje dostępu do biblioteki zdjęć, aby zapisać zdjęcie profilowe oraz zdjęcia z dziennika podróży.</string>
+	<string>spontaway saves images you download from the app to your library, such as a plan, collection or place card to share.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>spontaway pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Dystanse liczymy na Twoim telefonie. Jeśli ustawisz swoją lokalizację jako punkt startowy trasy, zapiszemy te współrzędne jako część trasy.</string>
+	<string>spontaway shows how far you are from places and sorts search results from the nearest. We only use your location while the app is open.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>spontaway pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Używamy lokalizacji wyłącznie gdy aplikacja jest otwarta - nie śledzimy Cię w tle. Dystanse liczymy na Twoim telefonie, a jeśli ustawisz swoją lokalizację jako punkt startowy trasy, zapiszemy te współrzędne jako część trasy.</string>
+	<string>spontaway shows how far you are from places and sorts search results from the nearest. We only use your location while the app is open - we never track you in the background.</string>
 </dict>
 </plist>

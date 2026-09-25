@@ -1,0 +1,6 @@
+/* System permission texts - English. Polish: pl.lproj/InfoPlist.strings. */
+"NSCameraUsageDescription" = "spontaway needs camera access to take a photo of a place and add it to a plan or collection.";
+"NSPhotoLibraryUsageDescription" = "spontaway needs access to your photos to set a profile picture and add photos to your plans and collections.";
+"NSPhotoLibraryAddUsageDescription" = "spontaway saves images you download from the app to your library, such as a plan, collection or place card to share.";
+"NSLocationWhenInUseUsageDescription" = "spontaway shows how far you are from places and sorts search results from the nearest. We only use your location while the app is open.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "spontaway shows how far you are from places and sorts search results from the nearest. We only use your location while the app is open - we never track you in the background.";

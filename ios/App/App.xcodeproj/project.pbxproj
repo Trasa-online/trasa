@@ -19,6 +19,7 @@
 		A1D5F0041000000000000004 /* InstagramStoriesPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D5F0031000000000000003 /* InstagramStoriesPlugin.swift */; };
 		A1D5F0061000000000000006 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D5F0051000000000000005 /* MainViewController.swift */; };
 		A1D5F0081000000000000008 /* ScreenshotPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D5F0071000000000000007 /* ScreenshotPlugin.swift */; };
+		A1D5F00B100000000000000B /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A1D5F00A100000000000000A /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +37,8 @@
 		A1D5F0031000000000000003 /* InstagramStoriesPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstagramStoriesPlugin.swift; sourceTree = "<group>"; };
 		A1D5F0051000000000000005 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		A1D5F0071000000000000007 /* ScreenshotPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotPlugin.swift; sourceTree = "<group>"; };
+		A1D5F00C100000000000000C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A1D5F00D100000000000000D /* pl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pl; path = pl.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,6 +82,7 @@
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
 				504EC3131FED79650016851F /* Info.plist */,
+				A1D5F00A100000000000000A /* InfoPlist.strings */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				A1D5F0011000000000000001 /* spontaway.caf */,
 				50B271D01FEDC1A000F3C39B /* public */,
@@ -136,6 +140,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				pl,
 				Base,
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
@@ -158,6 +163,7 @@
 			files = (
 				504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
+				A1D5F00B100000000000000B /* InfoPlist.strings in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
@@ -197,6 +203,15 @@
 				504EC3111FED79650016851F /* Base */,
 			);
 			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		A1D5F00A100000000000000A /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A1D5F00C100000000000000C /* en */,
+				A1D5F00D100000000000000D /* pl */,
+			);
+			name = InfoPlist.strings;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
