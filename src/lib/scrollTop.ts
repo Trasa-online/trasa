@@ -18,7 +18,9 @@ const INTERACTIVE = "button, a, input, select, textarea, label, [role='button'],
  *  `null` takze dla elementow `position: fixed`, wiec odrzucilby scroller, ktory jest na ekranie. */
 function mainScroller(): HTMLElement | null {
   const all = Array.from(document.querySelectorAll<HTMLElement>(SELECTOR));
-  const visible = all.filter((el) => el.getClientRects().length > 0);
+  // Pager zakladek (TabsPager) trzyma sasiednie ekrany w DOM obok siebie - sa „widoczne"
+  // w sensie layoutu, wiec pomijamy wszystko, co siedzi w nieaktywnym panelu.
+  const visible = all.filter((el) => el.getClientRects().length > 0 && !el.closest('[data-tab-panel="inactive"]'));
   return visible.find((el) => el.scrollHeight > el.clientHeight + 4) ?? visible[0] ?? null;
 }
 

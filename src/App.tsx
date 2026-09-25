@@ -751,20 +751,16 @@ import NotFound from "./pages/NotFound";
 // Lazy loaded - only fetched when the user navigates to that route
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
-// Zakladki z dolnego paska laduja sie W TLE zaraz po starcie (2026-09-25): przesuniecie
-// palcem miedzy nimi (useTabSwipe) czekalo przy pierwszym przejsciu na pobranie kodu ekranu
-// i w tym czasie wisial szkielet - Nat: „toporne, dlugo sie laduje". Te same funkcje karmia
-// `lazy`, wiec drugi import trafia w gotowy modul.
-const loadExplore = () => import("./pages/Explore");
-const loadMiejsca = () => import("./pages/Miejsca");
-const loadTravelerProfile = () => import("./pages/TravelerProfile");
+// Zakladki z dolnego paska (Eksploracja, Miejsca, Profil) zyja w JEDNYM pagerze (TabsPager,
+// 2026-09-26) - to on laduje ich kod. Kod pagera rozgrzewamy w tle zaraz po starcie, zeby
+// pierwsze wejscie nie czekalo na paczke.
+const loadTabsPager = () => import("./components/layout/TabsPager");
 if (typeof window !== "undefined") {
-  const warm = () => { void loadExplore(); void loadMiejsca(); void loadTravelerProfile(); };
   const ric = (window as any).requestIdleCallback as ((cb: () => void, o?: { timeout: number }) => number) | undefined;
+  const warm = () => { void loadTabsPager(); void import("./pages/Explore"); void import("./pages/Miejsca"); void import("./pages/TravelerProfile"); };
   if (ric) ric(warm, { timeout: 2500 }); else window.setTimeout(warm, 1200);
 }
-const Explore          = lazy(loadExplore);
-const Miejsca          = lazy(loadMiejsca);
+const TabsPager        = lazy(loadTabsPager);
 const CreateRanking    = lazy(() => import("./pages/CreateRanking"));
 const ComposeWyjazd    = lazy(() => import("./pages/ComposeWyjazd"));
 const CountryCityPicker = lazy(() => import("./pages/CountryCityPicker"));
@@ -774,7 +770,6 @@ const Settings         = lazy(() => import("./pages/Settings"));
 const Stats            = lazy(() => import("./pages/Stats"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
-const TravelerProfile  = lazy(loadTravelerProfile);
 const MyTrips          = lazy(() => import("./pages/MyTrips"));
 const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
@@ -882,8 +877,15 @@ const App = () => (
               · + · Miejsca (wizytowki lokali) · Profil. Osobny feed obserwowanych (/feed) i
               siatka "Glowna" zdjete z paska - stary link zostaje jako redirect. */}
           <Route path="/feed" element={<Navigate to="/eksploruj" replace />} />
-          <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
-          <Route path="/miejsca" element={<AppLayout hideTopBar><Miejsca /></AppLayout>} />
+          {/* PAGER ZAKLADEK (2026-09-26, wzor Instagrama): /eksploruj, /miejsca i /moj-profil to
+              JEDNA trasa-uklad - TabsPager zostaje zamontowany przy przejsciu miedzy nimi, a przy
+              przesuwaniu palcem widac od razu tresc sasiedniej zakladki. Dzieci sa puste: pager
+              sam wybiera panel po adresie. */}
+          <Route element={<AppLayout hideTopBar><TabsPager /></AppLayout>}>
+            <Route path="/eksploruj" element={null} />
+            <Route path="/miejsca" element={null} />
+            <Route path="/moj-profil" element={null} />
+          </Route>
           {/* /polubione (Zapisane) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
           <Route path="/polubione" element={<Navigate to="/moj-profil" replace />} />
           <Route path="/zestawienie/nowe" element={<RequireAuth><CreateRanking /></RequireAuth>} />
@@ -903,7 +905,6 @@ const App = () => (
           <Route path="/moje-trasy" element={PLANNING_DISABLED ? <Navigate to="/moj-profil?tab=wyjazdy" replace /> : <AppLayout><MyTrips /></AppLayout>} />
           {/* /dziennik (Wyjazdy/Journal) przeniesione do zakładki profilu (IA 2026-08-20). Redirect dla starych linków/pushy. */}
           <Route path="/dziennik" element={<Navigate to="/moj-profil?tab=wyjazdy" replace />} />
-          <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={PLANNING_DISABLED ? <Navigate to="/eksploruj" replace /> : <EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />

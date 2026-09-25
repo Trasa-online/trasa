@@ -37,6 +37,9 @@ export function useEdgeSwipeBack(enabled = isNative) {
       if (modalOpen()) return;
       const el = e.target as Element | null;
       if (el?.closest?.("[data-no-swipe]")) return;
+      // W pagerze zakladek gest w prawo od krawedzi to przejscie do poprzedniej zakladki
+      // (natywny scroll), a nie cofanie historii - oba naraz przerzucalyby usera dwa razy.
+      if (el?.closest?.("[data-tabs-pager]")) return;
       start = { x: t.clientX, y: t.clientY, t: Date.now() };
     };
 

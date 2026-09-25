@@ -1065,14 +1065,6 @@ function fetchAllPlaceRows(): Promise<{ data: any[] | null; error: unknown }> {
   return placesAllInflight!;
 }
 
-/** Rozgrzewka zakladki Miejsca (2026-09-25): przesuniecie palcem z Eksploracji na Miejsca
- *  czekalo przy pierwszym wejsciu ~2 s na miejsca. Wolane w tle z sasiednich zakladek -
- *  gdy cache jest swiezy, nic nie robi. */
-export function prewarmPlaceRows(): void {
-  const fresh = placesRowsCache && placesRowsCache.key === "all" && Date.now() - placesRowsCache.at < PLACES_CACHE_TTL_MS;
-  if (fresh || placesAllInflight) return;
-  void fetchAllPlaceRows();
-}
 
 function partitionBusinessFirst(places: MockPlace[], keysWithUserPhotos?: Set<string>): MockPlace[] {
   const bizPhoto: MockPlace[] = [];

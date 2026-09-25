@@ -1047,9 +1047,11 @@ const TravelerProfile = () => {
         </div>
 
         {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
-        {/* data-tab-pager: gest w bok najpierw przelacza Plany <-> Kolekcje, a dopiero ze
-            skraju (Plany + palec w prawo) przenosi na zakladke Miejsca (useTabSwipe). */}
-        <div className="space-y-6 pt-1" {...swipeTabs} data-tab-pager data-pager-start={tab === "wyjazdy"} data-pager-end={tab === "listy"}>
+        {/* Zagniezdzone zakladki (wybor Nat 2026-09-25): gest w bok najpierw przelacza Plany <->
+            Kolekcje. Na „Kolekcje" blokujemy poziomy scroll PAGERA (`touch-action: pan-y`), wiec
+            przesuniecie w prawo wraca na Plany; na „Plany" pager jest wolny i to samo
+            przesuniecie przenosi na Miejsca (w lewo pager i tak nie ma dokad - Profil jest ostatni). */}
+        <div className="space-y-6 pt-1" {...swipeTabs} style={{ touchAction: tab === "listy" ? "pan-y" : undefined }}>
           {tab === "listy" ? (
             <div className="space-y-4">
               <TabHint text={t(`tab_hints.lists_${listyTab}`)} />
