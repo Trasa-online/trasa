@@ -851,16 +851,25 @@ export default function SharedRoute() {
 
   // Rozpoznanie podwojnego tapniecia. Prog 40 px, bo palec nie trafia dwa razy w ten sam
   // piksel, a bez niego dwa tapniecia w PRZECIWNE rogi zdjecia liczylyby sie jako jedno.
+  // Pojedyncze tapniecie w zdjecie przelacza je (lewa/prawa polowa, 2026-09-25) - ale dopiero
+  // po oknie podwojnego tapniecia. Bez opoznienia pierwsze tapniecie dwukliku przewijaloby na
+  // nastepne zdjecie i serce ladowaloby na zlym. 300 ms = ten sam prog co rozpoznanie dwukliku.
+  const photoTapTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (photoTapTimer.current) window.clearTimeout(photoTapTimer.current); }, []);
   const onPhotoTap = (url: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     const now = Date.now();
     const prev = lastPhotoTap.current;
     if (prev && now - prev.t < 300 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 40) {
       lastPhotoTap.current = null;
+      if (photoTapTimer.current) { window.clearTimeout(photoTapTimer.current); photoTapTimer.current = null; }
       void likePhotoAt(url, e.clientX, e.clientY);
       return;
     }
     lastPhotoTap.current = { t: now, x: e.clientX, y: e.clientY };
+    const x = e.clientX;
+    if (photoTapTimer.current) window.clearTimeout(photoTapTimer.current);
+    photoTapTimer.current = window.setTimeout(() => { photoTapTimer.current = null; if (galleryPhotosCount.current > 1) viewerGestures.sideTap(x); }, 300);
   };
 
   // Wlasna okladka wyjazdu (route_member_covers) - kazdy uczestnik widzi swoja, wybor jednej
@@ -3273,7 +3282,7 @@ export default function SharedRoute() {
 
       {/* Fullscreen podglad zdjecia galerii (object-contain, kropki paginacji + polubienie). */}
       {viewerIndex !== null && visiblePhotos[viewerIndex] && (
-        <div {...viewerGestures.bind} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={() => setViewerIndex(null)}>
+        <div {...viewerGestures.bind} className="fixed inset-0 z-[95] bg-black flex items-center justify-center animate-in fade-in duration-200" onClick={(e) => { if (visiblePhotos.length > 1 && viewerGestures.sideTap(e.clientX)) return; setViewerIndex(null); }}>
           <img src={visiblePhotos[viewerIndex]} alt="" className="max-w-full max-h-full object-contain"
             onClick={onPhotoTap(visiblePhotos[viewerIndex])} />
           <button onClick={() => setViewerIndex(null)} aria-label={t("close")} className="absolute right-3 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>

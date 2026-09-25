@@ -6,7 +6,8 @@ import PhotoPagination from "./PhotoPagination";
 
 // Pelnoekranowy podglad zdjec (miejsca / galerii wyjazdu). Gest w bok = poprzednie/nastepne
 // (kropki na dole zamiast strzalek - prosba Nat 2026-08-30), gest W DOL zamyka (prosba Nat
-// 2026-09-24), tap w tlo zamyka. Wspoldzielony przez widok wyjazdu i listy, zeby zdjecie
+// 2026-09-24), tap w lewa/prawa polowe = poprzednie/nastepne (2026-09-25; przy jednym
+// zdjeciu tap w tlo zamyka). Wspoldzielony przez widok wyjazdu i listy, zeby zdjecie
 // dodane do miejsca dalo sie po prostu kliknac i obejrzec.
 export default function PhotoViewer({ urls, startIndex, onClose }: {
   urls: string[];
@@ -16,7 +17,7 @@ export default function PhotoViewer({ urls, startIndex, onClose }: {
   const { t } = useTranslation("common");
   const [idx, setIdx] = useState(Math.max(0, Math.min(startIndex, urls.length - 1)));
   const step = (dir: 1 | -1) => setIdx((i) => (i + dir + urls.length) % urls.length);
-  const { bind } = usePhotoViewerGestures({
+  const { bind, sideTap } = usePhotoViewerGestures({
     onClose,
     onNext: urls.length > 1 ? () => step(1) : undefined,
     onPrev: urls.length > 1 ? () => step(-1) : undefined,
@@ -31,9 +32,10 @@ export default function PhotoViewer({ urls, startIndex, onClose }: {
       // ⚠️ Styl z gestu SCALAMY, nie nadpisujemy - niesie transform i przygasanie tla.
       style={{ ...bind.style, pointerEvents: "auto" }}
       className="fixed inset-0 z-[130] bg-black flex items-center justify-center animate-in fade-in duration-200"
-      onClick={onClose}
+      // Tap w lewa / prawa polowe = poprzednie / nastepne. Przy jednym zdjeciu tap w tlo zamyka.
+      onClick={(e) => { if (!sideTap(e.clientX)) onClose(); }}
     >
-      <img src={urls[idx]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+      <img src={urls[idx]} alt="" className="max-w-full max-h-full object-contain" onClick={(e) => { e.stopPropagation(); sideTap(e.clientX); }} />
       <button
         onClick={(e) => { e.stopPropagation(); onClose(); }}
         aria-label={t("common:buttons.close")}

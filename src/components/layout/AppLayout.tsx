@@ -1,10 +1,11 @@
 import { ReactNode, useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
 import { haptics } from "@/hooks/useHaptics";
 import { scrollMainToTop } from "@/lib/scrollTop";
+import { useTabSwipe, useTabEnter } from "@/hooks/useTabSwipe";
 import OrbOverlay from "./OrbOverlay";
 import OfflineBanner from "./OfflineBanner";
 import GuestWelcomeSheet from "@/components/auth/GuestWelcomeSheet";
@@ -23,6 +24,11 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation("home");
   const onboarding = useOnboardingGate();
+  // Gest w bok miedzy Eksploracja / Miejscami / Profilem + wjazd nowego ekranu (2026-09-25).
+  const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  useTabSwipe(mainRef, pathname);
+  useTabEnter(mainRef, pathname);
 
   // Global redirect po loginie - dziala dla wszystkich method logowania
   // (AuthDrawer password/OAuth/magic link, Auth.tsx page). User wybral miejsca jako
@@ -134,7 +140,7 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
           style={{ height: "env(safe-area-inset-top, 0px)" }}
         />
       )}
-      <main className={`flex-1 flex flex-col min-h-0 max-w-lg mx-auto w-full${hideTopBar ? " pt-safe" : ""}`}>
+      <main ref={mainRef} className={`flex-1 flex flex-col min-h-0 max-w-lg mx-auto w-full${hideTopBar ? " pt-safe" : ""}`}>
         {children}
       </main>
       <OfflineBanner />

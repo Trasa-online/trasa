@@ -16,6 +16,11 @@ import { haptics } from "@/hooks/useHaptics";
  *
  * ⚠️ `onClickCapture` zjada klikniecie po gescie: podglad zamyka sie tapnieciem w tlo, wiec
  * bez tego przeciagniecie zakonczone powrotem na miejsce i tak by go zamknelo.
+ *
+ * TAPNIECIE W BOK EKRANU (prosba Nat 2026-09-25, obok gestu w bok): lewa polowa = poprzednie,
+ * prawa = nastepne - wzor z relacji na Instagramie. `sideTap(x)` oddaje `true`, gdy cos
+ * przelaczyl; przy JEDNYM zdjeciu (brak onNext/onPrev) oddaje `false` i caller robi to, co
+ * dotad (zamyka podglad). Zamykanie przy wielu zdjeciach = krzyzyk albo gest w dol.
  */
 interface PhotoViewerGestureOptions {
   onClose: () => void;
@@ -104,6 +109,14 @@ export function usePhotoViewerGestures({ onClose, onNext, onPrev, threshold = 11
     e.preventDefault();
   }, []);
 
+  const sideTap = useCallback((clientX: number): boolean => {
+    const handler = clientX < window.innerWidth / 2 ? onPrev : onNext;
+    if (!handler) return false;
+    haptics.selection();
+    handler();
+    return true;
+  }, [onNext, onPrev]);
+
   // Tlo gasnie proporcjonalnie do przesuniecia - to ono niesie informacje "puszczasz i zamykam".
   const fade = Math.min(1, Math.max(0, Math.abs(offset) / (threshold * 2.4)));
   const style: CSSProperties = {
@@ -114,5 +127,5 @@ export function usePhotoViewerGestures({ onClose, onNext, onPrev, threshold = 11
     touchAction: "none",
   };
 
-  return { bind: { onTouchStart, onTouchMove, onTouchEnd: finish, onTouchCancel: finish, onClickCapture, style }, dragging, offset };
+  return { bind: { onTouchStart, onTouchMove, onTouchEnd: finish, onTouchCancel: finish, onClickCapture, style }, dragging, offset, sideTap };
 }

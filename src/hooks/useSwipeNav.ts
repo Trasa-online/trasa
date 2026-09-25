@@ -29,7 +29,7 @@ interface SwipeNavOptions {
 }
 
 /** Czy gest moze wystartowac: brak data-no-swipe i brak poziomego scrolla po drodze. */
-function canStartSwipe(target: Element | null, root: Element): boolean {
+export function canStartSwipe(target: Element | null, root: Element): boolean {
   let el: Element | null = target;
   while (el && el !== root.parentElement) {
     if (el instanceof HTMLElement) {

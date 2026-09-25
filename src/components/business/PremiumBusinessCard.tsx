@@ -267,18 +267,36 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
       return;
     }
     if (tap) {
+      // Tap obslugujemy TUTAJ, wiec gasimy syntetyczny `click` - inaczej onClick kontenera
+      // zamykal podglad od razu, zanim dalo sie rozpoznac dwuklik albo tapniecie w bok.
+      e.preventDefault();
       const now = Date.now();
       if (now - lastTap.current < 300) {
         setZoom({ scale: 2.5, tx: 0, ty: 0 });
         lastTap.current = 0;
       } else {
         lastTap.current = now;
-        // Odczekaj na ewentualny drugi tap - inaczej double-tap-zoom zamykałby viewer.
+        const x = e.changedTouches[0].clientX;
+        // Odczekaj na ewentualny drugi tap - inaczej double-tap-zoom przelaczalby zdjecie.
+        // Pojedynczy tap: lewa / prawa polowa = poprzednie / nastepne (prosba Nat 2026-09-25);
+        // przy JEDNYM zdjeciu - zamkniecie, jak dotad.
         window.setTimeout(() => {
-          if (lastTap.current === now && scaleRef.current <= 1.01) onClose();
+          if (lastTap.current !== now || scaleRef.current > 1.01) return;
+          if (!tapSide(x)) onClose();
         }, 280);
       }
     }
+  };
+
+  // Zwraca true, gdy tap nalezy do nawigacji (galeria ma >= 2 zdjecia). Na pierwszym zdjeciu
+  // tap w lewo (i na ostatnim w prawo) nic nie robi - NIE zamyka: zamkniecie przy tapnieciu
+  // "o jedno za daleko" wyrzucaloby z galerii w polowie przegladania. Zamyka krzyzyk i gest w dol.
+  const tapSide = (clientX: number): boolean => {
+    if (photos.length < 2) return false;
+    const left = clientX < window.innerWidth / 2;
+    if (left && idx > 0) { haptics.selection(); goPrev(); }
+    else if (!left && idx < photos.length - 1) { haptics.selection(); goNext(); }
+    return true;
   };
 
   return createPortal(
@@ -294,10 +312,11 @@ const FullscreenPhotos = ({ photos, startIndex, onClose, likes, onToggleLike }: 
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={() => { dir.current = null; startPos.current = null; setGesturing(false); setDragY(0); }}
-      onClick={() => {
+      onClick={(e) => {
         // Klik po przeciagnieciu nie zamyka (przeciagniecie wrocone na miejsce = "rozmyslilem sie").
         if (dragged.current) { dragged.current = false; return; }
-        if (scaleRef.current <= 1.01) onClose();
+        // Na dotyku ten click jest zgaszony w handleTouchEnd - tu trafia tylko mysz (web).
+        if (scaleRef.current <= 1.01 && !tapSide(e.clientX)) onClose();
       }}
     >
       <button

@@ -1839,7 +1839,7 @@ const ReviewSummary = () => {
   const renderPhotoViewer = () => {
     if (!viewerUrl) return null;
     return (
-      <div {...viewerGestures.bind} className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
+      <div {...viewerGestures.bind} className="fixed inset-0 z-[90] bg-black flex items-center justify-center" onClick={(e) => { if (viewerGestures.sideTap(e.clientX)) return; setViewerUrl(null); setViewerMenuOpen(false); }}>
         <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
         {/* Strzalki jako alternatywa dla gestu (i licznik) - tylko gdy jest wiecej niz jedno zdjecie. */}
         {galleryUrlsRef.current.length > 1 && (

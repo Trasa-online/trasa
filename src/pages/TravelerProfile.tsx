@@ -1043,7 +1043,9 @@ const TravelerProfile = () => {
         </div>
 
         {/* Feed zakladki (gest: swipe w bok = zmiana zakladki) */}
-        <div className="space-y-6 pt-1" {...swipeTabs}>
+        {/* data-tab-pager: gest w bok najpierw przelacza Plany <-> Kolekcje, a dopiero ze
+            skraju (Plany + palec w prawo) przenosi na zakladke Miejsca (useTabSwipe). */}
+        <div className="space-y-6 pt-1" {...swipeTabs} data-tab-pager data-pager-start={tab === "wyjazdy"} data-pager-end={tab === "listy"}>
           {tab === "listy" ? (
             <div className="space-y-4">
               <TabHint text={t(`tab_hints.lists_${listyTab}`)} />
