@@ -204,5 +204,18 @@
     "confirm_cta": "Delete account for good",
     "done": "Account deleted"
   },
-  "terms_short": "Terms of use"
+  "terms_short": "Terms of use",
+  "bio_frames": {
+    "title": "Bio frame",
+    "desc": "This is how your bio looks on your profile.",
+    "desc_no_bio": "Add a bio in Settings to show the frame on your profile.",
+    "sample": "Your bio goes here",
+    "none": "No frame",
+    "flowers": "Flowers",
+    "meadow": "Meadow",
+    "grass": "Grass",
+    "swirls": "Swirls",
+    "hearts": "Hearts",
+    "streak": "Streak"
+  }
 }

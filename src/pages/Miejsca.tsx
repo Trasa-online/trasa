@@ -6,7 +6,7 @@ import TabTopBar from "@/components/layout/TabTopBar";
 import NotificationsBell from "@/components/layout/NotificationsBell";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
 import DistanceFilterSheet, { loadRadius, saveRadius } from "@/components/places/DistanceFilterSheet";
-import { useTabSearch, TabSearchField, TabSearchResults } from "@/components/home/TabSearch";
+import { useTabSearch, TabSearchField, TabSearchResults, SearchScopeFilter } from "@/components/home/TabSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
 import { toast } from "sonner";
@@ -71,6 +71,8 @@ export default function Miejsca() {
     <div className="flex-1 flex flex-col min-h-0">
       <TabTopBar>
         <TabSearchField s={search} />
+        {/* Kraj + miasto wyszukiwania pod JEDNYM guzikiem (2026-09-25) - wczesniej dwa rzedy chipow nad wynikami. */}
+        {search.open && <SearchScopeFilter s={search} />}
         {!search.open && (
           <button
             onClick={() => { haptics.light(); setFilterOpen(true); }}

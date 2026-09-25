@@ -186,5 +186,17 @@
     "trip_places": "Plan może mieć najwyżej {{max}} miejsc. Zostało {{left}}.",
     "collection_places": "Kolekcja może mieć najwyżej {{max}} miejsc. Zostało {{left}}.",
     "trip_members": "Plan może mieć najwyżej {{max}} współtwórców. Wolne miejsca: {{left}}."
+  },
+  "filters_sheet": {
+    "title": "Filtry",
+    "clear": "Wyczyść",
+    "aria": "Filtry",
+    "aria_active_one": "Filtry, aktywny {{count}}",
+    "aria_active_few": "Filtry, aktywne {{count}}",
+    "aria_active_many": "Filtry, aktywnych {{count}}",
+    "show_one": "Pokaż {{count}} wynik",
+    "show_few": "Pokaż {{count}} wyniki",
+    "show_many": "Pokaż {{count}} wyników",
+    "done": "Gotowe"
   }
 }

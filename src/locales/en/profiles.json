@@ -225,7 +225,10 @@
     "filter_count_one": "{{count}} place",
     "filter_count_other": "{{count}} places",
     "also_in_one": "· and {{count}} more",
-    "also_in_other": "· and {{count}} more"
+    "also_in_other": "· and {{count}} more",
+    "filter_group_country": "Country",
+    "filter_group_city": "City",
+    "filter_group_type": "Place type"
   },
   "trash": {
     "title": "Trash",

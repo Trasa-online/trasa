@@ -95,6 +95,8 @@
   "scope": {
     "everywhere": "Wszędzie",
     "all_cities": "Cały kraj",
-    "other_countries": "Pozostałe"
+    "other_countries": "Pozostałe",
+    "country": "Kraj",
+    "city": "Miasto"
   }
 }

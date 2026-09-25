@@ -93,6 +93,8 @@
   "scope": {
     "everywhere": "Everywhere",
     "all_cities": "Whole country",
-    "other_countries": "Other"
+    "other_countries": "Other",
+    "country": "Country",
+    "city": "City"
   }
 }

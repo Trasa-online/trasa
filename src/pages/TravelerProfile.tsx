@@ -39,6 +39,7 @@ import { fetchCollectionMembersBulk } from "@/lib/collectionInvite";
 import { listTheme } from "@/lib/listThemes";
 import ReferralCard, { SHOW_REFERRAL_CARD } from "@/components/profile/ReferralCard";
 import RewardThanksBanner from "@/components/profile/RewardThanksBanner";
+import BioFrame, { isBioFrame } from "@/components/profile/BioFrame";
 import { haptics } from "@/hooks/useHaptics";
 import StarredPlacesSheet, { useStarredPlaces } from "@/components/profile/StarredPlacesSheet";
 import { TripLayoutSwitch, TripTile, mosaicColumns, useTripLayout, MOSAIC_OFFSET } from "@/components/profile/TripLayout";
@@ -286,7 +287,7 @@ const TravelerProfile = () => {
   const { data: profile } = useQuery({
     queryKey: ["profile-full", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("username, avatar_url, first_name, bio, avatar_frame, avatar_frame_color").eq("id", user!.id).single();
+      const { data } = await supabase.from("profiles").select("username, avatar_url, first_name, bio, avatar_frame, avatar_frame_color, bio_frame").eq("id", user!.id).single();
       return data as any;
     },
     enabled: !!user,
@@ -919,7 +920,10 @@ const TravelerProfile = () => {
           {profile?.bio ? (
             <>
               <div className="w-px h-9 bg-border/60 self-center" />
-              <p className="flex-1 min-w-0 self-center text-[13px] text-muted-foreground leading-snug line-clamp-3">{profile.bio}</p>
+              {/* Ramka opisu z "Customizuj" (profiles.bio_frame, 2026-09-25). */}
+              <BioFrame kind={isBioFrame((profile as any)?.bio_frame) ? (profile as any).bio_frame : null} className="flex-1 min-w-0 self-center">
+                <p className="flex-1 min-w-0 self-center text-[13px] text-muted-foreground leading-snug line-clamp-3">{profile.bio}</p>
+              </BioFrame>
             </>
           ) : (
             <button

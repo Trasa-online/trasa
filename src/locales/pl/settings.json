@@ -204,5 +204,18 @@
     "confirm_cta": "Usuń konto na zawsze",
     "done": "Konto zostało usunięte"
   },
-  "terms_short": "Regulamin"
+  "terms_short": "Regulamin",
+  "bio_frames": {
+    "title": "Ramka opisu",
+    "desc": "Tak Twój opis wygląda na profilu.",
+    "desc_no_bio": "Dodaj opis w Ustawieniach, żeby ramka była widoczna na profilu.",
+    "sample": "Tu stanie Twój opis",
+    "none": "Bez ramki",
+    "flowers": "Kwiatki",
+    "meadow": "Łąka",
+    "grass": "Trawa",
+    "swirls": "Zawijasy",
+    "hearts": "Serduszka",
+    "streak": "Smuga"
+  }
 }

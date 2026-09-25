@@ -229,7 +229,10 @@
     "filter_count_many": "{{count}} miejsc",
     "also_in_one": "· i jeszcze {{count}}",
     "also_in_few": "· i jeszcze {{count}}",
-    "also_in_many": "· i jeszcze {{count}}"
+    "also_in_many": "· i jeszcze {{count}}",
+    "filter_group_country": "Kraj",
+    "filter_group_city": "Miasto",
+    "filter_group_type": "Typ miejsca"
   },
   "trash": {
     "title": "Kosz",

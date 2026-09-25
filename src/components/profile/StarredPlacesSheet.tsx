@@ -7,41 +7,17 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { BrandIcon, LIST_ICON, STAR_ICON } from "@/components/BrandIcon";
 import { resolveStored } from "@/components/PlacePhoto";
 import { categoryIconSrc } from "@/lib/placeCategoryIcon";
-import { subcategoryLabelLocalized } from "@/lib/categories";
+import { placeCategoryLabel } from "@/lib/categories";
+import { countryLabel } from "@/lib/tripCountries";
+import { FilterButton, FilterSheet } from "@/components/filters/FilterSheet";
 import { useImageWithFallback } from "@/hooks/useImageWithFallback";
 import { haptics } from "@/hooks/useHaptics";
 import { fetchStarredPlaces, starredPlacesKey, type StarredPlace } from "@/lib/starredPlaces";
 
-// Filtry arkusza (prosba Nat 2026-09-15): kraj, miasto, typ miejsca. Grupa pojawia sie TYLKO
-// wtedy, gdy realnie ma co filtrowac (dwie rozne wartosci) - przy jednym miescie rzad chipow
-// "Wszystkie / Warszawa" jest samym halasem. Wartosci biora sie z tego, co user faktycznie
-// wyroznil, wiec nigdy nie ma tu pustego wyniku po wyborze pojedynczego filtra.
-function FilterRow({ value, onChange, options, allLabel }: {
-  value: string | null;
-  onChange: (v: string | null) => void;
-  options: { id: string; label: string }[];
-  allLabel: string;
-}) {
-  return (
-    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-      {[{ id: "", label: allLabel }, ...options].map((o) => {
-        const active = (o.id || null) === value;
-        return (
-          <button
-            key={o.id}
-            onClick={() => { haptics.selection(); onChange(o.id || null); }}
-            aria-pressed={active}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-bold whitespace-nowrap active:scale-95 transition-all ${
-              active ? "bg-[#FDF184] text-[#5B2C06]" : "bg-secondary text-foreground"
-            }`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+// Filtry arkusza (prosba Nat 2026-09-15): kraj, miasto, typ miejsca. Od 2026-09-25 siedza pod
+// JEDNYM guzikiem z ikona filtrow ([FilterSheet]) zamiast trzech rzedow chipow nad lista.
+// Grupa pojawia sie TYLKO wtedy, gdy realnie ma co filtrowac (dwie rozne wartosci), a caly
+// guzik - gdy jest choc jedna taka grupa.
 
 // Wyroznione miejsca (prosba Nat 2026-09-13): licznik gwiazdek na profilu otwiera arkusz ze
 // wszystkimi miejscami, ktore user wyroznil w swoich wyjazdach i listach. Wiersz = zdjecie
@@ -79,6 +55,7 @@ export default function StarredPlacesSheet({ open, onOpenChange, userId, own = t
   const [country, setCountry] = useState<string | null>(null);
   const [city, setCity] = useState<string | null>(null);
   const [cat, setCat] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Listy wartosci liczymy z CALEGO zbioru (nie z przefiltrowanego), zeby chipy nie znikaly
   // po wybraniu pierwszego filtra i dalo sie zmienic zdanie bez czyszczenia wszystkiego.
@@ -90,7 +67,7 @@ export default function StarredPlacesSheet({ open, onOpenChange, userId, own = t
     [places]);
   const cats = useMemo(
     () => Array.from(new Set(places.map((p) => p.category).filter((c): c is string => !!c)))
-      .map((id) => ({ id, label: subcategoryLabelLocalized(id) }))
+      .map((id) => ({ id, label: placeCategoryLabel(id) }))
       .sort((a, b) => a.label.localeCompare(b.label, "pl")),
     [places]);
 
@@ -126,34 +103,38 @@ export default function StarredPlacesSheet({ open, onOpenChange, userId, own = t
           </div>
         ) : (
           <>
-          {hasFilters && (
-            <div className="mt-4 space-y-2">
-              {countries.length > 1 && (
-                <FilterRow value={country} onChange={setCountry} allLabel={t("starred.filter_all_countries")}
-                  options={countries.map((c) => ({ id: c, label: c }))} />
-              )}
-              {cities.length > 1 && (
-                <FilterRow value={city} onChange={setCity} allLabel={t("starred.filter_all_cities")}
-                  options={cities.map((c) => ({ id: c, label: c }))} />
-              )}
-              {cats.length > 1 && (
-                <FilterRow value={cat} onChange={setCat} allLabel={t("starred.filter_all_types")} options={cats} />
-              )}
+          {/* Licznik po lewej, guzik filtrow po prawej - jedna linia zamiast trzech rzedow chipow. */}
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <span className="text-[13px] text-muted-foreground">
+              {t("starred.filter_count", { count: shown.length })}
               {anyActive && (
-                <div className="flex items-center gap-2 pt-0.5">
-                  <span className="text-[12px] text-muted-foreground">{t("starred.filter_count", { count: shown.length })}</span>
-                  <button onClick={clear} className="text-[12px] font-semibold text-primary active:opacity-70">{t("starred.filter_clear")}</button>
-                </div>
+                <button onClick={clear} className="ml-2 font-semibold text-primary active:opacity-70">{t("starred.filter_clear")}</button>
               )}
-            </div>
-          )}
+            </span>
+            {hasFilters && (
+              <FilterButton activeCount={[country, city, cat].filter(Boolean).length} onClick={() => setFiltersOpen(true)} />
+            )}
+          </div>
+          <FilterSheet
+            open={filtersOpen}
+            onOpenChange={setFiltersOpen}
+            resultCount={shown.length}
+            groups={[
+              { id: "country", title: t("starred.filter_group_country"), allLabel: t("starred.filter_all_countries"),
+                options: countries.length > 1 ? countries.map((c) => ({ id: c, label: countryLabel(c) })) : [], value: country, onChange: setCountry },
+              { id: "city", title: t("starred.filter_group_city"), allLabel: t("starred.filter_all_cities"),
+                options: cities.length > 1 ? cities.map((c) => ({ id: c, label: c })) : [], value: city, onChange: setCity },
+              { id: "type", title: t("starred.filter_group_type"), allLabel: t("starred.filter_all_types"),
+                options: cats.length > 1 ? cats : [], value: cat, onChange: setCat },
+            ]}
+          />
           <div className="mt-3 divide-y divide-border/40">
             {shown.map((p) => (
               <button key={p.id} onClick={() => go(p)} className="flex w-full items-center gap-3 py-3 text-left active:bg-muted/40 transition-colors">
                 <Thumb place={p} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-semibold text-foreground">{p.place_name}</span>
-                  {p.category && <span className="block text-[12px] text-muted-foreground">{subcategoryLabelLocalized(p.category)}</span>}
+                  {p.category && <span className="block text-[12px] text-muted-foreground">{placeCategoryLabel(p.category)}</span>}
                   <span className="mt-0.5 flex items-center gap-1 text-[12px] text-muted-foreground">
                     {p.source.kind === "trip"
                       ? <BrandIcon src="/Ikona_Trasy.svg" className="h-3 w-3 shrink-0" />

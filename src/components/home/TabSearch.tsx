@@ -8,6 +8,8 @@ import { type SearchCat } from "@/components/home/SearchCategoryRow";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import { haptics } from "@/hooks/useHaptics";
 import { fetchPlaceCities, countriesOf, placeCitiesKey } from "@/lib/placeCities";
+import { countryLabel } from "@/lib/tripCountries";
+import { FilterButton, FilterSheet } from "@/components/filters/FilterSheet";
 
 // Wyszukiwarka w KAZDEJ zakladce (prosba Nat 2026-09-11): Feed, Eksploruj i Miejsca maja
 // te sama wyszukiwarke - jedno pole w belce, tryb wynikow ze strzalka powrotu, foldery
@@ -130,20 +132,6 @@ export function SearchCategoryList({ onPick }: { onPick: (c: SearchCat) => void 
   );
 }
 
-function ScopeChip({ active, label, count, onClick }: { active: boolean; label: string; count?: number; onClick: () => void }) {
-  return (
-    <button
-      onClick={() => { haptics.selection(); onClick(); }}
-      aria-pressed={active}
-      className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-bold whitespace-nowrap active:scale-95 transition-all ${
-        active ? "bg-[#FDF184] text-[#5B2C06]" : "bg-secondary text-foreground"
-      }`}
-    >
-      {label}{count != null && <span className="ml-1.5 font-semibold opacity-60 tabular-nums">{count}</span>}
-    </button>
-  );
-}
-
 /**
  * Wybor KRAJU i MIASTA w wyszukiwarce Miejsc (prosba Nat 2026-09-15).
  *
@@ -152,10 +140,14 @@ function ScopeChip({ active, label, count, onClick }: { active: boolean; label: 
  * kilkanascie chipow z roznych krajow lezaloby obok siebie bez porzadku. Kraj z jednym
  * miastem od razu je zaznacza (klik w "Czechy" ma pokazac Prage, nie kazac klikac drugi raz).
  */
-export function SearchScopeBar({ s }: { s: TabSearchState }) {
+/** Zasieg wyszukiwarki Miejsc (kraj + miasto) pod JEDNYM guzikiem filtrow w belce (prosba Nat
+ *  2026-09-25). Do tego dnia nad wynikami staly dwa rzedy przewijanych chipow. Logika wyboru
+ *  bez zmian: kraj z jednym miastem zaznacza je od razu, a wybrane miasto samo jest zapytaniem. */
+export function SearchScopeFilter({ s }: { s: TabSearchState }) {
   const { t } = useTranslation("explore");
+  const [open, setOpen] = useState(false);
   const { data: cities = [] } = useQuery({ queryKey: placeCitiesKey, queryFn: fetchPlaceCities, staleTime: 60 * 60_000 });
-  const countries = useMemo(() => countriesOf(cities), [cities]);
+  const countries = useMemo(() => countriesOf(cities).filter((c) => c.country !== null), [cities]);
   const inCountry = useMemo(
     () => cities.filter((c) => c.country === s.country).sort((a, b) => b.count - a.count),
     [cities, s.country]);
@@ -168,30 +160,24 @@ export function SearchScopeBar({ s }: { s: TabSearchState }) {
     // Kraj z jednym miastem = wybor miasta jest oczywisty, wiec go nie wymuszamy klikiem.
     s.setCity(only.length === 1 ? only[0].city : null);
   };
+  const active = (s.country ? 1 : 0) + (s.city && inCountry.length > 1 ? 1 : 0);
 
   return (
-    <div className="space-y-2 px-4 pt-3">
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-        <ScopeChip active={s.country === null} label={t("scope.everywhere")} onClick={() => pickCountry(null)} />
-        {countries.map((c) => (
-          <ScopeChip
-            key={c.country ?? "_"}
-            active={s.country === c.country}
-            label={c.country ?? t("scope.other_countries")}
-            count={c.count}
-            onClick={() => pickCountry(c.country)}
-          />
-        ))}
-      </div>
-      {s.country !== null && inCountry.length > 1 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-          <ScopeChip active={s.city === null} label={t("scope.all_cities")} onClick={() => s.setCity(null)} />
-          {inCountry.map((c) => (
-            <ScopeChip key={c.city} active={s.city === c.city} label={c.city} count={c.count} onClick={() => s.setCity(c.city)} />
-          ))}
-        </div>
-      )}
-    </div>
+    <>
+      <FilterButton activeCount={active} onClick={() => setOpen(true)} />
+      <FilterSheet
+        open={open}
+        onOpenChange={setOpen}
+        groups={[
+          { id: "country", title: t("scope.country"), allLabel: t("scope.everywhere"),
+            options: countries.map((c) => ({ id: c.country!, label: countryLabel(c.country!), count: c.count })),
+            value: s.country, onChange: pickCountry },
+          { id: "city", title: t("scope.city"), allLabel: t("scope.all_cities"),
+            options: s.country !== null && inCountry.length > 1 ? inCountry.map((c) => ({ id: c.city, label: c.city, count: c.count })) : [],
+            value: s.city, onChange: (v) => s.setCity(v) },
+        ]}
+      />
+    </>
   );
 }
 
@@ -227,11 +213,10 @@ export function SearchPane({ query, cat, onCat, city = "all", scopeCity = null }
 
 /** Panel wynikow z wlasnym scrollerem - zastepuje tresc zakladki na czas szukania (Feed, Miejsca). */
 export function TabSearchResults({ s, city = "all", scope = false }: { s: TabSearchState; city?: string;
-  /** true = nad wynikami staje pasek wyboru kraju i miasta (zakladka Miejsca). */
+  /** true = wyniki zaweza miasto wybrane w filtrach (`SearchScopeFilter` w belce, zakladka Miejsca). */
   scope?: boolean }) {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom,0px))]" style={{ WebkitOverflowScrolling: "touch" }}>
-      {scope && <SearchScopeBar s={s} />}
       <SearchPane query={s.query} cat={s.cat} onCat={s.setCat} city={city} scopeCity={scope ? s.city : null} />
     </div>
   );

@@ -19,6 +19,7 @@ import { applyTripOrder, fetchTripOrder, tripOrderKey } from "@/lib/tripOrder";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import FriendButton from "@/components/social/FriendButton";
+import BioFrame, { isBioFrame } from "@/components/profile/BioFrame";
 import ReportContentSheet from "@/components/moderation/ReportContentSheet";
 import { blockUser, unblockUser, isUserBlocked } from "@/lib/blockedUsers";
 import { MoreVertical, Ban, Flag as FlagIcon } from "lucide-react";
@@ -117,13 +118,13 @@ export default function PublicProfile() {
       // z wyszukiwarki czy powiadomienia wyglada jak nieistniejacy user (2026-09-21).
       const { data } = await (supabase as any)
         .from("profiles")
-        .select("id, username, first_name, avatar_url, bio, avatar_frame, avatar_frame_color")
+        .select("id, username, first_name, avatar_url, bio, avatar_frame, avatar_frame_color, bio_frame")
         .ilike("username", escapeLike((username ?? "").trim()))
         .eq("is_business", false)
         .maybeSingle();
       // `as unknown`: wygenerowane typy Supabase nie znaja jeszcze avatar_frame (types.ts
       // regenerowany osobno - CLAUDE.md), a kolumna w bazie jest (migracja 20260911f).
-      return data as unknown as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null; avatar_frame: string | null; avatar_frame_color: string | null } | null;
+      return data as unknown as { id: string; username: string; first_name: string | null; avatar_url: string | null; bio: string | null; avatar_frame: string | null; avatar_frame_color: string | null; bio_frame: string | null } | null;
     },
     enabled: !!username,
   });
@@ -514,7 +515,9 @@ export default function PublicProfile() {
           {profile.bio && (
             <>
               <div className="w-px h-9 bg-border/60 self-center" />
-              <p className="flex-1 min-w-0 self-center text-[13px] text-muted-foreground leading-snug line-clamp-3">{profile.bio}</p>
+              <BioFrame kind={isBioFrame(profile.bio_frame) ? profile.bio_frame : null} className="flex-1 min-w-0 self-center">
+                <p className="flex-1 min-w-0 self-center text-[13px] text-muted-foreground leading-snug line-clamp-3">{profile.bio}</p>
+              </BioFrame>
             </>
           )}
         </div>

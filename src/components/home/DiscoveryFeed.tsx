@@ -2570,9 +2570,16 @@ export default function DiscoveryFeed({ city = "Warszawa", active = true, search
             // i KAZDY koszyk osobno, wiec „obserwowani nad reszta swiata" i „najnowsze wyzej"
             // zostaja w mocy - zmienia sie tylko to, ktore kafelki wpadaja pod pierwsze
             // spojrzenie. Patrz src/lib/feedShuffle.ts.
+            // ⛔ PIERWSZY PLAN ZAWSZE NA GORZE (prosba Nat 2026-09-25): mimo tasowania feed ma
+            // sie otwierac planem - najnowszym od obserwowanych, a gdy ich nie ma, najnowszym ze
+            // swiata. Wyjmujemy go z koszyka PRZED tasowaniem, reszta tasuje sie jak dotad.
+            const pinned = r.mine[0] ?? r.rest[0] ?? null;
+            const mineR = pinned && r.mine[0] === pinned ? r.mine.slice(1) : r.mine;
+            const restR = pinned && r.mine[0] !== pinned ? r.rest.slice(1) : r.rest;
             return [
-              ...shuffleWindows(interleave(r.mine, l.mine), feedSeed),
-              ...shuffleWindows(interleave(r.rest, l.rest), feedSeed),
+              ...(pinned ? [pinned] : []),
+              ...shuffleWindows(interleave(mineR, l.mine), feedSeed),
+              ...shuffleWindows(interleave(restR, l.rest), feedSeed),
             ];
           })()}
         </div>

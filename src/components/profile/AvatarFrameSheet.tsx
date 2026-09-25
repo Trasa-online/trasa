@@ -13,6 +13,7 @@ import { haptics } from "@/hooks/useHaptics";
 import { AVATAR_FRAMES, DEFAULT_FRAME_COLOR, FRAME_SWATCHES, isAvatarFrame, isFrameColor, type AvatarFrameId, frameHasFixedColor } from "@/lib/avatarFrames";
 import AvatarFrame from "@/components/profile/AvatarFrame";
 import AvatarPresetRow from "@/components/profile/AvatarPresetRow";
+import BioFrame, { BIO_FRAMES, isBioFrame, type BioFrameKind } from "@/components/profile/BioFrame";
 import { avatarFrameKey } from "@/lib/avatarFrameLoader";
 
 // "Customizuj mój profil" (prosba Nat 2026-09-11): arkusz z ramkami awatara i ich kolorem.
@@ -20,14 +21,14 @@ import { avatarFrameKey } from "@/lib/avatarFrameLoader";
 // nazwa i znacznik wyboru. Kolor: szybkie kolory + pipeta (systemowa paleta - dowolny kolor).
 // Tapniecie zapisuje od razu (profiles.avatar_frame / avatar_frame_color) - bez osobnego
 // "Zapisz", bo to dwie wartosci i da sie je w kazdej chwili zmienic.
-type Me = { avatar_url: string | null; first_name: string | null; avatar_frame: string | null; avatar_frame_color: string | null };
+type Me = { avatar_url: string | null; first_name: string | null; avatar_frame: string | null; avatar_frame_color: string | null; bio?: string | null; bio_frame?: string | null };
 
 export function useMyAvatarFrame(userId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: ["avatar-frame-sheet", userId],
     enabled: enabled && !!userId,
     queryFn: async () => {
-      const { data } = await (supabase as any).from("profiles").select("avatar_url, first_name, avatar_frame, avatar_frame_color").eq("id", userId!).maybeSingle();
+      const { data } = await (supabase as any).from("profiles").select("avatar_url, first_name, avatar_frame, avatar_frame_color, bio, bio_frame").eq("id", userId!).maybeSingle();
       return (data ?? null) as Me | null;
     },
   });
@@ -92,6 +93,18 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
     }
     invalidateAll();
     toast.success(frame ? t("frames.saved") : t("frames.removed"));
+  };
+  // Ramka wokol opisu profilu (2026-09-25). Zapis od razu, jak nakladka.
+  const chooseBioFrame = async (frame: BioFrameKind | null) => {
+    haptics.selection();
+    queryClient.setQueryData(["avatar-frame-sheet", userId], (old: any) => ({ ...(old ?? {}), bio_frame: frame }));
+    const { error } = await (supabase as any).from("profiles").update({ bio_frame: frame }).eq("id", userId);
+    if (error) {
+      queryClient.invalidateQueries({ queryKey: ["avatar-frame-sheet", userId] });
+      toast.error(t("frames.save_failed"));
+      return;
+    }
+    invalidateAll();
   };
   // Awatar bazowy w samym kolorze (presety, prosba Nat 2026-09-13 - wybor "zamiast normalnego
   // awatara" zyje TUTAJ, pod nakladkami, jak "lub wybierz domyslny awatar" w zalaczniku).
@@ -235,6 +248,35 @@ export default function AvatarFrameSheet({ open, onOpenChange, userId }: { open:
         </div>
 
         </>)}
+
+        {/* RAMKA OPISU (prosba Nat 2026-09-25). Podglad na PRAWDZIWYM opisie usera - ramka ma
+            sie oceniac na tym, co bedzie w niej stalo, a nie na przykladowym zdaniu. */}
+        <p className="mt-6 text-sm font-bold text-foreground">{t("bio_frames.title")}</p>
+        <p className="text-xs text-muted-foreground">{me?.bio?.trim() ? t("bio_frames.desc") : t("bio_frames.desc_no_bio")}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
+          {([null, ...BIO_FRAMES] as (BioFrameKind | null)[]).map((k) => {
+            const active = (isBioFrame(me?.bio_frame) ? me!.bio_frame : null) === k;
+            return (
+              <button
+                key={k ?? "none"}
+                type="button"
+                onClick={() => void chooseBioFrame(k)}
+                aria-pressed={active}
+                className={`relative rounded-2xl bg-[#FEFEFE] border px-3 pt-4 pb-3 text-left active:scale-[0.98] transition-transform ${active ? "border-primary ring-2 ring-primary/30" : "border-border/60"}`}
+              >
+                <div className="h-[64px] flex items-center">
+                  <BioFrame kind={k} className="w-full">
+                    <p className="text-[12px] text-muted-foreground leading-snug line-clamp-2">{me?.bio?.trim() || t("bio_frames.sample")}</p>
+                  </BioFrame>
+                </div>
+                <span className="mt-2 flex items-center justify-between text-[13px] font-semibold text-foreground">
+                  {t(`bio_frames.${k ?? "none"}`)}
+                  {active && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white"><BrandCheck className="h-3 w-3" strokeWidth={3} /></span>}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
         {/* Awatar bazowy z palety - NA DOLE, pod nakladkami i kolorem. */}
         <div className="mt-6">
