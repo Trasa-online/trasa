@@ -908,6 +908,10 @@ interface PlaceSwiperProps {
    *  Wlaczony promien sam w sobie ustawia tez kolejnosc od najblizszego - inaczej "do 1 km"
    *  oddawaloby miejsca w losowej kolejnosci i user nie wiedzialby, ktore ma najblizej. */
   maxDistanceKm?: number | null;
+  /** Zawezenie do miast (filtr „Kraj i miasto" w zakladce Miejsca, 2026-09-26). Filtrujemy
+   *  WIERSZE juz pobrane (cache „all"), bez nowego zapytania - zmiana filtra jest natychmiastowa.
+   *  Puste / brak = bez zawezenia. Meta-miasta (Trojmiasto) rozwija `expandCity`. */
+  cityScope?: string[];
   /** Wywolywane, gdy w promieniu nie ma zadnego miejsca i user chce zdjac filtr. */
   onClearDistance?: () => void;
   initialLikedPlaceNames?: string[];
@@ -1235,13 +1239,14 @@ export function enrichWithBusinessProfile(p: any, refDate?: string): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, maxDistanceKm = null, onClearDistance, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, maxDistanceKm = null, cityScope, onClearDistance, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
   const { t } = useTranslation("plan");
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
     ? categoryFilter.filter(Boolean)
     : (categoryFilter ? [categoryFilter] : []);
   const categoryFilterKey = categoryFilters.join(",");
+  const cityScopeKey = (cityScope ?? []).join("|");
   const dietFilterKey = (dietFilters ?? []).join(",");
   const hasCategoryFilter = categoryFilters.length > 0;
   // Naglowek empty state po przejrzeniu wszystkich miejsc: "{kategoria} przejrzana!"
@@ -1428,10 +1433,15 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       ]);
       if (cancelled) return;
 
-      const { data, error: placesError } = placesRes as { data: any[] | null; error: unknown };
+      const { data: fetched, error: placesError } = placesRes as { data: any[] | null; error: unknown };
       if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
-      if (data?.length && !fresh) placesRowsCache = { key: cacheKey, at: Date.now(), rows: data };
-      if (!data?.length) { setLoading(false); return; }
+      if (fetched?.length && !fresh) placesRowsCache = { key: cacheKey, at: Date.now(), rows: fetched };
+      // Filtr „Kraj i miasto" - po cache'u, zeby cache trzymal zawsze PELNY zestaw.
+      const scopeSet = cityScopeKey ? new Set(cityScopeKey.split("|").flatMap((c) => expandCity(c)).map((c) => c.toLowerCase())) : null;
+      const data = scopeSet ? (fetched ?? []).filter((r: any) => scopeSet.has(String(r.city ?? "").toLowerCase())) : fetched;
+      // Pusty wynik filtra = pusta kolejka. Bez tego na ekranie zostawaly karty z POPRZEDNIEGO
+      // zawezenia (wczesniej ta galaz znaczyla tylko „brak danych", wiec nic nie czyscila).
+      if (!data?.length) { setQueue([]); setAllPlaces([]); setLoading(false); return; }
 
       let ratedPlaceIds = new Set<string>();
       const reactions = (reactionsRes as { data: { place_id: string }[] | null })?.data;
@@ -1557,7 +1567,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     return () => { cancelled = true; clearTimeout(safetyTimeout); };
     // UWAGA: sortByNearest CELOWO nie jest w deps - zmiana sortu nie przebudowuje queue
     // (inaczej ocenione miejsca wracaly = reset swipe). Sort stosowany reaktywnie nizej.
-  }, [city, user, categoryFilterKey, dietFilterKey, refreshNonce]);
+  }, [city, user, categoryFilterKey, dietFilterKey, refreshNonce, cityScopeKey]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {

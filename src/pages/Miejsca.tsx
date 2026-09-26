@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SlidersHorizontal } from "lucide-react";
 import TabTopBar from "@/components/layout/TabTopBar";
 import NotificationsBell from "@/components/layout/NotificationsBell";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
-import DistanceFilterSheet, { loadRadius, saveRadius, loadCategories, saveCategories } from "@/components/places/DistanceFilterSheet";
+import DistanceFilterSheet, { loadRadius, saveRadius, loadCategories, saveCategories, loadScope, saveScope, type PlaceScope } from "@/components/places/DistanceFilterSheet";
+import { fetchPlaceCities, placeCitiesKey } from "@/lib/placeCities";
 import { useTabSearch, TabSearchField, TabSearchResults, SearchScopeFilter } from "@/components/home/TabSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
@@ -51,6 +53,17 @@ export default function Miejsca() {
   // Typ miejsca (2026-09-26) - ten sam arkusz co promien, zapamietany tak samo.
   const [cats, setCats] = useState<string[]>(() => loadCategories());
   const applyCats = (next: string[]) => { setCats(next); saveCategories(next); };
+  // Kraj i miasto (2026-09-26). Do swipera idzie LISTA miast: jedno wybrane albo wszystkie
+  // miasta wybranego kraju (kraj nie jest kolumna w `places`, tylko wynika z miasta).
+  const [scope, setScope] = useState<PlaceScope>(() => loadScope());
+  const applyScope = (next: PlaceScope) => { setScope(next); saveScope(next); };
+  const { data: placeCities = [] } = useQuery({ queryKey: placeCitiesKey, queryFn: fetchPlaceCities, staleTime: 60 * 60_000 });
+  const cityScope = useMemo(() => {
+    if (scope.city) return [scope.city];
+    if (scope.country) return placeCities.filter((c) => c.country === scope.country).map((c) => c.city);
+    return undefined;
+  }, [scope, placeCities]);
+  const activeFilters = cats.length + (scope.country ? 1 : 0) + (scope.city ? 1 : 0);
 
   // ⚠️ Zapamietany promien bez punktu odniesienia NIE FILTRUJE nic - a pigulka "3 km" w belce
   // twierdzilaby, ze filtr dziala. Dzieje sie tak po wyczyszczeniu danych albo na drugim
@@ -82,7 +95,7 @@ export default function Miejsca() {
             aria-label={t("place_filters.aria")}
             className={cn(
               "relative shrink-0 h-9 flex items-center justify-center rounded-full border transition-colors",
-              radiusKm || cats.length
+              radiusKm || activeFilters
                 ? "bg-[#FDF184] border-[#FDF184] text-[#5B2C06] text-xs font-bold"
                 : "bg-muted/70 border-border/50 text-foreground",
               radiusKm ? "px-3 gap-1" : "w-9",
@@ -92,8 +105,8 @@ export default function Miejsca() {
                 w rogu: filtr, ktorego stanu nie widac, kaze otwierac arkusz, zeby sprawdzic,
                 czemu miejsc jest tak malo. */}
             {radiusKm ? t("distance.chip_km", { km: radiusKm }) : <SlidersHorizontal className="h-4 w-4" />}
-            {cats.length > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold leading-[18px] text-center">{cats.length}</span>
+            {activeFilters > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold leading-[18px] text-center">{activeFilters}</span>
             )}
           </button>
         )}
@@ -109,10 +122,11 @@ export default function Miejsca() {
           sortNearestNonce={nearbyNonce}
           maxDistanceKm={radiusKm}
           categoryFilter={cats}
+          cityScope={cityScope}
           onClearDistance={() => applyRadius(null)}
         />
       </div>
-      <DistanceFilterSheet open={filterOpen} onOpenChange={setFilterOpen} value={radiusKm} onChange={applyRadius} categories={cats} onCategoriesChange={applyCats} />
+      <DistanceFilterSheet open={filterOpen} onOpenChange={setFilterOpen} value={radiusKm} onChange={applyRadius} categories={cats} onCategoriesChange={applyCats} scope={scope} onScopeChange={applyScope} />
     </div>
   );
 }

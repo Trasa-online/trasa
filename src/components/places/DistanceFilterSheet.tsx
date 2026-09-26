@@ -6,6 +6,12 @@ import { askPermission } from "@/lib/permissionPrompts";
 import { getReference, setGpsReference } from "@/lib/distanceReference";
 import { mainCategoryLabel, placeCategoryLabel, MAIN_CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BrandSearch } from "@/components/BrandIcon";
+import { fetchPlaceCities, countriesOf, placeCitiesKey } from "@/lib/placeCities";
+import { countryLabel } from "@/lib/tripCountries";
 
 // FILTR ODLEGLOSCI w zakladce Miejsca (prosba Nat 2026-09-24: "filtrowanie po odleglosci
 // miejsc ode mnie"). Dystans byl w apce od dawna - chip "2,5 km" na karcie i sortowanie
@@ -61,9 +67,29 @@ export function saveCategories(cats: string[]) {
     else localStorage.setItem(CATS_KEY, JSON.stringify(cats));
   } catch { /* jak przy promieniu - filtr zyje wtedy tylko do wyjscia */ }
 }
+// KRAJ I MIASTO (prosba Nat 2026-09-26): NIE chipy, tylko selektor z wyszukiwarka - krajow
+// i miast jest kilkadziesiat, rzad chipow bylby nie do przejrzenia. Wartosci z BAZY
+// (`fetchPlaceCities`), wiec nie da sie wybrac miasta, w ktorym nie mamy wizytowek.
+export type PlaceScope = { country: string | null; city: string | null };
+const SCOPE_KEY = "spontaway_places_scope_v1";
+export function loadScope(): PlaceScope {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SCOPE_KEY) ?? "null");
+    return { country: typeof raw?.country === "string" ? raw.country : null, city: typeof raw?.city === "string" ? raw.city : null };
+  } catch { return { country: null, city: null }; }
+}
+export function saveScope(v: PlaceScope) {
+  try {
+    if (!v.country && !v.city) localStorage.removeItem(SCOPE_KEY);
+    else localStorage.setItem(SCOPE_KEY, JSON.stringify(v));
+  } catch { /* jak przy promieniu */ }
+}
+// Szukanie bez polskich znakow: „lodz" znajduje „Łódź".
+const fold = (v: string) => v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l");
+
 const catLabel = (id: string) => MAIN_CATEGORIES.some((c) => c.id === id) ? mainCategoryLabel(id) : placeCategoryLabel(id);
 
-export default function DistanceFilterSheet({ open, onOpenChange, value, onChange, categories, onCategoriesChange }: {
+export default function DistanceFilterSheet({ open, onOpenChange, value, onChange, categories, onCategoriesChange, scope, onScopeChange }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   /** Aktywny promien w km albo null = bez ograniczenia. */
@@ -72,8 +98,40 @@ export default function DistanceFilterSheet({ open, onOpenChange, value, onChang
   /** Wybrane typy miejsc (puste = wszystkie). */
   categories: string[];
   onCategoriesChange: (cats: string[]) => void;
+  /** Kraj i miasto (null = wszedzie). */
+  scope: PlaceScope;
+  onScopeChange: (v: PlaceScope) => void;
 }) {
   const { t } = useTranslation("plan");
+  // Podwidok selektora w TYM SAMYM arkuszu (drugi arkusz na arkuszu gubil gest zamkniecia).
+  const [pick, setPick] = useState<null | "country" | "city">(null);
+  const [q, setQ] = useState("");
+  const { data: cities = [] } = useQuery({ queryKey: placeCitiesKey, queryFn: fetchPlaceCities, staleTime: 60 * 60_000, enabled: open });
+  const countries = useMemo(
+    () => countriesOf(cities).filter((c) => c.country !== null)
+      .map((c) => ({ id: c.country!, label: countryLabel(c.country!), count: c.count }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    [cities]);
+  const cityOptions = useMemo(
+    () => cities.filter((c) => !scope.country || c.country === scope.country)
+      .map((c) => ({ id: c.city, label: c.city, count: c.count, country: c.country }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pl")),
+    [cities, scope.country]);
+  const openPick = (k: "country" | "city") => { haptics.light(); setQ(""); setPick(k); };
+  const choosePick = (id: string | null) => {
+    haptics.selection();
+    if (pick === "country") {
+      // Zmiana kraju czysci miasto spoza niego; kraj z JEDNYM miastem wybiera je od razu.
+      const inC = id ? cities.filter((c) => c.country === id) : [];
+      const keep = scope.city && inC.some((c) => c.city === scope.city) ? scope.city : null;
+      onScopeChange({ country: id, city: keep ?? (inC.length === 1 ? inC[0].city : null) });
+    } else {
+      // Miasto samo ustawia swoj kraj - inaczej wiersz „Kraj" klamalby „Wszystkie".
+      const c = id ? cities.find((x) => x.city === id) : null;
+      onScopeChange({ country: id ? (c?.country ?? scope.country) : scope.country, city: id });
+    }
+    setPick(null);
+  };
 
   // Od 2026-09-26 arkusz ma DWIE sekcje, wiec wybor promienia go juz nie zamyka - user moze
   // jeszcze zmienic typ miejsca. Zamyka guzik „Gotowe" albo gest.
@@ -111,15 +169,66 @@ export default function DistanceFilterSheet({ open, onOpenChange, value, onChang
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(v) => { if (!v) setPick(null); onOpenChange(v); }}>
       <SheetContent side="bottom" className="px-5 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] max-h-[88dvh] overflow-y-auto">
+        {pick ? (() => {
+          const opts = pick === "country" ? countries : cityOptions;
+          const f = fold(q.trim());
+          const shown = f ? opts.filter((o) => fold(o.label).includes(f) || fold(o.id).includes(f)) : opts;
+          const current = pick === "country" ? scope.country : scope.city;
+          const Item = ({ id, label, count }: { id: string | null; label: string; count?: number }) => (
+            <button onClick={() => choosePick(id)} aria-pressed={current === id}
+              className="flex w-full items-center gap-3 py-3.5 text-left border-b border-border/40 active:bg-muted/40">
+              <span className="flex-1 text-[15px] font-semibold text-foreground">{label}</span>
+              {count != null && <span className="text-[13px] text-muted-foreground tabular-nums">{count}</span>}
+              {current === id && <BrandCheck className="h-4 w-4 shrink-0 text-primary" />}
+            </button>
+          );
+          return (
+            <div className="flex flex-col min-h-[60dvh]">
+              <div className="flex items-center gap-2 pr-8">
+                <button onClick={() => setPick(null)} aria-label={t("place_filters.back")} className="-ml-2 h-9 w-9 flex items-center justify-center rounded-full active:bg-muted">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <SheetTitle className="text-lg font-black">{pick === "country" ? t("place_filters.country") : t("place_filters.city")}</SheetTitle>
+              </div>
+              <div className="mt-3 flex items-center gap-2 rounded-full bg-muted/70 border border-border/50 px-4">
+                <BrandSearch className="h-4 w-4 text-muted-foreground" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} autoCorrect="off"
+                  placeholder={pick === "country" ? t("place_filters.search_country") : t("place_filters.search_city")}
+                  className="flex-1 bg-transparent py-2.5 text-[15px] outline-none placeholder:text-muted-foreground/60" />
+              </div>
+              <div className="mt-2">
+                {!f && <Item id={null} label={pick === "country" ? t("place_filters.all_countries") : t("place_filters.all_cities")} />}
+                {shown.map((o) => <Item key={o.id} id={o.id} label={o.label} count={o.count} />)}
+                {f && shown.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">{t("place_filters.no_match")}</p>}
+              </div>
+            </div>
+          );
+        })() : (<>
         <div className="flex items-center justify-between pr-8">
           <SheetTitle className="text-lg font-black">{t("place_filters.title")}</SheetTitle>
-          {(categories.length > 0 || value !== null) && (
-            <button onClick={() => { haptics.light(); onCategoriesChange([]); onChange(null); }} className="text-sm font-semibold text-primary active:opacity-70">
+          {(categories.length > 0 || value !== null || scope.country || scope.city) && (
+            <button onClick={() => { haptics.light(); onCategoriesChange([]); onChange(null); onScopeChange({ country: null, city: null }); }} className="text-sm font-semibold text-primary active:opacity-70">
               {t("place_filters.clear")}
             </button>
           )}
+        </div>
+        {/* Kraj i miasto - selektory, nie chipy (patrz komentarz przy PlaceScope). */}
+        <p className="mt-4 text-[13px] font-bold text-muted-foreground">{t("place_filters.where")}</p>
+        <div className="mt-2 overflow-hidden rounded-2xl bg-muted/60">
+          {(["country", "city"] as const).map((k, i) => {
+            const val = k === "country" ? (scope.country ? countryLabel(scope.country) : t("place_filters.all_countries")) : (scope.city ?? t("place_filters.all_cities"));
+            const set = k === "country" ? !!scope.country : !!scope.city;
+            return (
+              <button key={k} onClick={() => openPick(k)}
+                className={cn("flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted", i === 1 && "border-t border-border/50")}>
+                <span className="text-[15px] font-semibold text-foreground">{k === "country" ? t("place_filters.country") : t("place_filters.city")}</span>
+                <span className={cn("ml-auto truncate text-[14px]", set ? "font-bold text-[#5B2C06]" : "text-muted-foreground")}>{val}</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            );
+          })}
         </div>
         <p className="mt-4 text-[13px] font-bold text-muted-foreground">{t("place_filters.type")}</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -145,6 +254,7 @@ export default function DistanceFilterSheet({ open, onOpenChange, value, onChang
         <button onClick={() => onOpenChange(false)} className="mt-5 h-12 w-full rounded-full bg-primary text-white text-[15px] font-bold active:scale-[0.98] transition-transform">
           {t("place_filters.done")}
         </button>
+        </>)}
       </SheetContent>
     </Sheet>
   );

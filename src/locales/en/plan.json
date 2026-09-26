@@ -281,6 +281,15 @@
     "clear": "Clear",
     "type": "Place type",
     "done": "Show places",
-    "aria": "Place filters"
+    "aria": "Place filters",
+    "where": "Country and city",
+    "country": "Country",
+    "city": "City",
+    "all_countries": "All countries",
+    "all_cities": "All cities",
+    "search_country": "Search countries",
+    "search_city": "Search cities",
+    "no_match": "No matches",
+    "back": "Back"
   }
 }

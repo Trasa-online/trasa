@@ -285,6 +285,15 @@
     "clear": "Wyczyść",
     "type": "Typ miejsca",
     "done": "Pokaż miejsca",
-    "aria": "Filtry miejsc"
+    "aria": "Filtry miejsc",
+    "where": "Kraj i miasto",
+    "country": "Kraj",
+    "city": "Miasto",
+    "all_countries": "Wszystkie kraje",
+    "all_cities": "Wszystkie miasta",
+    "search_country": "Szukaj kraju",
+    "search_city": "Szukaj miasta",
+    "no_match": "Nic nie pasuje",
+    "back": "Wróć"
   }
 }
