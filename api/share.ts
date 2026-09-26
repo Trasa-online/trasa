@@ -458,7 +458,7 @@ ${o.imageW && o.imageH ? `<meta property="og:image:width" content="${o.imageW}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Sigmar&display=swap" rel="stylesheet">
 <style>${CSS}</style></head>${o.variant === "trip" || o.variant === "white" ? `<body class="${o.variant}">
-${installBar()}
+${o.variant === "trip" ? installBar() : "" /* strona kodu QR bez lokalu: BEZ paska „Dolacz przedpremierowo" (prosba Nat 2026-09-26) - to ekran dla LOKALU, nie dla podroznego */}
 ${o.body}` : `<body>
 <div class="bar"><div class="in"><img class="mark" src="${BRAND_IMG}" alt=""><span class="brand">spontaway</span>
 ${ctaTop()}</div></div>
