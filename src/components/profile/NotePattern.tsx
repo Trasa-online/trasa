@@ -4,8 +4,8 @@ import { isAvatarFrame, type AvatarFrameId } from "@/lib/avatarFrames";
 
 // WZOR NAKLADKI W TLE NOTKI (prosba Nat 2026-09-26): notka osoby z nakladka awatara (serduszka,
 // chmurki, ksiezyce...) dostaje w tle dymka te same znaczki - w jasnej szarosci i przy niskim
-// kryciu, zeby tekst zostal w pelni czytelny. 2026-09-26 (druga iteracja, Nat): krycie 10 %
-// i znaczki ~3x wieksze, za to rzadsze - drobny gesty wzor czytal sie jak szum pod tekstem. Dotyczy notek przy miejscach w PLANACH
+// kryciu, zeby tekst zostal w pelni czytelny. 2026-09-26 (druga iteracja, Nat): krycie 5 %
+// i znaczki ~3x wieksze (potem jeszcze +10 %), za to rzadsze - drobny gesty wzor czytal sie jak szum pod tekstem. Dotyczy notek przy miejscach w PLANACH
 // i KOLEKCJACH (PlaceNotes + wlasna notka w PlaceNoteEditor).
 //
 // Szary, NIE kolor nakladki: kolorowe znaczki pod tekstem czytalyby sie jak ozdobny papier,
@@ -25,13 +25,13 @@ export default function NotePattern({ userId, frame }: { userId?: string | null;
   if (!isAvatarFrame(kind) || kind === "rainbow") return null;
   const k = kind as Exclude<AvatarFrameId, "rainbow">;
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" style={{ color: "#5E5E5E", opacity: 0.1 }}>
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" style={{ color: "#5E5E5E", opacity: 0.05 }}>
       {Array.from({ length: ROWS }, (_, r) => (
         // Rzedy przesuniete naprzemiennie o pol kroku - wzor czyta sie jak tapeta, nie jak siatka.
-        <div key={r} className="flex" style={{ gap: 26, marginTop: r === 0 ? -6 : 10, marginLeft: r % 2 ? -20 : 8 }}>
+        <div key={r} className="flex" style={{ gap: 29, marginTop: r === 0 ? -7 : 11, marginLeft: r % 2 ? -22 : 9 }}>
           {Array.from({ length: PER_ROW }, (_, c) => (
             <span key={c} className="shrink-0" style={{ transform: `rotate(${((r * 3 + c * 5) % 7 - 3) * 8}deg)` }}>
-              <PatternGlyph kind={k} px={(r + c) % 3 === 0 ? 36 : 28} i={r + c} />
+              <PatternGlyph kind={k} px={(r + c) % 3 === 0 ? 40 : 31} i={r + c} />
             </span>
           ))}
         </div>
