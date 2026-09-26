@@ -239,6 +239,17 @@ li:last-child{border-bottom:0}
    sam widok niezaleznie od tego, czy komunikator otworzyl adres krotki (/r/<id>), czy pelny.
    LISTA zostaje na starym, dokumentowym ukladzie - jej wyglad jest jeszcze projektowany. */
 body.trip{background:#FDF184}
+/* Kod QR bez lokalu (2026-09-26, prosba Nat): BIALE tlo, zaokraglony zolty kafelek ze znakiem
+   (S + gwiazdka) i logotyp pod nim - strona ma wygladac jak marka, a nie jak blad. */
+body.white{background:#FEFEFE}
+.qrw{max-width:420px;margin:0 auto;padding:56px 20px 40px;text-align:center}
+.qrw .tile{width:112px;height:112px;margin:0 auto;border-radius:30px;background:#FDF184;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(91,44,6,.12)}
+.qrw .tile img{width:66px;height:auto;display:block}
+.qrw .wm{height:26px;width:auto;margin:22px auto 0;display:block}
+.qrw h1{margin:34px 0 10px;font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-.02em;color:#0E0E0E}
+.qrw .lead{margin:0;font-size:15.5px;line-height:1.45;color:#6B6B6B}
+.qrw .go{margin:34px auto 0}
+.qrw .tail{margin:18px 0 0;font-size:12.5px;line-height:1.4;color:#979797}
 .ins{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#F9F9F9;border-bottom:1px solid #FDF184;padding:12px 16px}
 .ins .l{display:flex;align-items:center;gap:12px;min-width:0}
 .ins .tile{width:44px;height:44px;flex:none;border-radius:14px;background:#FDF184;display:flex;align-items:center;justify-content:center}
@@ -428,7 +439,7 @@ const choiceSheet = () => `<div class="ov" id="ov"><div class="md">
 })();
 </script>`;
 
-function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string; variant?: "trip"; imageW?: number; imageH?: number }) {
+function shell(o: { title: string; desc: string; image: string; url: string; body: string; noun?: string; variant?: "trip" | "white"; imageW?: number; imageH?: number }) {
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(o.title)} · spontaway</title>
@@ -446,7 +457,7 @@ ${o.imageW && o.imageH ? `<meta property="og:image:width" content="${o.imageW}">
 <meta name="twitter:image" content="${esc(o.image)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Sigmar&display=swap" rel="stylesheet">
-<style>${CSS}</style></head>${o.variant === "trip" ? `<body class="trip">
+<style>${CSS}</style></head>${o.variant === "trip" || o.variant === "white" ? `<body class="${o.variant}">
 ${installBar()}
 ${o.body}` : `<body>
 <div class="bar"><div class="in"><img class="mark" src="${BRAND_IMG}" alt=""><span class="brand">spontaway</span>
@@ -567,20 +578,22 @@ export default async function handler(req: Request): Promise<Response> {
     const qrUrl = `${SITE}/q/${token}`;
     const claimUrl = `${SITE}/#/auth?business=true&qr=${encodeURIComponent(token)}`;
     // "To moj lokal" - tylko dopoki nikt nie przypisal kodu do swojej wizytowki.
-    const claimBar = q.claimed ? "" : `<p class="tail">Prowadzisz to miejsce? <a href="${claimUrl}" style="color:#EE5307;font-weight:700;text-decoration:none">To mój lokal →</a></p>`;
+    const claimBar = q.claimed ? "" : `<p class="tail">Prowadzisz to miejsce? <a href="${claimUrl}" style="color:#EE5307;font-weight:700;text-decoration:none">Przypisz lokal do&#160;kodu QR →</a></p>`;
     if (q.place_id && UUID.test(q.place_id)) {
       const page = await placePage(req, q.place_id, { url: qrUrl, extra: claimBar, qrToken: token });
       if (page) return page;
     }
     // Kod przejety przez lokal, ale wizytowka jeszcze niezatwierdzona (place_id dopisze
     // admin-moderate-business) - podroznemu mowimy, ze to kwestia chwili, bez guzika przejecia.
-    const body = `<div class="page">
-<div class="empty"><img class="mark" src="${BRAND_IMG}" alt=""><h1>${q.claimed ? "Wizytówka w&#160;przygotowaniu" : "Ten kod nie&#160;ma jeszcze lokalu"}</h1>
-<p class="meta">${q.claimed ? "Lokal właśnie zakłada swoją wizytówkę w&#160;spontaway. Zajrzyj tu za&#160;chwilę." : "Wizytówka czeka na&#160;przypisanie. Jeśli prowadzisz ten lokal, przejmij ją poniżej."}</p></div>
-${q.claimed ? "" : `<a class="go" href="${claimUrl}">To mój lokal →</a>`}
+    const body = `<div class="qrw">
+<div class="tile"><img src="${SITE}/logo.svg" alt="spontaway"></div>
+<img class="wm" src="${SITE}/wordmark.svg" alt="">
+<h1>${q.claimed ? "Wizytówka w&#160;przygotowaniu" : "Ten kod nie&#160;ma jeszcze przypisanego lokalu"}</h1>
+<p class="lead">${q.claimed ? "Lokal właśnie zakłada swoją wizytówkę w&#160;spontaway. Zajrzyj tu za&#160;chwilę." : "Wizytówka czeka na&#160;przypisanie. Jeśli prowadzisz ten lokal, przejmij ją poniżej."}</p>
+${q.claimed ? "" : `<a class="go" href="${claimUrl}">Przypisz lokal do&#160;kodu QR</a>`}
 <p class="tail">spontaway to aplikacja do&#160;odkrywania miejsc i&#160;planowania wyjazdów ze&#160;znajomymi.</p>
 </div>`;
-    return new Response(shell({ title: q.claimed ? "Wizytówka w przygotowaniu" : "Kod bez lokalu", desc: q.claimed ? "Lokal zakłada swoją wizytówkę w spontaway." : "Wizytówka czeka na przypisanie.", image: BRAND_IMG, url: qrUrl, body, noun: "place", variant: "trip" }), {
+    return new Response(shell({ title: q.claimed ? "Wizytówka w przygotowaniu" : "Kod bez lokalu", desc: q.claimed ? "Lokal zakłada swoją wizytówkę w spontaway." : "Wizytówka czeka na przypisanie.", image: BRAND_IMG, url: qrUrl, body, noun: "place", variant: "white" }), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     });
   }

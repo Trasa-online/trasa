@@ -275,5 +275,12 @@
   "refresh": {
     "release": "Release to refresh",
     "doing": "Refreshing…"
+  },
+  "place_filters": {
+    "title": "Filters",
+    "clear": "Clear",
+    "type": "Place type",
+    "done": "Show places",
+    "aria": "Place filters"
   }
 }

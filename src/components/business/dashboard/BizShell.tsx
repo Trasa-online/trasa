@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Store, BookOpen, CalendarDays, MessageSquareQuote, Images, Settings,
   MessageCircle, LogOut, ChevronDown, Loader2, Check, MoreHorizontal, X, Plus,
 } from "lucide-react";
-import { TrasaLogo } from "@/components/TrasaLogo";
+import { SpontawayMark } from "@/components/SpontawayMark";
 import { markBusinessLangChoice } from "@/lib/businessLanguage";
 import { venueKey, type OwnedVenue } from "@/lib/businessVenues";
 import i18n from "@/i18n";
@@ -85,7 +85,8 @@ export function BizShell(props: BizShellProps) {
       {/* ── Boczna nawigacja (od md) ── */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-slate-100 bg-white p-4 md:flex">
         <div className="mb-5 flex items-center gap-2 px-1">
-          <TrasaLogo size={26} />
+          {/* Znak Z GWIAZDKA (prosba Nat 2026-09-26) - ten sam, co ikona apki i splash. */}
+          <SpontawayMark size={30} />
           <span className="text-[15px] font-black leading-none">
             spontaway <span className="text-primary">biznes</span>
           </span>

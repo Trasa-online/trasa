@@ -5,7 +5,7 @@ import { SlidersHorizontal } from "lucide-react";
 import TabTopBar from "@/components/layout/TabTopBar";
 import NotificationsBell from "@/components/layout/NotificationsBell";
 import ExploreSwiper from "@/components/home/ExploreSwiper";
-import DistanceFilterSheet, { loadRadius, saveRadius } from "@/components/places/DistanceFilterSheet";
+import DistanceFilterSheet, { loadRadius, saveRadius, loadCategories, saveCategories } from "@/components/places/DistanceFilterSheet";
 import { useTabSearch, TabSearchField, TabSearchResults, SearchScopeFilter } from "@/components/home/TabSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { haptics } from "@/hooks/useHaptics";
@@ -48,6 +48,9 @@ export default function Miejsca() {
   const [radiusKm, setRadiusKm] = useState<number | null>(() => loadRadius());
   const [filterOpen, setFilterOpen] = useState(false);
   const applyRadius = (km: number | null) => { setRadiusKm(km); saveRadius(km); };
+  // Typ miejsca (2026-09-26) - ten sam arkusz co promien, zapamietany tak samo.
+  const [cats, setCats] = useState<string[]>(() => loadCategories());
+  const applyCats = (next: string[]) => { setCats(next); saveCategories(next); };
 
   // ⚠️ Zapamietany promien bez punktu odniesienia NIE FILTRUJE nic - a pigulka "3 km" w belce
   // twierdzilaby, ze filtr dziala. Dzieje sie tak po wyczyszczeniu danych albo na drugim
@@ -76,15 +79,22 @@ export default function Miejsca() {
         {!search.open && (
           <button
             onClick={() => { haptics.light(); setFilterOpen(true); }}
-            aria-label={t("distance.filter_aria")}
+            aria-label={t("place_filters.aria")}
             className={cn(
-              "shrink-0 h-9 flex items-center justify-center rounded-full border transition-colors",
-              radiusKm
-                ? "px-3 gap-1 bg-[#FDF184] border-[#FDF184] text-[#5B2C06] text-xs font-bold"
-                : "w-9 bg-muted/70 border-border/50 text-foreground",
+              "relative shrink-0 h-9 flex items-center justify-center rounded-full border transition-colors",
+              radiusKm || cats.length
+                ? "bg-[#FDF184] border-[#FDF184] text-[#5B2C06] text-xs font-bold"
+                : "bg-muted/70 border-border/50 text-foreground",
+              radiusKm ? "px-3 gap-1" : "w-9",
             )}
           >
+            {/* Aktywny promien pokazujemy LICZBA (jak dotad), a liczbe wybranych typow - plakietka
+                w rogu: filtr, ktorego stanu nie widac, kaze otwierac arkusz, zeby sprawdzic,
+                czemu miejsc jest tak malo. */}
             {radiusKm ? t("distance.chip_km", { km: radiusKm }) : <SlidersHorizontal className="h-4 w-4" />}
+            {cats.length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold leading-[18px] text-center">{cats.length}</span>
+            )}
           </button>
         )}
         {!search.open && user && !(user as any).is_anonymous && <NotificationsBell userId={user.id} />}
@@ -98,10 +108,11 @@ export default function Miejsca() {
           active={!search.open}
           sortNearestNonce={nearbyNonce}
           maxDistanceKm={radiusKm}
+          categoryFilter={cats}
           onClearDistance={() => applyRadius(null)}
         />
       </div>
-      <DistanceFilterSheet open={filterOpen} onOpenChange={setFilterOpen} value={radiusKm} onChange={applyRadius} />
+      <DistanceFilterSheet open={filterOpen} onOpenChange={setFilterOpen} value={radiusKm} onChange={applyRadius} categories={cats} onCategoriesChange={applyCats} />
     </div>
   );
 }

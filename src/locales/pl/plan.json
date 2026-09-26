@@ -279,5 +279,12 @@
   "refresh": {
     "release": "Puść, żeby odświeżyć",
     "doing": "Odświeżam…"
+  },
+  "place_filters": {
+    "title": "Filtry",
+    "clear": "Wyczyść",
+    "type": "Typ miejsca",
+    "done": "Pokaż miejsca",
+    "aria": "Filtry miejsc"
   }
 }

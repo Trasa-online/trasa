@@ -41,7 +41,7 @@ import BusinessHoursEditor, { type OpeningHours } from "@/components/business/Bu
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromDashboardState } from "@/components/business/premiumBusinessAdapters";
 import { ImageCropModal } from "@/components/business/ImageCropModal";
-import { TrasaLogo } from "@/components/TrasaLogo";
+import { SpontawayMark } from "@/components/SpontawayMark";
 import { BizShell, type BizSection } from "@/components/business/dashboard/BizShell";
 import { OverviewSection, type CompletenessStep } from "@/components/business/dashboard/OverviewSection";
 import { ProfileSection } from "@/components/business/dashboard/ProfileSection";
@@ -191,7 +191,8 @@ function DashboardLoadingScreen() {
       {/* ⛔ BEZ cienia. `shadow-lg` na przezroczystym PNG rysuje cien wokol PROSTOKATA obrazka,
           wiec znak wygladal, jakby siedzial w kwadracie (zgloszenie Nat 2026-09-15).
           Marka to sam symbol - bez kolka, bez kafelka, bez cienia. */}
-      <TrasaLogo size={64} />
+      {/* Znak Z GWIAZDKA (prosba Nat 2026-09-26), jak na splashu apki - nie `TrasaLogo` bez gwiazdki. */}
+      <SpontawayMark size={76} />
       <p className="text-xl font-black tracking-tight text-foreground">
         spontaway <span className="text-primary">biznes</span>
       </p>
@@ -2806,15 +2807,18 @@ const BusinessDashboard = () => {
       {/* ── Mobile/Tablet FAB: Podglad wizytowki - tylko desktop (lg+) ma sticky sidebar preview ──
           Dolny pasek nawigacji (BizShell, ~60 px + safe-area) zajmuje dol ekranu, wiec FAB
           i pasek zapisu siadaja NAD nim - inaczej zaslaniaja nawigacje. */}
-      {/* Od 2026-09-26 guzik rozwija DWIE opcje (prosba Nat): podglad wizytowki i kod QR lokalu.
+      {/* ⚠️ Warstwy guzika (44-46) MUSZA byc ponizej arkusza „Wiecej" z BizShell (z-50) - na z-[55]
+          guzik stal NA arkuszu i zaslanial jego pozycje (zgloszenie Nat 2026-09-26). Nad trescia
+          i dolnym paskiem (z-20) jest i tak.
+          Od 2026-09-26 guzik rozwija DWIE opcje (prosba Nat): podglad wizytowki i kod QR lokalu.
           Guzik jest aktywny zawsze - kod QR nie zalezy od kompletu danych; niekompletna
           wizytowka wylacza tylko jej wlasna opcje. */}
       {previewMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[54]" onClick={() => setPreviewMenuOpen(false)} />
+        <div className="lg:hidden fixed inset-0 z-[44]" onClick={() => setPreviewMenuOpen(false)} />
       )}
       {previewMenuOpen && (
         <div
-          className="lg:hidden fixed z-[56] flex flex-col items-end gap-2"
+          className="lg:hidden fixed z-[46] flex flex-col items-end gap-2"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 8.5rem)", right: "1rem" }}
         >
           <button
@@ -2836,7 +2840,7 @@ const BusinessDashboard = () => {
         title={t("fab.preview_title")}
         aria-label={t("fab.preview_aria")}
         aria-expanded={previewMenuOpen}
-        className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all"
+        className="lg:hidden fixed z-[45] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all"
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.75rem)", right: "1rem" }}
       >
         {previewMenuOpen ? <X className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
