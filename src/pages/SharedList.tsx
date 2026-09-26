@@ -905,7 +905,7 @@ export default function SharedList() {
                 Pigulki "Edytuj notkę" i "Zdjęcie" zniknely stad razem z wyjazdami (2026-09-10) -
                 obie akcje siedza w menu przy miejscu. */}
             <PlaceNoteEditor note={myNote} editable={canWriteNote} showAvatar avatarUrl={me?.avatar_url ?? author?.avatar_url ?? col.author_avatar}
-              onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
+              authorId={user?.id} onSave={(v) => saveItemNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
             {/* Notki POZOSTALYCH uczestnikow - moja jest juz w edytorze wyzej. */}
             <PlaceNotes notes={placeNotes as any} excludeUserId={user?.id ?? null} />
             {/* Wgrywanie trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}

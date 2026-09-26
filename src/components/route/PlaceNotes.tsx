@@ -1,6 +1,7 @@
 import { avatarSrc } from "@/lib/avatar";
 import type { PlaceNote } from "@/lib/placeNotes";
 import TranslatableText from "@/components/TranslatableText";
+import NotePattern from "@/components/profile/NotePattern";
 
 // Notki uczestnikow pod miejscem (redesign 2026-08-27, Figma "perspektywa innego usera"): kazda notka
 // = szary dymek z tekstem + awatar autora w PRAWYM-DOLNYM rogu (bez nazwy - awatar wystarcza).
@@ -29,8 +30,10 @@ export default function PlaceNotes({ notes, excludeUserId, className }: {
         );
         return (
           <div key={`${n.user_id}-${n.place_name}`} className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5">
+            {/* Wzor nakladki autora w tle dymka (2026-09-26) - pod trescia, szary, niskie krycie. */}
+            <NotePattern userId={n.user_id} />
             {/* Cudza notka w innym jezyku dostaje guzik "Przetlumacz" (TranslatableText). */}
-            {n.note && <TranslatableText text={n.note} className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words" buttonClassName="pr-6" />}
+            {n.note && <div className="relative"><TranslatableText text={n.note} className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words" buttonClassName="pr-6" /></div>}
             {/* Awatar autora w prawym-dolnym rogu dymka (biala obwodka = odklejony od tla). */}
             {avatar}
           </div>

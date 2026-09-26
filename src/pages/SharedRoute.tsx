@@ -2058,7 +2058,7 @@ export default function SharedRoute() {
               Awatar przy WLASNEJ notce dopiero we wspomnieniu (po publikacji) - w trakcie
               wyjazdu autor jest oczywisty, a awatar dokladal szumu przy pisaniu. */}
           {canEdit && (
-            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} onSave={(v) => saveMyNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
+            <PlaceNoteEditor note={myNote} showAvatar avatarUrl={myAvatar} authorId={user?.id} onSave={(v) => saveMyNote(pin, v)} hideActions onEditingChange={setNoteEditing} />
           )}
           {/* Wgrywanie zdjecia trwa - jedyny sygnal, odkad guzik "Zdjęcie" zszedl do menu. */}
           {busy && (

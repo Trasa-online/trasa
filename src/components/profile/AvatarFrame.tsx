@@ -72,6 +72,20 @@ function Glyph({ kind, px, i }: { kind: Exclude<AvatarFrameId, "rainbow">; px: n
   return <Cloud className="h-full w-full drop-shadow-[0_1px_2px_rgba(0,0,0,0.18)]" fill="currentColor" stroke="rgba(255,255,255,0.85)" strokeWidth={1.5} style={{ width: px, height: px }} />;
 }
 
+/** PLASKI znaczek nakladki do WZORU w tle notki (NotePattern, 2026-09-26): bez cienia i zawsze
+ *  `currentColor` - takze banan, bo wzor jest jednolicie szary. Tecza nie ma znaczka. */
+export function PatternGlyph({ kind, px, i = 0 }: { kind: Exclude<AvatarFrameId, "rainbow">; px: number; i?: number }) {
+  const star = (n: number) => (
+    <svg viewBox={STAR_VIEWBOX} width={n} height={n} className="block" aria-hidden><path d={STAR_PATH} fill="currentColor" /></svg>
+  );
+  if (kind === "stars") return star(px);
+  if (kind === "moonstars") return i % 2 === 0 ? <Moon fill="currentColor" strokeWidth={1.5} style={{ width: px, height: px }} /> : star(Math.round(px * 0.82));
+  if (kind === "moon") return <Moon fill="currentColor" strokeWidth={1.5} style={{ width: px, height: px }} />;
+  if (kind === "banana") return <svg viewBox="0 0 24 24" width={px} height={px} className="block" aria-hidden><path d={BANANA_BODY} fill="currentColor" /></svg>;
+  if (kind === "hearts") return <Heart fill="currentColor" strokeWidth={1.5} style={{ width: px, height: px }} />;
+  return <Cloud fill="currentColor" strokeWidth={1.5} style={{ width: px, height: px }} />;
+}
+
 // Teczowy pierscien (nagroda za zaproszenia, wzor: swiecaca ramka z zalacznika Nat - ale
 // KOLKO, nie kwadrat): stozkowy gradient przyciety maska do cienkiego pierscienia tuz przy
 // krawedzi awatara + rozmyta kopia pod spodem jako poswiata. Obrot gradientu = kolory

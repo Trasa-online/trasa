@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BrandNote } from "@/components/BrandIcon";
 import { avatarSrc } from "@/lib/avatar";
+import NotePattern from "@/components/profile/NotePattern";
 
 // Kompaktowy edytor notki miejsca - WSPOLDZIELONY przez listy (SharedList) i wyjazdy (SharedRoute),
 // zeby uklad byl spojny (prosba Nat 2026-08-26). Stany:
@@ -24,6 +25,7 @@ export default function PlaceNoteEditor({
   hideActions = false,
   openKey = 0,
   onEditingChange,
+  authorId,
 }: {
   note: string;
   /** `false` = zapis sie nie udal (edytor zostaje otwarty przy „Gotowe"). */
@@ -49,6 +51,8 @@ export default function PlaceNoteEditor({
   openKey?: number;
   /** Informuje rodzica, ze user WLASNIE pisze notke - ekran chowa wtedy czat i dolne CTA. */
   onEditingChange?: (editing: boolean) => void;
+  /** Autor notki - dymek dostaje w tle wzor jego nakladki awatara (NotePattern). */
+  authorId?: string | null;
 }) {
   const { t } = useTranslation("route");
   // Domyslka nie moze stac w liscie parametrow - hook nie istnieje jeszcze w tym miejscu.
@@ -144,7 +148,8 @@ export default function PlaceNoteEditor({
       {noteText && !hideText && (
         showAvatar ? (
           <div className="relative bg-muted/50 rounded-2xl px-3.5 py-2.5 mb-1.5">
-            <p className="text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{noteText}</p>
+            {authorId && <NotePattern userId={authorId} />}
+            <p className="relative text-[13.5px] text-foreground/85 leading-snug whitespace-pre-wrap break-words">{noteText}</p>
             <img
               src={avatarSrc(avatarUrl)}
               alt=""
