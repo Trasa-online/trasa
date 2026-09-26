@@ -59,6 +59,19 @@ const Auth = () => {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  // KOD QR Z KARTY „To moj lokal" DLA ISTNIEJACEGO KONTA (2026-09-26). Rejestracja przypina kod
+  // po stronie serwera (`register-business`), ale lokal z kontem wchodzi w LOGOWANIE i parametr
+  // `?qr=` ginal. Przypinamy go tuz przed wejsciem do panelu. Best-effort: blad nie blokuje
+  // logowania, a odpowiedz „juz Twoj" jest cicha (ponowne wejscie z tego samego linku).
+  const claimQrIfAny = async () => {
+    const tok = searchParams.get("qr")?.trim().toLowerCase();
+    if (!tok) return;
+    try {
+      const { data } = await (supabase as any).rpc("claim_business_qr", { p_token: tok });
+      if (data === "claimed") toast.success(t("biz.qr_claimed"));
+      else if (data === "taken" || data === "other_place") toast.error(t("biz.qr_taken"));
+    } catch (e) { console.warn("[Auth] claim_business_qr:", e); }
+  };
   // Web: powrot z ekranu Google/Apple strzalka "wstecz" przywraca strone z bfcache razem
   // z `loading = true` - guziki bylyby martwe tak samo jak na natywce.
   useEffect(() => {
@@ -115,13 +128,14 @@ const Auth = () => {
           .maybeSingle();
         if (cancelled) return;
         if (bp?.id && !bp.is_draft) {
+          await claimQrIfAny();
           navigate(await businessPanelPath(user.id, bp));
           return;
         }
         // Kontekst biznesowy (zakladka Panel Biznesowy): NIGDY nie odbijaj na B2C /home.
         // Draft owner -> panel draft; brak wizytowki -> zostan na logowaniu z komunikatem.
         if (businessMode) {
-          if (bp?.id) { navigate(await businessPanelPath(user.id, bp)); return; }
+          if (bp?.id) { await claimQrIfAny(); navigate(await businessPanelPath(user.id, bp)); return; }
           toast.error(t("biz.no_profile"));
           return;
         }
@@ -240,6 +254,7 @@ const Auth = () => {
             .eq("owner_user_id", data.user!.id)
             .maybeSingle();
       if (bp?.id && !bp.is_draft) {
+        await claimQrIfAny();
         navigate(`/biznes/${bp.place_id ?? bp.id}`);
         return;
       }

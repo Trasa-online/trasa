@@ -7,10 +7,11 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import BusinessQrModal from "@/components/business/BusinessQrModal";
 import { cn } from "@/lib/utils";
 import { BrandIcon, SAVE_ICON } from "@/components/BrandIcon";
 import { applyBusinessDefaultLanguage, markBusinessLangChoice } from "@/lib/businessLanguage";
-import { Loader2, Plus, X, ImagePlus, Trash2, ZoomIn, Camera, Heart, ChevronUp, GripVertical, Eye, FileText, Check, MessageSquareQuote, Flag, Bookmark, Share2, Globe } from "lucide-react";
+import { Loader2, Plus, X, ImagePlus, Trash2, ZoomIn, Camera, Heart, ChevronUp, GripVertical, Eye, FileText, Check, MessageSquareQuote, Flag, Bookmark, Share2, Globe, QrCode } from "lucide-react";
 
 // Pola formularza panelu = szare wypełnienie + pomarańczowy focus (prośba Nat 2026-09-14:
 // jednolitość i "zasada przynależności" - wszystkie inputy wyglądają tak samo, spokojnie).
@@ -460,6 +461,9 @@ const BusinessDashboard = () => {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  // Kod QR lokalu (2026-09-26): okno z kodem + menu pod guzikiem „Podglad" na telefonie.
+  const [qrOpen, setQrOpen] = useState(false);
+  const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
 
   // Form state
   const [businessName, setBusinessName] = useState("");
@@ -2253,6 +2257,18 @@ const BusinessDashboard = () => {
                     tags={tags}
                   />
                 </button>
+                {/* Kod QR lokalu (2026-09-26) - na desktopie pod podgladem karty. */}
+                <button
+                  type="button"
+                  onClick={() => setQrOpen(true)}
+                  className="mt-3 w-full flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left hover:border-primary/40 transition-colors"
+                >
+                  <span className="h-9 w-9 shrink-0 rounded-xl bg-[#FDF184] flex items-center justify-center"><QrCode className="h-5 w-5 text-[#5B2C06]" /></span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-slate-900">{t("qr.title")}</span>
+                    <span className="block text-xs text-slate-500">{t("qr.tile_desc")}</span>
+                  </span>
+                </button>
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
             </div>
@@ -2790,17 +2806,43 @@ const BusinessDashboard = () => {
       {/* ── Mobile/Tablet FAB: Podglad wizytowki - tylko desktop (lg+) ma sticky sidebar preview ──
           Dolny pasek nawigacji (BizShell, ~60 px + safe-area) zajmuje dol ekranu, wiec FAB
           i pasek zapisu siadaja NAD nim - inaczej zaslaniaja nawigacje. */}
+      {/* Od 2026-09-26 guzik rozwija DWIE opcje (prosba Nat): podglad wizytowki i kod QR lokalu.
+          Guzik jest aktywny zawsze - kod QR nie zalezy od kompletu danych; niekompletna
+          wizytowka wylacza tylko jej wlasna opcje. */}
+      {previewMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[54]" onClick={() => setPreviewMenuOpen(false)} />
+      )}
+      {previewMenuOpen && (
+        <div
+          className="lg:hidden fixed z-[56] flex flex-col items-end gap-2"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 8.5rem)", right: "1rem" }}
+        >
+          <button
+            onClick={() => { setPreviewMenuOpen(false); setQrOpen(true); }}
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-900 shadow-lg active:scale-95 transition-transform"
+          >
+            <QrCode className="h-4 w-4 text-primary" />{t("fab.qr")}
+          </button>
+          <button
+            onClick={() => { if (!previewReady) { toast(t("fab.incomplete")); return; } setPreviewMenuOpen(false); setShowAppPreview(true); }}
+            className={`flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-900 shadow-lg active:scale-95 transition-transform ${previewReady ? "" : "opacity-60"}`}
+          >
+            <Eye className="h-4 w-4 text-primary" />{t("fab.card")}
+          </button>
+        </div>
+      )}
       <button
-        onClick={() => previewReady && setShowAppPreview(true)}
-        disabled={!previewReady}
-        title={!previewReady ? t("fab.incomplete") : t("fab.preview_title")}
+        onClick={() => setPreviewMenuOpen((v) => !v)}
+        title={t("fab.preview_title")}
         aria-label={t("fab.preview_aria")}
-        className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+        aria-expanded={previewMenuOpen}
+        className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-[#D45113] text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all"
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.75rem)", right: "1rem" }}
       >
-        <Eye className="h-4 w-4" />
+        {previewMenuOpen ? <X className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         {t("fab.preview")}
       </button>
+      <BusinessQrModal open={qrOpen} onClose={() => setQrOpen(false)} businessId={profile?.id} businessName={businessName} />
 
       {/* ── App-like preview modal (card + detail view) ── */}
       {showAppPreview && (

@@ -496,7 +496,9 @@
     "incomplete": "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd",
     "preview_title": "Podgląd wizytówki w aplikacji",
     "preview_aria": "Podgląd wizytówki",
-    "preview": "Podgląd"
+    "preview": "Podgląd",
+    "qr": "Podgląd kodu QR",
+    "card": "Podgląd wizytówki"
   },
   "crop": {
     "logo_title": "Dostosuj logo",
@@ -588,5 +590,20 @@
     "you": "Wy",
     "us": "spontaway",
     "badge": "Czat ze spontaway"
+  },
+  "qr": {
+    "title": "Kod QR lokalu",
+    "desc": "Wydrukuj go i postaw przy kasie albo na stoliku. Goście od razu trafią na Twoją wizytówkę.",
+    "tile_desc": "Podgląd, liczba skanów i plik do druku",
+    "scans_one": "Zeskanowano {{count}} raz",
+    "scans_few": "Zeskanowano {{count}} razy",
+    "scans_many": "Zeskanowano {{count}} razy",
+    "download": "Pobierz PNG",
+    "copy": "Kopiuj link",
+    "copied": "Link skopiowany",
+    "copy_failed": "Nie udało się skopiować linku",
+    "close": "Zamknij",
+    "empty_title": "Nie masz jeszcze kodu QR",
+    "empty_desc": "Napisz do nas na hello@spontaway.com, a przygotujemy kod dla Twojego lokalu."
   }
 }

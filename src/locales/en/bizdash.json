@@ -495,7 +495,9 @@
     "incomplete": "Add a name and a photo to see the preview",
     "preview_title": "Card preview in the app",
     "preview_aria": "Card preview",
-    "preview": "Preview"
+    "preview": "Preview",
+    "qr": "QR code preview",
+    "card": "Listing preview"
   },
   "crop": {
     "logo_title": "Adjust logo",
@@ -586,5 +588,19 @@
     "you": "You",
     "us": "spontaway",
     "badge": "Chat with spontaway"
+  },
+  "qr": {
+    "title": "Venue QR code",
+    "desc": "Print it and put it by the till or on a table. Guests go straight to your listing.",
+    "tile_desc": "Preview, scan count and a print file",
+    "scans_one": "Scanned {{count}} time",
+    "scans_other": "Scanned {{count}} times",
+    "download": "Download PNG",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "copy_failed": "Could not copy the link",
+    "close": "Close",
+    "empty_title": "You do not have a QR code yet",
+    "empty_desc": "Write to us at hello@spontaway.com and we will prepare a code for your venue."
   }
 }
